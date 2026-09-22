@@ -18,9 +18,9 @@ The application is structured as a decoupled monorepo (or dual repository setup)
 | **Backend API** | `v1.8.2` | Node.js / Express / PostgreSQL | Authentication (JWT), payment gateway integration, database ORM, guest auditing |
 
 ### Versioning Strategy
-- **MAJOR (`x.0.0`)**: Incompatible API changes or UI overhauls breaking existing client requests.
-- **MINOR (`0.x.0`)**: Backward-compatible feature additions (e.g., adding a new payment vendor integration).
-- **PATCH (`0.0.x`)**: Backward-compatible bug fixes and security hotfixes.
+- **MAJOR (`1.0.0`)**: Incompatible API changes or UI overhauls breaking existing client requests.
+- **MINOR (`1.0.0`)**: Backward-compatible feature additions (e.g., adding a new payment vendor integration).
+- **PATCH (`1.0.0`)**: Backward-compatible bug fixes and security hotfixes.
 
 ---
 
