@@ -1,0 +1,134 @@
+/* NammaStay — shared styles
+   Page designs keep their exact inline values; this file handles
+   the app shell, navigation and responsive behaviour. */
+
+:root{
+  --navy:#0E1B3D; --ink:#101A3D; --cream:#FBF3DE; --paper:#FFFDF6;
+  --green:#1C9A6C; --line:#E7DFC7; --muted:#6B7280; --nav-text:#AEB6C9;
+  --sidebar-w:248px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:'Manrope',system-ui,sans-serif;background:var(--cream);color:var(--ink)}
+a{color:var(--green);text-decoration:none}
+img{max-width:100%}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:6px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:0}
+
+/* ---------- App shell ---------- */
+.ns-shell{display:flex;min-height:100vh;width:100%;background:var(--cream)}
+.ns-sidebar{
+  width:var(--sidebar-w);flex-shrink:0;height:100vh;position:sticky;top:0;
+  background:var(--navy);padding:24px 16px;display:flex;flex-direction:column;overflow-y:auto;z-index:40;
+}
+.ns-brand{display:flex;align-items:center;gap:10px;padding:8px 8px 24px 8px}
+.ns-brand img,.ns-mobile-brand img{background:var(--cream);border-radius:8px;padding:3px;object-fit:contain}
+.ns-brand > span,.ns-mobile-brand > span{font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:var(--cream)}
+.ns-brand > span span,.ns-mobile-brand > span span{color:var(--green)}
+.ns-nav{display:flex;flex-direction:column;gap:2px}
+.ns-nav-link{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px;
+  color:var(--nav-text);font-size:14px;font-weight:600;transition:background .15s,color .15s;
+}
+.ns-nav-link:hover{background:#18264D;color:#FFFFFF}
+.ns-nav-link.is-active{background:var(--green);color:#FFFFFF;font-weight:700}
+.ns-nav-link svg{flex-shrink:0}
+.ns-sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid #22305A;padding-top:12px}
+.ns-user{display:flex;align-items:center;gap:10px;padding:12px 8px 4px 8px;line-height:1.3}
+.ns-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+.ns-user-name{font-size:13px;font-weight:700;color:var(--cream)}
+.ns-user-sub{font-size:11px;color:#8B93A8}
+.ns-signout{font-size:13px;padding:9px 12px}
+
+.ns-main{flex:1;min-width:0;min-height:100vh;display:flex;flex-direction:column}
+.ns-content{flex:1;min-width:0}
+.ns-content[style*="display:grid"] > *,
+.ns-content [style*="display:grid"] > *{min-width:0}
+.ns-mobilebar,.ns-scrim{display:none}
+
+/* clickable table rows */
+tr[data-href]{cursor:pointer}
+tr[data-href]:hover{background:#FBF9F1}
+
+/* ---------- Sign in ---------- */
+.ns-login{display:flex;min-height:100vh;width:100%;background:var(--cream)}
+.ns-login-aside{width:39%;max-width:560px;min-height:100vh}
+.ns-login-main{flex:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 24px}
+
+.ns-login-brand{display:none;align-items:center;gap:10px}
+.ns-login-brand img{background:#FFFDF6;border:1px solid var(--line);border-radius:10px;padding:3px}
+.ns-login-brand > span{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--ink)}
+.ns-login-brand > span span{color:var(--green)}
+
+/* ---------- Booking detail (modal page) ---------- */
+.ns-modal-page{width:100%;min-height:100vh;height:100vh}
+.ns-ghost-sidebar{width:var(--sidebar-w);height:100%}
+
+/* ---------- Mobile self check-in ---------- */
+.ns-page-mobile{background:#E9E1C8}
+.ns-phone{width:100%;max-width:480px;min-height:100vh;margin:0 auto;box-shadow:0 0 0 1px var(--line)}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1180px){
+  .ns-content [style*="grid-template-columns:1.3fr 1fr"],
+  .ns-content [style*="grid-template-columns:1.5fr 1fr"],
+  .ns-content [style*="grid-template-columns:1fr 340px"],
+  .ns-content [style*="grid-template-columns:1fr 380px"],
+  .ns-content [style*="grid-template-columns:340px 1fr"],
+  .ns-content[style*="grid-template-columns:1fr 380px"],
+  .ns-content[style*="grid-template-columns:1fr 340px"],
+  .ns-content[style*="grid-template-columns:340px 1fr"]{grid-template-columns:1fr !important}
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) !important}
+  .ns-content div:has(> table){overflow-x:auto !important}
+  .ns-content table{min-width:820px}
+}
+
+@media (max-width:900px){
+  .ns-sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 40px rgba(14,27,61,.35)}
+  .ns-sidebar.is-open{transform:none}
+  .ns-scrim{position:fixed;inset:0;background:rgba(14,27,61,.45);z-index:30}
+  .ns-scrim.is-open{display:block}
+  .ns-mobilebar{
+    display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;
+    height:56px;padding:0 12px;background:var(--navy);
+  }
+  .ns-menu-btn{width:40px;height:40px;border:0;border-radius:9px;background:transparent;color:var(--cream);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ns-mobile-brand{display:flex;align-items:center;gap:8px}
+  .ns-mobile-brand img{border-radius:6px;padding:2px}
+
+  /* page header row */
+  .ns-main > [style*="height:76px"]{height:auto !important;min-height:64px;flex-wrap:wrap;gap:12px;padding:14px 16px !important}
+  .ns-main > [style*="height:76px"] > div:last-child{flex-wrap:wrap}
+  .ns-content{padding:16px !important}
+  .ns-main > [style*="height:56px"]{overflow-x:auto;padding:0 8px !important;white-space:nowrap}
+  .ns-content div:has(> [style="flex:1;"]){flex-wrap:wrap;row-gap:10px}
+
+  .ns-content [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr) !important}
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(2,1fr) !important}
+  .ns-content [style*="justify-content:space-between"]{flex-wrap:wrap;row-gap:10px}
+  .ns-content [style*="gap:8px"][style*="display:flex"]:not([style*="align-items:center;gap:8px;height"]){flex-wrap:wrap}
+
+  /* wide timelines scroll sideways inside their card */
+  .page-calendar .ns-content{overflow-x:auto}
+  .page-calendar .ns-content > *{min-width:820px}
+  .page-bookings .ns-content > div:first-child{overflow-x:auto}
+  .page-bookings .ns-content > div:first-child > div:first-child{flex-shrink:0;width:84px !important;padding-right:8px}
+  .page-bookings .ns-content > div:first-child > [style*="repeat(7"]{min-width:520px}
+
+  .ns-login-aside{display:none !important}
+  .ns-login-brand{display:flex}
+  .ns-ghost-sidebar{display:none}
+}
+
+@media (max-width:560px){
+  [style*="grid-column:1/3"]{grid-column:1/-1 !important}
+  .ns-content [style*="grid-template-columns:1fr 1fr"],
+  .ns-content [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr !important}
+  .ns-content [style*="grid-template-columns:repeat(4"],
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  .ns-dialog [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
