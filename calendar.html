@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar · NammaStay</title>
+<meta name="description" content="NammaStay: bookings, beds, check-ins and payments for hostels, hotels and homestays.">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  .row{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;height:48px;align-items:center;}
+  .bar{border-radius:8px;display:flex;align-items:center;padding:0 10px;font-size:11.5px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;height:34px;}
+</style>
+</head>
+<body class="ns-app page-calendar">
+<div class="ns-shell">
+
+  <aside class="ns-sidebar" id="ns-sidebar">
+    <a href="dashboard.html" class="ns-brand">
+      <img src="assets/img/logo.png" alt="" width="34" height="34">
+      <span>Namma<span>Stay</span></span>
+    </a>
+    <nav class="ns-nav" aria-label="Main">
+        <a href="dashboard.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg><span>Dashboard</span></a>
+        <a href="bookings.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>Bookings</span></a>
+        <a href="calendar.html" class="ns-nav-link is-active" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18"></path><path d="M8 2v4"></path><path d="M16 2v4"></path></svg><span>Calendar</span></a>
+        <a href="guest-profile.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M2.5 20c0-3.6 2.9-6.4 6.5-6.4s6.5 2.8 6.5 6.4"></path><circle cx="18" cy="9" r="2.3"></circle><path d="M15.8 13.8c2.3.5 4.2 2.5 4.2 5.4"></path></svg><span>Guests</span></a>
+        <a href="check-in.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg><span>Check-in</span></a>
+        <a href="rooms.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V9a2 2 0 012-2h3a2 2 0 012 2v1"></path><path d="M9 16V9a2 2 0 012-2h9v9"></path><path d="M2 16h20v4"></path><path d="M2 20v-4"></path><path d="M22 20v-4"></path></svg><span>Rooms &amp; Beds</span></a>
+        <a href="payments.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path><path d="M6 15h4"></path></svg><span>Payments</span></a>
+        <a href="reports.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10"></path><path d="M12 19V5"></path><path d="M20 19v-7"></path></svg><span>Reports</span></a>
+    </nav>
+    <div class="ns-sidebar-foot">
+      <a href="settings.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg><span>Settings</span></a>
+      <div class="ns-user">
+        <div class="ns-avatar">SB</div>
+        <div><div class="ns-user-name">Owner</div><div class="ns-user-sub">Social Backpackers</div></div>
+      </div>
+      <a href="index.html" class="ns-nav-link ns-signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg><span>Sign out</span></a>
+    </div>
+  </aside>
+  <div class="ns-scrim" data-nav-close></div>
+
+  <main class="ns-main">
+    <header class="ns-mobilebar">
+      <button type="button" class="ns-menu-btn" data-nav-open aria-label="Open menu" aria-controls="ns-sidebar" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <a href="dashboard.html" class="ns-mobile-brand"><img src="assets/img/logo.png" alt="" width="28" height="28"><span>Namma<span>Stay</span></span></a>
+    </header>
+
+    <div style="height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 32px;border-bottom:1px solid #E7DFC7;">
+      <div>
+        <div style="font-family:'Sora',sans-serif;font-size:21px;font-weight:700;">Calendar</div>
+        <div style="font-size:13px;color:#6B7280;">19 – 27 Sep 2026 · Social Backpackers Hostel</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:9px;background:#FFFFFF;border:1px solid #E7DFC7;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#101A3D" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg></div>
+        <div style="width:36px;height:36px;border-radius:9px;background:#FFFFFF;border:1px solid #E7DFC7;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#101A3D" stroke-width="2"><path d="M9 6l6 6-6 6"></path></svg></div>
+        <a href="check-in.html" style="height:40px;padding:0 16px;border-radius:9px;background:#1C9A6C;color:#FFFFFF;display:flex;align-items:center;font-size:13px;font-weight:700;">+ New booking</a>
+      </div>
+    </div>
+
+    <div class="ns-content" style="padding:24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+      <div style="display:flex;gap:14px;">
+        <div style="width:170px;flex-shrink:0;"></div>
+        <div class="row" style="height:auto;">
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Sat 19</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Sun 20</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Mon 21</div>
+          <div style="text-align:center;font-size:11.5px;color:#101A3D;font-weight:800;background:#F0EBDB;border-radius:6px;padding:4px 0;">Tue 22</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Wed 23</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Thu 24</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Fri 25</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Sat 26</div>
+          <div style="text-align:center;font-size:11.5px;color:#6B7280;font-weight:700;">Sun 27</div>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow:auto;background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;gap:2px;">
+
+        <div style="font-size:11px;font-weight:800;color:#9AA3B5;text-transform:uppercase;letter-spacing:0.04em;padding:8px 0 4px 0;">6-Bed Mixed Dorm</div>
+
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Lower A1</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:1/4;background:#9CA9C4;border-radius:8px 0 0 8px;">Sofia Jensen</div>
+            <div class="bar" style="grid-column:4/6;background:#1C9A6C;">Ken Watanabe</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Upper A2</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:1/4;background:#9CA9C4;border-radius:8px 0 0 8px;">Marco Klein</div>
+            <div class="bar" style="grid-column:6/9;background:#1C9A6C;">David Kim</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Upper A3</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:4/6;background:#1C9A6C;">Aravind V.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Lower B1</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:4/7;background:#1C9A6C;">Rahul Kannan</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Upper B2</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:8/10;background:#E2A03F;">Noa Levi</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Upper B3</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:1/10;background:repeating-linear-gradient(135deg,#DAD2B6,#DAD2B6 8px,#EDE7D3 8px,#EDE7D3 16px);color:#7A7154;">Maintenance — fan repair</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:800;color:#9AA3B5;text-transform:uppercase;letter-spacing:0.04em;padding:14px 0 4px 0;">3-Bed Dorm</div>
+
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Lower C1</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:1/4;background:#9CA9C4;border-radius:8px 0 0 8px;">Priya N.</div>
+            <div class="bar" style="grid-column:5/10;background:#1C9A6C;">Farah Ali</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Lower C2</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:4/10;background:#E2A03F;">Emma Torres · partial paid</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;"><div style="width:170px;flex-shrink:0;display:flex;align-items:center;font-size:12.5px;font-weight:700;">Lower C3</div>
+          <div class="row" style="flex:1;">
+            <div class="bar" style="grid-column:2/4;background:#1C9A6C;">Tom Becker</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:18px;padding-top:16px;margin-top:auto;border-top:1px solid #F0EBDB;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6B7280;"><span style="width:14px;height:10px;border-radius:3px;background:#1C9A6C;display:inline-block;"></span>Confirmed / checked-in</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6B7280;"><span style="width:14px;height:10px;border-radius:3px;background:#E2A03F;display:inline-block;"></span>Pending / partial payment</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6B7280;"><span style="width:14px;height:10px;border-radius:3px;background:#9CA9C4;display:inline-block;"></span>Continues from earlier</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6B7280;"><span style="width:14px;height:10px;border-radius:3px;background:#DAD2B6;display:inline-block;"></span>Blocked / maintenance</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
