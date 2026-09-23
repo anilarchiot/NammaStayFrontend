@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Booking detail · NammaStay</title>
+<meta name="description" content="NammaStay: bookings, beds, check-ins and payments for hostels, hotels and homestays.">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  .fld{height:42px;border-radius:9px;border:1px solid #E2DAC4;padding:0 12px;font-size:13px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;width:100%;}
+  .lbl{font-size:11.5px;font-weight:700;color:#6B7280;}
+</style>
+</head>
+<body class="ns-page-modal page-booking-detail">
+<div class="ns-modal-page" style="box-sizing:border-box;position:relative;background:#FBF3DE;overflow:hidden;">
+
+  <div style="position:absolute;inset:0;display:flex;opacity:0.5;filter:saturate(0.7);">
+    <div class="ns-ghost-sidebar" style="background:#0E1B3D;flex-shrink:0;"></div>
+    <div style="flex:1;padding:24px 32px;">
+      <div style="height:44px;width:220px;background:#F0EBDB;border-radius:8px;margin-bottom:20px;"></div>
+      <div style="height:80px;background:#FFFFFF;border:1px solid #E7DFC7;border-radius:14px;margin-bottom:16px;"></div>
+      <div style="height:400px;background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;"></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;inset:0;background:rgba(14,27,61,0.55);display:flex;align-items:center;justify-content:center;">
+    <div role="dialog" aria-modal="true" aria-label="Booking detail" class="ns-dialog" style="width:680px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);background:#FFFFFF;border-radius:20px;box-shadow:0 24px 60px rgba(14,27,61,0.35);display:flex;flex-direction:column;overflow:hidden;">
+
+      <div style="padding:22px 26px;border-bottom:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-family:'Sora',sans-serif;font-size:18px;font-weight:700;">Booking BK-2290</div>
+            <span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#FCF0DC;color:#966016;font-weight:700;">Pending</span>
+          </div>
+          <div style="font-size:12.5px;color:#6B7280;margin-top:4px;">Created 20 Sep 2026, 9:14 AM by Divya Menon</div>
+        </div>
+        <a href="bookings.html" style="width:32px;height:32px;border-radius:8px;background:#F5F1E3;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </a>
+      </div>
+
+      <div style="padding:22px 26px;display:flex;flex-direction:column;gap:20px;overflow:auto;">
+
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#FBF9F1;border:1px solid #F0EBDB;">
+          <div style="width:38px;height:38px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">EM</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px;font-weight:700;">Emma Torres</div>
+            <div style="font-size:11.5px;color:#6B7280;">+34 611 220 987 · emma.t@mail.com</div>
+          </div>
+          <a href="guest-profile.html" style="font-size:12px;font-weight:700;">View profile</a>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Room / Bed</label><div class="fld" style="display:flex;align-items:center;">3-Bed Dorm · Lower C2</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Nights</label><div class="fld" style="display:flex;align-items:center;">5 nights · ₹850/night</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Check-in</label><input class="fld" value="22 Sep 2026, 3:00 PM"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Check-out</label><input class="fld" value="27 Sep 2026, 11:00 AM"></div>
+        </div>
+
+        <div style="border:1px solid #F0EBDB;border-radius:12px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:#6B7280;">Room charge (5 nights)</span><span style="font-weight:600;">₹4,250</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:#6B7280;">Amount paid</span><span style="font-weight:600;color:#157A56;">₹2,000 (UPI)</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:8px;border-top:1px solid #F0EBDB;"><span style="font-weight:700;">Balance due</span><span style="font-weight:700;color:#B23A3A;">₹2,250</span></div>
+        </div>
+
+        <div>
+          <div class="lbl" style="margin-bottom:10px;">Activity</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:10px;"><div style="width:7px;height:7px;border-radius:50%;background:#1C9A6C;margin-top:5px;flex-shrink:0;"></div><div style="font-size:12.5px;"><b>Booking created</b> — 20 Sep, 9:14 AM <span style="color:#9AA3B5;">by Divya Menon</span></div></div>
+            <div style="display:flex;gap:10px;"><div style="width:7px;height:7px;border-radius:50%;background:#1C9A6C;margin-top:5px;flex-shrink:0;"></div><div style="font-size:12.5px;"><b>Partial payment received</b> — ₹2,000 via UPI, 20 Sep, 9:16 AM</div></div>
+            <div style="display:flex;gap:10px;"><div style="width:7px;height:7px;border-radius:50%;background:#E2A03F;margin-top:5px;flex-shrink:0;"></div><div style="font-size:12.5px;"><b>Awaiting check-in confirmation</b> — expected 22 Sep, 3:00 PM</div></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="lbl">Note</label>
+          <textarea style="height:56px;border-radius:9px;border:1px solid #E2DAC4;padding:10px 12px;font-size:13px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;resize:none;width:100%;" placeholder="Add an internal note">Guest asked about late check-out on day of departure.</textarea>
+        </div>
+      </div>
+
+      <div style="padding:18px 26px;border-top:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;font-weight:700;color:#B23A3A;">Cancel booking</div>
+        <div style="display:flex;gap:10px;">
+          <div style="height:42px;padding:0 16px;border-radius:9px;border:1px solid #E2DAC4;color:#101A3D;display:flex;align-items:center;font-size:13px;font-weight:700;">Send receipt</div>
+          <a href="bookings.html" style="height:42px;padding:0 20px;border-radius:9px;background:#1C9A6C;color:#FFFFFF;display:flex;align-items:center;font-size:13px;font-weight:700;">Confirm check-in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>

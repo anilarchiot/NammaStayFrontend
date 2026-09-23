@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest check-in · NammaStay</title>
+<meta name="description" content="NammaStay: bookings, beds, check-ins and payments for hostels, hotels and homestays.">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  input::placeholder,select{color:#101A3D}
+  .fld{height:46px;border-radius:10px;border:1px solid #E2DAC4;padding:0 14px;font-size:13.5px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;width:100%;}
+  .lbl{font-size:12.5px;font-weight:700;color:#101A3D;}
+</style>
+</head>
+<body class="ns-app page-check-in">
+<div class="ns-shell">
+
+  <aside class="ns-sidebar" id="ns-sidebar">
+    <a href="dashboard.html" class="ns-brand">
+      <img src="assets/img/logo.png" alt="" width="34" height="34">
+      <span>Namma<span>Stay</span></span>
+    </a>
+    <nav class="ns-nav" aria-label="Main">
+        <a href="dashboard.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg><span>Dashboard</span></a>
+        <a href="bookings.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>Bookings</span></a>
+        <a href="calendar.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18"></path><path d="M8 2v4"></path><path d="M16 2v4"></path></svg><span>Calendar</span></a>
+        <a href="guest-profile.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M2.5 20c0-3.6 2.9-6.4 6.5-6.4s6.5 2.8 6.5 6.4"></path><circle cx="18" cy="9" r="2.3"></circle><path d="M15.8 13.8c2.3.5 4.2 2.5 4.2 5.4"></path></svg><span>Guests</span></a>
+        <a href="check-in.html" class="ns-nav-link is-active" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg><span>Check-in</span></a>
+        <a href="rooms.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V9a2 2 0 012-2h3a2 2 0 012 2v1"></path><path d="M9 16V9a2 2 0 012-2h9v9"></path><path d="M2 16h20v4"></path><path d="M2 20v-4"></path><path d="M22 20v-4"></path></svg><span>Rooms &amp; Beds</span></a>
+        <a href="payments.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path><path d="M6 15h4"></path></svg><span>Payments</span></a>
+        <a href="reports.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10"></path><path d="M12 19V5"></path><path d="M20 19v-7"></path></svg><span>Reports</span></a>
+    </nav>
+    <div class="ns-sidebar-foot">
+      <a href="settings.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg><span>Settings</span></a>
+      <div class="ns-user">
+        <div class="ns-avatar">SB</div>
+        <div><div class="ns-user-name">Owner</div><div class="ns-user-sub">Social Backpackers</div></div>
+      </div>
+      <a href="index.html" class="ns-nav-link ns-signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg><span>Sign out</span></a>
+    </div>
+  </aside>
+  <div class="ns-scrim" data-nav-close></div>
+
+  <main class="ns-main">
+    <header class="ns-mobilebar">
+      <button type="button" class="ns-menu-btn" data-nav-open aria-label="Open menu" aria-controls="ns-sidebar" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <a href="dashboard.html" class="ns-mobile-brand"><img src="assets/img/logo.png" alt="" width="28" height="28"><span>Namma<span>Stay</span></span></a>
+    </header>
+
+    <div style="height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 32px;border-bottom:1px solid #E7DFC7;">
+      <div>
+        <a href="bookings.html" style="font-size:12px;font-weight:700;color:#6B7280;">← Back to bookings</a>
+        <div style="font-family:'Sora',sans-serif;font-size:21px;font-weight:700;margin-top:2px;">New guest registration &amp; check-in</div>
+      </div>
+    </div>
+
+    <div class="ns-content" style="padding:28px 32px;display:grid;grid-template-columns:1fr 380px;gap:24px;">
+
+      <div style="overflow:hidden;display:flex;flex-direction:column;gap:20px;">
+
+        <div style="background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;padding:24px;">
+          <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Guest details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Full name</label><input class="fld" placeholder="e.g. Rahul Kannan"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Number of visitors</label><input class="fld" type="number" placeholder="1" value="1"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Phone number</label><input class="fld" placeholder="+91 00000 00000"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Email address</label><input class="fld" placeholder="guest@email.com"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Date of birth</label><input class="fld" placeholder="DD / MM / YYYY"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label class="lbl">Proof of identity</label>
+              <div class="fld" style="display:flex;align-items:center;justify-content:space-between;">Aadhaar card <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/3;"><label class="lbl">ID document number</label><input class="fld" placeholder="e.g. XXXX XXXX 4821"></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280;margin-top:16px;">
+            <input type="checkbox" checked="" style="width:16px;height:16px;accent-color:#1C9A6C;">
+            Send booking confirmation to guest's email
+          </label>
+        </div>
+
+        <div style="background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;padding:24px;">
+          <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;">Stay details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label class="lbl">Room type</label>
+              <div class="fld" style="display:flex;align-items:center;justify-content:space-between;">6-Bed Mixed Dorm <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label class="lbl">Bed</label>
+              <div class="fld" style="display:flex;align-items:center;justify-content:space-between;">Lower B1 — ₹700/night <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Check-in date &amp; time</label><input class="fld" placeholder="22 Sep 2026, 2:00 PM"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Check-out date &amp; time</label><input class="fld" placeholder="25 Sep 2026, 11:00 AM"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:16px;">
+            <label class="lbl">Note (optional)</label>
+            <textarea placeholder="Late arrival, special request, etc." style="height:72px;border-radius:10px;border:1px solid #E2DAC4;padding:12px 14px;font-size:13.5px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;resize:none;width:100%;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="background:#0E1B3D;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#FBF3DE;">Booking summary</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9;"><span>6-Bed Mixed Dorm · Lower B1</span><span>₹700 / night</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9;"><span>Nights</span><span>3</span></div>
+          <div style="height:1px;background:#22305A;"></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9;"><span>Subtotal</span><span>₹2,100</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9;"><span>Taxes &amp; fees</span><span>₹0</span></div>
+          <div style="height:1px;background:#22305A;"></div>
+          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;color:#FBF3DE;"><span>Total due</span><span>₹2,100</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            <label class="lbl" style="color:#AEB6C9;">Payment method</label>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;text-align:center;padding:10px 0;border-radius:9px;background:#1C9A6C;color:#FFFFFF;font-size:12.5px;font-weight:700;">UPI</div>
+              <div style="flex:1;text-align:center;padding:10px 0;border-radius:9px;background:#16233F;color:#AEB6C9;font-size:12.5px;font-weight:700;">Cash</div>
+              <div style="flex:1;text-align:center;padding:10px 0;border-radius:9px;background:#16233F;color:#AEB6C9;font-size:12.5px;font-weight:700;">Card</div>
+            </div>
+          </div>
+        </div>
+
+        <a href="dashboard.html" style="height:50px;border-radius:10px;background:#1C9A6C;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">Confirm booking &amp; check in</a>
+        <div style="height:44px;border-radius:10px;border:1px solid #E2DAC4;color:#6B7280;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13.5px;">Save as pending</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
