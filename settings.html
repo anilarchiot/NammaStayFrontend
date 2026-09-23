@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · NammaStay</title>
+<meta name="description" content="NammaStay: bookings, beds, check-ins and payments for hostels, hotels and homestays.">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  table{border-collapse:collapse;width:100%;}
+  .fld{height:44px;border-radius:10px;border:1px solid #E2DAC4;padding:0 14px;font-size:13px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;width:100%;}
+  .lbl{font-size:12px;font-weight:700;color:#101A3D;}
+</style>
+</head>
+<body class="ns-app page-settings">
+<div class="ns-shell">
+
+  <aside class="ns-sidebar" id="ns-sidebar">
+    <a href="dashboard.html" class="ns-brand">
+      <img src="assets/img/logo.png" alt="" width="34" height="34">
+      <span>Namma<span>Stay</span></span>
+    </a>
+    <nav class="ns-nav" aria-label="Main">
+        <a href="dashboard.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg><span>Dashboard</span></a>
+        <a href="bookings.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>Bookings</span></a>
+        <a href="calendar.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18"></path><path d="M8 2v4"></path><path d="M16 2v4"></path></svg><span>Calendar</span></a>
+        <a href="guest-profile.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M2.5 20c0-3.6 2.9-6.4 6.5-6.4s6.5 2.8 6.5 6.4"></path><circle cx="18" cy="9" r="2.3"></circle><path d="M15.8 13.8c2.3.5 4.2 2.5 4.2 5.4"></path></svg><span>Guests</span></a>
+        <a href="check-in.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg><span>Check-in</span></a>
+        <a href="rooms.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16V9a2 2 0 012-2h3a2 2 0 012 2v1"></path><path d="M9 16V9a2 2 0 012-2h9v9"></path><path d="M2 16h20v4"></path><path d="M2 20v-4"></path><path d="M22 20v-4"></path></svg><span>Rooms &amp; Beds</span></a>
+        <a href="payments.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"></rect><path d="M2 10h20"></path><path d="M6 15h4"></path></svg><span>Payments</span></a>
+        <a href="reports.html" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10"></path><path d="M12 19V5"></path><path d="M20 19v-7"></path></svg><span>Reports</span></a>
+    </nav>
+    <div class="ns-sidebar-foot">
+      <a href="settings.html" class="ns-nav-link is-active" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"></path></svg><span>Settings</span></a>
+      <div class="ns-user">
+        <div class="ns-avatar">SB</div>
+        <div><div class="ns-user-name">Owner</div><div class="ns-user-sub">Social Backpackers</div></div>
+      </div>
+      <a href="index.html" class="ns-nav-link ns-signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg><span>Sign out</span></a>
+    </div>
+  </aside>
+  <div class="ns-scrim" data-nav-close></div>
+
+  <main class="ns-main">
+    <header class="ns-mobilebar">
+      <button type="button" class="ns-menu-btn" data-nav-open aria-label="Open menu" aria-controls="ns-sidebar" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <a href="dashboard.html" class="ns-mobile-brand"><img src="assets/img/logo.png" alt="" width="28" height="28"><span>Namma<span>Stay</span></span></a>
+    </header>
+
+    <div style="height:76px;flex-shrink:0;display:flex;align-items:center;padding:0 32px;border-bottom:1px solid #E7DFC7;">
+      <div style="font-family:'Sora',sans-serif;font-size:21px;font-weight:700;">Settings</div>
+    </div>
+
+    <div style="height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 32px;border-bottom:1px solid #E7DFC7;">
+      <div style="padding:10px 16px;font-size:13px;font-weight:600;color:#6B7280;">Property details</div>
+      <div style="padding:10px 16px;font-size:13px;font-weight:700;color:#101A3D;border-bottom:2px solid #1C9A6C;">Users &amp; roles</div>
+      <div style="padding:10px 16px;font-size:13px;font-weight:600;color:#6B7280;">Room types &amp; pricing</div>
+      <div style="padding:10px 16px;font-size:13px;font-weight:600;color:#6B7280;">Notifications</div>
+    </div>
+
+    <div class="ns-content" style="padding:24px 32px;display:grid;grid-template-columns:1fr 340px;gap:20px;">
+
+      <div style="background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="padding:18px 22px;border-bottom:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;">Team members</div>
+            <div style="font-size:12px;color:#6B7280;">5 people have access to Social Backpackers Hostel</div>
+          </div>
+          <div style="height:38px;padding:0 16px;border-radius:9px;background:#1C9A6C;color:#FFFFFF;display:flex;align-items:center;font-size:12.5px;font-weight:700;">+ Invite member</div>
+        </div>
+        <table>
+          <thead>
+            <tr style="background:#FBF9F1;">
+              <th style="text-align:left;padding:12px 22px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;">Name</th>
+              <th style="text-align:left;padding:12px 12px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;">Role</th>
+              <th style="text-align:left;padding:12px 12px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;">Access</th>
+              <th style="text-align:left;padding:12px 12px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;">Last active</th>
+              <th style="padding:12px 22px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid #F3EFE1;">
+              <td style="padding:14px 22px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#1C9A6C;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">SB</div><div><div style="font-size:13px;font-weight:700;">You</div><div style="font-size:11px;color:#6B7280;">owner@socialbackpacker.com</div></div></div></td>
+              <td style="padding:14px 12px;"><span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#101A3D;color:#fff;font-weight:700;">Owner</span></td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Full access</td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Now</td>
+              <td style="padding:14px 22px;"></td>
+            </tr>
+            <tr style="border-top:1px solid #F3EFE1;">
+              <td style="padding:14px 22px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">DM</div><div><div style="font-size:13px;font-weight:700;">Divya Menon</div><div style="font-size:11px;color:#6B7280;">divya@socialbackpacker.com</div></div></div></td>
+              <td style="padding:14px 12px;"><span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#E9F5EE;color:#157A56;font-weight:700;">Manager</span></td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Bookings, payments, reports</td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">2 hours ago</td>
+              <td style="padding:14px 22px;font-size:12px;color:#6B7280;font-weight:700;">Edit</td>
+            </tr>
+            <tr style="border-top:1px solid #F3EFE1;">
+              <td style="padding:14px 22px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">KJ</div><div><div style="font-size:13px;font-weight:700;">Karthik J.</div><div style="font-size:11px;color:#6B7280;">karthik@socialbackpacker.com</div></div></div></td>
+              <td style="padding:14px 12px;"><span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#EAF1FB;color:#2D5FA6;font-weight:700;">Front desk</span></td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Check-in/out, guest profiles</td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Yesterday</td>
+              <td style="padding:14px 22px;font-size:12px;color:#6B7280;font-weight:700;">Edit</td>
+            </tr>
+            <tr style="border-top:1px solid #F3EFE1;">
+              <td style="padding:14px 22px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">AR</div><div><div style="font-size:13px;font-weight:700;">Anitha R.</div><div style="font-size:11px;color:#6B7280;">anitha@socialbackpacker.com</div></div></div></td>
+              <td style="padding:14px 12px;"><span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#EAF1FB;color:#2D5FA6;font-weight:700;">Front desk</span></td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Check-in/out, guest profiles</td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">3 days ago</td>
+              <td style="padding:14px 22px;font-size:12px;color:#6B7280;font-weight:700;">Edit</td>
+            </tr>
+            <tr style="border-top:1px solid #F3EFE1;">
+              <td style="padding:14px 22px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">VP</div><div><div style="font-size:13px;font-weight:700;">Vikram P.</div><div style="font-size:11px;color:#6B7280;">Pending invite</div></div></div></td>
+              <td style="padding:14px 12px;"><span style="font-size:11px;padding:4px 9px;border-radius:20px;background:#FCF0DC;color:#966016;font-weight:700;">Accountant</span></td>
+              <td style="padding:14px 12px;font-size:12px;color:#6B7280;">Payments, reports only</td>
+              <td style="padding:14px 12px;font-size:12px;color:#9AA3B5;">Invited 2 days ago</td>
+              <td style="padding:14px 22px;font-size:12px;color:#6B7280;font-weight:700;">Resend</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="background:#FFFFFF;border:1px solid #E7DFC7;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;">Property</div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Property name</label><input class="fld" value="Social Backpackers Hostel"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Type</label>
+            <div class="fld" style="display:flex;align-items:center;justify-content:space-between;">Hostel <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Timezone</label><input class="fld" value="Asia/Kolkata (GMT+5:30)"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;"><label class="lbl">Default check-in / out</label><input class="fld" value="2:00 PM / 11:00 AM"></div>
+        </div>
+
+        <div style="background:#0E1B3D;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px;">
+          <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#FBF3DE;">Role permissions</div>
+          <div style="font-size:11.5px;color:#AEB6C9;line-height:1.7;">
+            <b style="color:#FBF3DE;">Owner</b> — everything, incl. billing &amp; team<br>
+            <b style="color:#FBF3DE;">Manager</b> — bookings, rooms, payments, reports<br>
+            <b style="color:#FBF3DE;">Front desk</b> — check-in/out, guest profiles<br>
+            <b style="color:#FBF3DE;">Accountant</b> — payments &amp; reports, read-only elsewhere
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
