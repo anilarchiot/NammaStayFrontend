@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guest check-in · NammaStay</title>
 <meta name="description" content="NammaStay: bookings, beds, check-ins and payments for hostels, hotels and homestays.">
@@ -12,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<script src="assets/js/config.js"></script>
 <style>
   input::placeholder,select{color:#101A3D}
   .fld{height:46px;border-radius:10px;border:1px solid #E2DAC4;padding:0 14px;font-size:13.5px;font-family:'Manrope',sans-serif;background:#FFFDF6;box-sizing:border-box;outline:none;width:100%;}
@@ -42,7 +45,7 @@
         <div class="ns-avatar">SB</div>
         <div><div class="ns-user-name">Owner</div><div class="ns-user-sub">Social Backpackers</div></div>
       </div>
-      <a href="index.html" class="ns-nav-link ns-signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg><span>Sign out</span></a>
+      <a href="login.html" class="ns-nav-link ns-signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg><span>Sign out</span></a>
     </div>
   </aside>
   <div class="ns-scrim" data-nav-close></div>
@@ -135,5 +138,6 @@
 </div>
 
 <script src="assets/js/app.js" defer></script>
+<script type="module" src="assets/js/pages/check-in.js"></script>
 </body>
 </html>
