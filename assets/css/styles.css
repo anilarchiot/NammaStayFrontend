@@ -120,9 +120,11 @@ tr[data-href]:hover{background:#FBF9F1}
   .ns-ghost-sidebar{display:none}
 }
 
-@media (max-width:560px){
+@media (max-width:700px){
   [style*="grid-column:1/3"]{grid-column:1/-1 !important}
-  .ns-content [style*="grid-template-columns:1fr 1fr"],
+  .ns-content [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+}
+@media (max-width:560px){
   .ns-content [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr !important}
   .ns-content [style*="grid-template-columns:repeat(4"],
   .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
@@ -132,3 +134,186 @@ tr[data-href]:hover{background:#FBF9F1}
 @media (prefers-reduced-motion:reduce){
   *{transition:none !important;animation:none !important}
 }
+
+/* =====================================================================
+   Live mode (connected to Supabase): shared components used by the
+   page scripts in assets/js/pages/. Values match the design tokens.
+   ===================================================================== */
+.ns-booting .ns-content,
+.ns-booting .ns-dialog > *,
+.ns-booting .ns-phone-body{visibility:hidden}
+.ns-booting .ns-main::after{
+  content:"";position:fixed;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;
+  border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:ns-spin .8s linear infinite;
+}
+@keyframes ns-spin{to{transform:rotate(360deg)}}
+
+.ns-card{background:#FFFFFF;border:1px solid var(--line);border-radius:16px;padding:20px}
+.ns-card-dark{background:var(--navy);border-radius:16px;padding:20px;color:var(--cream)}
+.ns-h3{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;margin:0}
+.ns-muted{font-size:12px;color:var(--muted)}
+.ns-stat{background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px}
+.ns-stat-label{font-size:12px;color:var(--muted);font-weight:600}
+.ns-stat-value{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;margin-top:6px}
+.ns-stat-sub{font-size:11px;color:var(--muted);font-weight:700;margin-top:4px}
+.ns-stat.is-dark{background:var(--navy);border-color:var(--navy)}
+.ns-stat.is-dark .ns-stat-label{color:var(--nav-text)}
+.ns-stat.is-dark .ns-stat-value{color:var(--cream)}
+
+.ns-btn,.ns-btn-ghost,.ns-btn-danger{
+  height:40px;padding:0 16px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font:700 13px 'Manrope',system-ui,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none;
+}
+.ns-btn{background:var(--green);color:#FFFFFF;border:1px solid var(--green)}
+.ns-btn:hover{background:#178A60}
+.ns-btn-ghost{background:#FFFFFF;color:var(--ink);border:1px solid #E2DAC4}
+.ns-btn-ghost:hover{background:#FBF9F1}
+.ns-btn-danger{background:#FFFFFF;color:#B23A3A;border:1px solid #F0C9C9}
+.ns-btn[disabled],.ns-btn-ghost[disabled],.ns-btn-danger[disabled]{opacity:.55;cursor:not-allowed}
+.ns-btn-lg{height:50px;font-size:15px;border-radius:10px;width:100%}
+
+.ns-field{display:flex;flex-direction:column;gap:6px}
+.ns-field > label{font-size:12px;font-weight:700;color:var(--ink)}
+.ns-input{
+  height:44px;border-radius:10px;border:1px solid #E2DAC4;padding:0 14px;font:500 13.5px 'Manrope',system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);width:100%;
+}
+textarea.ns-input{height:auto;min-height:72px;padding:12px 14px;resize:vertical}
+.ns-input:focus{border-color:var(--green);outline:none;box-shadow:0 0 0 3px rgba(28,154,108,.15)}
+.ns-input[aria-invalid="true"]{border-color:#B23A3A}
+.ns-help{font-size:11.5px;color:var(--muted)}
+.ns-error{font-size:12.5px;color:#B23A3A;font-weight:600}
+
+.ns-pill{display:inline-block;font-size:11px;padding:4px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.ns-pill.green{background:#E9F5EE;color:#157A56}
+.ns-pill.amber{background:#FCF0DC;color:#966016}
+.ns-pill.red{background:#FCE9E9;color:#B23A3A}
+.ns-pill.navy{background:#101A3D;color:#FFFFFF}
+.ns-pill.grey{background:#F3EFE1;color:#6B7280}
+.ns-pill.blue{background:#EAF1FB;color:#2D5FA6}
+.ns-pill.purple{background:#F0E5F7;color:#7B3FA0}
+
+.ns-chip{padding:8px 16px;border-radius:20px;background:#FFFFFF;border:1px solid var(--line);color:var(--muted);
+  font:600 12.5px 'Manrope',system-ui,sans-serif;cursor:pointer}
+.ns-chip.is-on{background:#101A3D;border-color:#101A3D;color:#FFFFFF;font-weight:700}
+
+.ns-avatar-sm{width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--ink);flex-shrink:0}
+
+.ns-table{width:100%;border-collapse:collapse}
+.ns-table th{text-align:left;padding:12px;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.03em;background:#FBF9F1;white-space:nowrap}
+.ns-table td{padding:13px 12px;font-size:12.5px;border-top:1px solid #F3EFE1;vertical-align:middle}
+.ns-table th:first-child,.ns-table td:first-child{padding-left:20px}
+.ns-table th:last-child,.ns-table td:last-child{padding-right:20px}
+.ns-table tr[data-href]:hover td{background:#FBF9F1}
+.ns-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+
+.ns-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #F3EFE1}
+.ns-list-row:last-child{border-bottom:0}
+
+.ns-search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:9px;background:var(--paper);border:1px solid var(--line)}
+.ns-search input{border:0;background:transparent;outline:none;font:500 13px 'Manrope',system-ui,sans-serif;color:var(--ink);width:220px;max-width:50vw}
+
+/* dialogs & toasts */
+.ns-overlay{position:fixed;inset:0;background:rgba(14,27,61,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:12px}
+.ns-modal{background:#FFFFFF;border-radius:20px;box-shadow:0 24px 60px rgba(14,27,61,.35);width:480px;max-width:100%;
+  max-height:calc(100vh - 24px);display:flex;flex-direction:column;overflow:hidden}
+.ns-modal-head{padding:20px 24px;border-bottom:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ns-modal-body{padding:20px 24px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.ns-modal-foot{padding:16px 24px;border-top:1px solid #F0EBDB;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.ns-x{width:32px;height:32px;border-radius:8px;background:#F5F1E3;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ns-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#FFFFFF;
+  padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;box-shadow:0 10px 30px rgba(14,27,61,.3);max-width:calc(100vw - 32px)}
+.ns-toast.is-error{background:#B23A3A}
+
+/* notification bell */
+.ns-bell{position:relative;width:36px;height:36px;border-radius:9px;border:0;background:transparent;color:var(--nav-text);
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ns-bell:hover{background:#18264D;color:#FFFFFF}
+.ns-bell-count{position:absolute;top:2px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#E2A03F;
+  color:var(--navy);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.ns-sidebar .ns-bell{position:absolute;top:30px;right:14px}
+.ns-mobilebar .ns-bell{margin-left:auto;color:var(--cream)}
+
+.ns-seg{display:flex;gap:8px}
+.ns-seg button{flex:1;text-align:center;padding:10px 0;border-radius:8px;border:1px solid #2A3963;background:transparent;color:var(--nav-text);
+  font:700 12.5px 'Manrope',system-ui,sans-serif;cursor:pointer}
+.ns-seg button.is-on{background:var(--green);border-color:var(--green);color:#FFFFFF}
+.ns-seg.light button{border-color:#E2DAC4;color:var(--muted);background:#FFFFFF}
+.ns-seg.light button.is-on{background:var(--green);border-color:var(--green);color:#FFFFFF}
+
+.ns-bars{display:flex;align-items:flex-end;gap:14px;height:170px;padding:0 4px}
+.ns-bars > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%}
+.ns-bars .bar-fill{width:100%;background:#EEF2E9;border-radius:8px 8px 0 0;min-height:2px}
+.ns-bars .is-today .bar-fill{background:var(--green)}
+.ns-meter{height:6px;border-radius:4px;background:#22305A;overflow:hidden}
+.ns-meter > span{display:block;height:100%;background:var(--green)}
+
+@media (max-width:900px){
+  .ns-search input{width:140px}
+  .ns-modal-foot .ns-btn,.ns-modal-foot .ns-btn-ghost{flex:1}
+}
+.ns-booting .ns-phone > :not(:first-child){visibility:hidden}
+.ns-demo-badge{margin:0 4px 12px;padding:10px 12px;border-radius:10px;background:#18264D;color:#AEB6C9;font-size:11.5px;line-height:1.5}
+.ns-demo-badge b{color:#E2A03F}
+.ns-demo-badge button{background:none;border:0;padding:0;color:#FBF3DE;font:700 11.5px 'Manrope',system-ui,sans-serif;text-decoration:underline;cursor:pointer}
+.ns-demo-hint{padding:10px 12px;border-radius:10px;background:#FCF0DC;color:#966016;font-size:12.5px;line-height:1.5;margin-bottom:4px}
+
+/* ---------- Layout fixes: nothing overlaps or gets clipped at any width ---------- */
+[hidden]{display:none !important}                 /* hidden fields must stay hidden even with display:flex */
+.ns-table td{white-space:nowrap}                    /* dates & amounts stay on one line; tables scroll sideways */
+.ns-input{min-width:0;text-overflow:ellipsis}
+.ns-field{min-width:0}
+.ns-content [style*="display:grid"] > *{min-width:0}
+
+@media (max-width:1180px){
+  .ns-content [style*="grid-template-columns:1.4fr 1fr"],
+  .ns-content [style*="grid-template-columns:1.6fr 1fr"],
+  .ns-content [style*="grid-template-columns:1fr 1.2fr"]{grid-template-columns:1fr !important}
+}
+@media (max-width:700px){
+  .ns-modal [style*="grid-template-columns:1fr 1fr"],
+  .ns-modal [style*="grid-template-columns:1fr 1fr 1fr"],
+  .ns-dialog [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  .ns-modal [style*="grid-template-columns:1fr 110px 100px"]{grid-template-columns:1fr 96px !important}
+  .ns-modal [style*="grid-template-columns:1fr 110px 100px"] > label{grid-column:1/-1}
+  .ns-guestbox{flex-wrap:wrap}
+  .ns-guestbox-actions{flex-direction:row !important;width:100%;justify-content:space-between;align-items:center !important}
+  .ns-dialog-foot,.ns-dialog-foot > div{width:100%}
+  .ns-dialog-foot .ns-btn,.ns-dialog-foot .ns-btn-ghost,.ns-dialog-foot .ns-btn-danger{flex:1 1 auto}
+  .ns-modal-body{padding:16px 18px}
+  .ns-modal-head,.ns-modal-foot{padding-left:18px;padding-right:18px}
+}
+.ns-dialog > *:first-child,.ns-dialog-foot,.ns-modal-head,.ns-modal-foot{flex-shrink:0}
+.ns-modal-body{flex:1 1 auto;min-height:0}
+
+/* ---------- Page header: title, search and buttons never collide ---------- */
+.ns-main > [style*="height:76px"]{height:auto !important;min-height:76px;flex-wrap:wrap;gap:12px 20px;padding-top:14px !important;padding-bottom:14px !important}
+.ns-main > [style*="height:76px"] > div:first-child{flex:1 1 240px;min-width:0}
+.ns-main > [style*="height:76px"] > div:last-child{flex:0 1 auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;min-width:0;max-width:100%}
+.ns-main > [style*="height:76px"] > div:last-child > a,
+.ns-main > [style*="height:76px"] > div:last-child > button,
+.ns-main > [style*="height:76px"] > div:last-child > select{flex-shrink:0;white-space:nowrap}
+.ns-search{flex:1 1 200px;min-width:0}
+.ns-search input{width:100% !important;min-width:0;max-width:none}
+@media (max-width:700px){
+  .ns-main > [style*="height:76px"] > div:last-child{flex:1 1 100%;justify-content:flex-start}
+  .ns-main > [style*="height:76px"] > div:last-child > .ns-search{flex:1 1 160px}
+}
+
+/* ---------- Date & time fields: stay inside their box on every browser (incl. iPhone Safari) ---------- */
+input[type="date"],input[type="time"],input[type="datetime-local"]{
+  -webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;box-sizing:border-box;
+  line-height:normal;padding-right:10px
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value{text-align:left;margin:0}
+input[type="datetime-local"]::-webkit-datetime-edit{padding:0;overflow:hidden}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;cursor:pointer}
+@media (max-width:1100px){
+  .ns-content [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+}
+.ns-stat-value{overflow-wrap:anywhere}
