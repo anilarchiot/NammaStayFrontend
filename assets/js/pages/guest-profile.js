@@ -1,4 +1,4 @@
-import { page, rpc, q, sb, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
+import { deleteBookingDialog, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
   toast, openIdDoc, param, uuidOk, $ } from '../core.js';
 
 page('guests', async (ctx) => {
@@ -15,6 +15,7 @@ page('guests', async (ctx) => {
   head.innerHTML = `${wa ? `<a class="ns-btn-ghost" href="${esc(wa)}" target="_blank" rel="noopener">Message guest</a>` : ''}
     <a class="ns-btn" href="check-in.html?guest=${esc(g.id)}">+ New booking</a>`;
 
+  const canDelete = ctx.can('owner', 'manager', 'front_desk');
   const row = (l, v) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0"><span class="ns-muted" style="font-size:12.5px">${l}</span><b style="font-weight:700;text-align:right">${v}</b></div>`;
   content(`
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -40,10 +41,13 @@ page('guests', async (ctx) => {
     </div>
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
       <div class="ns-card" style="padding:0;overflow:hidden"><div style="padding:18px 20px" class="ns-h3">Stay history</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>Bed</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th></tr></thead>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>Bed</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th>${canDelete ? '<th class="ns-sticky-end"><span class="sr-only">Delete</span></th>' : ''}</tr></thead>
         <tbody>${d.stays.map((s) => `<tr data-href="booking-detail.html?id=${esc(s.id)}" tabindex="0" style="cursor:pointer"><td style="font-weight:700">${esc(s.code)}</td>
-          <td>${esc(s.room)} · ${esc(s.bed)}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
-          <td style="font-weight:700">${rupees(s.paid_paise)}</td><td>${statusPill(s.status)}</td></tr>`).join('') || '<tr><td colspan="6" class="ns-empty">No stays yet.</td></tr>'}</tbody></table></div></div>
+          <td style="white-space:normal;min-width:130px">${esc(s.room)} · ${esc(s.bed)}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
+          <td style="font-weight:700">${rupees(s.paid_paise)}</td><td>${statusPill(s.status)}</td>
+          ${canDelete ? `<td class="ns-sticky-end" style="width:44px;text-align:right"><button type="button" class="ns-icon-del" data-del="${esc(s.id)}"
+            aria-label="Delete ${esc(s.code)} (${esc(fmtDate(s.check_in_at))} – ${esc(fmtDate(s.check_out_at))})" title="Delete this stay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></td>` : ''}</tr>`).join('')
+          || `<tr><td colspan="${canDelete ? 7 : 6}" class="ns-empty">No stays yet.</td></tr>`}</tbody></table></div></div>
       ${d.current ? `<div class="ns-card-dark" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
           <div><div style="font-weight:700">Currently checked in</div><div style="font-size:12px;color:#AEB6C9">${esc(d.current.room)} · ${esc(d.current.bed)} · until ${fmtDate(d.current.check_out_at)}</div></div>
           <a class="ns-btn" href="booking-detail.html?id=${esc(d.current.id)}">View active booking</a></div>` : ''}
@@ -54,7 +58,17 @@ page('guests', async (ctx) => {
     try { await q(sb.from('guests').update({ notes: $('#notes').value.trim() || null }).eq('id', g.id)); toast('Notes saved.'); }
     catch (e) { toast(e.message, { error: true }); }
   };
-  document.querySelector('.ns-content').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href; });
+  document.querySelector('.ns-content').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      e.stopPropagation();
+      const st = d.stays.find((x) => x.id === del.dataset.del);
+      deleteBookingDialog({ ctx, id: st.id, guest: g.full_name, room: st.room, bed: st.bed, checkIn: st.check_in_at, checkOut: st.check_out_at,
+        status: st.status, paidPaise: st.paid_paise, onDone: () => setTimeout(() => location.reload(), 500) });
+      return;
+    }
+    const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href;
+  });
 });
 
 async function guestList(ctx) {

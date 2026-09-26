@@ -7,6 +7,11 @@ page('checkin', async (ctx) => {
   const guestId = uuidOk(param('guest')) ? param('guest') : null;
   const existing = guestId ? await q(sb.from('guests').select('id, full_name, phone, email, nationality').eq('id', guestId).single()) : null;
   const today = ymd();
+  // Opened from the calendar: ?bed=…&in=YYYY-MM-DD&out=YYYY-MM-DD
+  const dayOk = (x) => /^\d{4}-\d{2}-\d{2}$/.test(x || '');
+  const preIn = dayOk(param('in')) ? param('in') : today;
+  const preOut = dayOk(param('out')) && param('out') > preIn ? param('out') : addDays(preIn, 1);
+  const preBed = uuidOk(param('bed')) ? param('bed') : null;
   const state = { beds: [], bed: null, method: 'upi', guest: existing };
 
   const L = (s) => `<div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9">${s}</div>`;
@@ -36,8 +41,8 @@ page('checkin', async (ctx) => {
       <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
         <div class="ns-h3">Stay details</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          ${field('Check-in date & time *', `<input class="ns-input" name="check_in_at" type="datetime-local" value="${today}T14:00">`)}
-          ${field('Check-out date & time *', `<input class="ns-input" name="check_out_at" type="datetime-local" value="${addDays(today, 1)}T11:00">`)}
+          ${field('Check-in date & time *', `<input class="ns-input" name="check_in_at" type="datetime-local" value="${preIn}T14:00">`)}
+          ${field('Check-out date & time *', `<input class="ns-input" name="check_out_at" type="datetime-local" value="${preOut}T11:00">`)}
           ${field('Bed *', '<select class="ns-input" name="bed_id"><option value="">Loading free beds…</option></select>')}
           ${field('Booked via', `<select class="ns-input" name="source">${options(SOURCES, 'walk_in')}</select>`)}
         </div>
@@ -88,7 +93,7 @@ page('checkin', async (ctx) => {
     if (!inAt || !outAt || new Date(outAt) <= new Date(inAt)) {
       sel.innerHTML = '<option value="">Check-out must be after check-in</option>'; summary(); return;
     }
-    const keep = sel.value;
+    const keep = sel.value || preBed;
     state.beds = await rpc('available_beds', { p_property: ctx.property_id, p_in: inAt, p_out: outAt });
     sel.innerHTML = state.beds.length
       ? '<option value="">Choose a bed…</option>' + state.beds.map((x) =>
@@ -158,7 +163,7 @@ page('checkin', async (ctx) => {
         payment: paid > 0 ? { amount_paise: paid, method: state.method, reference: f('reference').value || null } : null,
       } });
       toast(`${res.code} saved.`);
-      location.href = `booking-detail.html?id=${res.id}`;
+      location.href = `booking-detail.html?id=${res.id}&new=1`;
     } catch (e) {
       fail(e.message); btn.disabled = false;
       if (/already booked/.test(e.message)) loadBeds();

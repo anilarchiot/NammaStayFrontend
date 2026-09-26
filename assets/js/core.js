@@ -73,6 +73,7 @@ function friendly(error) {
   const m = error?.message || String(error || '');
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No connection. Check your internet and try again.';
   if (/JWT|session|refresh token/i.test(m)) return 'Your session expired. Please sign in again.';
+  if (/subscription has ended/i.test(m)) return m;
   return m || 'Something went wrong. Please try again.';
 }
 export async function rpc(fn, args = {}) {
@@ -139,8 +140,9 @@ async function boot(key) {
   }
   const mems = await rpc('my_memberships');
   if (!mems?.length) {
-    showFatal('Your login isn’t linked to a property yet. Ask the owner to add you in Settings → Users & roles.', { signIn: true });
-    await sb.auth.signOut();
+    // New owner who signed up but hasn't created a property yet → finish setup.
+    // (Invited staff get linked by the owner in Settings → Users & roles.)
+    location.replace('signup.html?step=property');
     throw new Stop();
   }
   const saved = localStorage.getItem('ns.property');
@@ -159,6 +161,8 @@ async function boot(key) {
     showFatal('Your role doesn’t have access to this page.');
     throw new Stop();
   }
+  ctx.access = await rpc('property_access', { p_property: ctx.property_id }).catch(() => null);
+  accessBanner(ctx);
   rpc('touch_presence', { p_property: ctx.property_id }).catch(() => {});
   sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.replace('login.html'); });
   startNotifications(ctx);
@@ -194,6 +198,25 @@ function applyChrome(ctx) {
   }
 }
 
+// Trial / expiry banner at the top of every screen
+function accessBanner(ctx) {
+  const a = ctx.access;
+  const main = $('.ns-main') || $('.ns-dialog');
+  if (!a || !main || ['complimentary', 'active'].includes(a.state) && !(a.state === 'active' && a.days_left <= 5)) return;
+  const canPay = ctx.can('owner');
+  const link = canPay ? ' <a href="settings.html?tab=billing">Choose a plan →</a>' : ' Ask the owner to renew.';
+  let cls = 'info'; let text;
+  if (a.pending_payment) { text = 'Payment received — waiting for confirmation from NammaStay.'; }
+  else if (a.state === 'trial') { text = `Free trial: <b>${a.days_left} day${a.days_left === 1 ? '' : 's'} left</b>.` + link; cls = a.days_left <= 3 ? 'warn' : 'info'; }
+  else if (a.state === 'active') { text = `Your plan renews in <b>${a.days_left} day${a.days_left === 1 ? '' : 's'}</b>.` + (canPay ? ' <a href="settings.html?tab=billing">Pay now →</a>' : ''); cls = 'warn'; }
+  else if (a.state === 'grace') { text = '<b>Your subscription has ended.</b> New bookings stop in a few days.' + link; cls = 'warn'; }
+  else { text = '<b>Subscription ended — new bookings are paused.</b> Your data is safe and still visible.' + link; cls = 'danger'; }
+  const el = document.createElement('div');
+  el.className = 'ns-access-banner ' + cls; el.setAttribute('role', 'status'); el.innerHTML = text;
+  const mobilebar = $('.ns-mobilebar');
+  if (mobilebar && mobilebar.parentNode === main) mobilebar.insertAdjacentElement('afterend', el); else main.prepend(el);
+}
+
 function addLeadsLink() {
   const reports = $('.ns-sidebar .ns-nav-link[href="reports.html"]');
   if (!reports || $('.ns-sidebar .ns-nav-link[href="leads.html"]')) return;
@@ -202,6 +225,11 @@ function addLeadsLink() {
   a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path></svg><span>Leads</span>';
   if (/leads\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
   reports.insertAdjacentElement('afterend', a);
+  const b = document.createElement('a');
+  b.href = 'subscribers.html'; b.className = 'ns-nav-link';
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg><span>Subscribers</span>';
+  if (/subscribers\.html$/.test(__PATH())) { b.classList.add('is-active'); b.setAttribute('aria-current', 'page'); }
+  a.insertAdjacentElement('afterend', b);
 }
 const __PATH = () => location.pathname;
 
@@ -393,6 +421,91 @@ export const field = (label, control, help = '') =>
 
 export function options(list, selected) {
   return list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(selected) ? 'selected' : ''}>${esc(l)}</option>`).join('');
+}
+
+// ---------------------------------------------------------------- WhatsApp booking details to the guest
+// Free click-to-chat: opens WhatsApp with the message ready; staff tap Send.
+const fWa = fmt({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+const waDate = (d) => {
+  const p = Object.fromEntries(fWa.formatToParts(new Date(d)).map((x) => [x.type, x.value]));
+  return `${p.weekday}, ${p.day} ${sep(p.month)} ${p.year}, ${fmtTime(d)}`;          // Mon, 26 Oct 2026, 2:00 PM
+};
+export function waNumber(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 10) d = '91' + d;                     // Indian mobile saved without country code
+  return d.length >= 8 ? d : '';
+}
+export function bookingMessage({ booking: b, guest: g, bed, property: p, contact = {} }) {
+  const first = String(g.full_name || '').trim().split(/\s+/)[0] || 'there';
+  const head = b.status === 'checked_in' ? `Welcome to ${p.name}! You’re checked in. 🙌`
+    : b.status === 'pending' ? `We’ve received your booking request at ${p.name}. We’ll confirm it shortly.`
+    : `Your booking at ${p.name} is confirmed. ✅`;
+  const lines = [`Hi ${first}! 🙏`, head, '',
+    `*Booking:* ${b.code}`, `*Name:* ${g.full_name}`, `*Bed:* ${bed.room} · ${bed.label}`,
+    `*Check-in:* ${waDate(b.check_in_at)}`, `*Check-out:* ${waDate(b.check_out_at)}`,
+    `*Nights:* ${b.nights}`,
+    `*Total:* ${rupees(b.total_paise)}${b.paid_paise ? ` · Paid: ${rupees(b.paid_paise)}` : ''}${b.balance_paise > 0 ? ` · *Balance due: ${rupees(b.balance_paise)}*` : ''}`];
+  if (b.self_checkin_token && ['pending', 'confirmed'].includes(b.status) && !b.self_checkin_at) {
+    lines.push('', 'Save time at the desk — check in online:', `${SITE_URL}/self-check-in.html?t=${b.self_checkin_token}`);
+  }
+  const addr = [contact.address, contact.city].filter(Boolean).join(', ');
+  if (addr || contact.phone) lines.push('');
+  if (addr) lines.push(`📍 ${addr}`);
+  if (contact.phone) lines.push(`📞 ${contact.phone}`);
+  lines.push('', b.status === 'checked_in' ? 'Enjoy your stay!' : 'See you soon!');
+  return lines.join('\n');
+}
+/** Show the message (editable) with an "Open WhatsApp" button. */
+export async function sendBookingWhatsApp(bookingId, { justSaved = false } = {}) {
+  const d = await rpc('booking_detail', { p_booking: bookingId });
+  const contact = await sb.from('properties').select('name, address, city, phone').eq('id', d.property.id).limit(1)
+    .then((r) => (r.data && r.data[0]) || {}, () => ({}));
+  const text = bookingMessage({ booking: d.booking, guest: d.guest, bed: d.bed, property: d.property, contact });
+  const num = waNumber(d.guest.phone);
+  const link = () => `https://wa.me/${num}?text=${encodeURIComponent(m.el.querySelector('#wa-text').value)}`;
+  const m = modal({
+    title: justSaved ? `Booking ${d.booking.code} saved ✓` : 'Send booking details',
+    width: 520,
+    body: `${justSaved ? '<div style="font-size:14px">Send the booking details to the guest on WhatsApp?</div>' : ''}
+      ${num ? `<div class="ns-muted" style="font-size:13px">To <b>${esc(d.guest.full_name)}</b> · ${esc(d.guest.phone)}</div>`
+        : '<div class="ns-demo-hint">No phone number saved for this guest — WhatsApp will ask you to pick the contact.</div>'}
+      <textarea class="ns-input" id="wa-text" rows="14" style="font-size:13px;line-height:1.5">${esc(text)}</textarea>
+      <div class="ns-help">You can edit the message before sending.</div>`,
+    actions: [{ label: justSaved ? 'Not now' : 'Close' },
+      { label: 'Copy', onClick: async (el) => {
+        const t = el.querySelector('#wa-text').value;
+        try { await navigator.clipboard.writeText(t); toast('Message copied.'); } catch { el.querySelector('#wa-text').select(); toast('Select and copy the message.'); }
+        return false;
+      } },
+      { label: 'Open WhatsApp', kind: 'primary', onClick: () => { window.open(link(), '_blank', 'noopener'); return true; } }],
+  });
+  return m;
+}
+
+// ---------------------------------------------------------------- delete a booking entered by mistake
+// Used from the booking screen and from the calendar. Removes only this stay.
+export function deleteBookingDialog({ ctx, id, guest, room, bed, checkIn, checkOut, status, paidPaise = 0, paymentsCount = null, createdAt = null, onDone }) {
+  const nPay = paymentsCount ?? (paidPaise > 0 ? 1 : 0);
+  if (ctx.role === 'front_desk' && (nPay > 0 || (createdAt && Date.now() - new Date(createdAt) > 24 * 3600e3))) {
+    toast('Front desk can only delete bookings made in the last 24 hours with no payments. Please ask the owner or manager.', { error: true });
+    return;
+  }
+  modal({
+    title: `Delete ${guest}’s stay?`,
+    body: `<p style="margin:0;font-size:14px;line-height:1.6">This removes only this stay — <b>${esc(room)} · ${esc(bed)}</b>,
+        <b>${fmtDayTime(checkIn)} → ${fmtDayTime(checkOut)}</b> — and frees the bed for those dates.
+        ${esc(guest)}’s profile and other bookings are not affected.</p>
+      ${status === 'checked_in' ? '<div class="ns-demo-hint">This guest is <b>checked in right now</b>. Only delete if the booking was entered by mistake — to end a real stay, use <b>Check out</b>.</div>' : ''}
+      ${paidPaise > 0 ? `<div class="ns-error" style="font-weight:600">${rupees(paidPaise)} paid on this booking will be deleted too. If you really received this money, record it on the correct booking.</div>` : ''}
+      ${field('Reason', `<select class="ns-input" name="reason">${options([['Entered by mistake', 'Entered by mistake'], ['Duplicate booking', 'Duplicate booking'],
+        ['Wrong guest', 'Wrong guest'], ['Wrong bed or dates', 'Wrong bed or dates'], ['Test booking', 'Test booking'], ['Other', 'Other']], 'Entered by mistake')}</select>`)}
+      <div class="ns-help">A copy is kept in Settings → Notifications → Deleted bookings.</div>`,
+    actions: [{ label: 'Keep booking' }, { label: 'Delete booking', kind: 'danger', onClick: async (el) => {
+      const r = await rpc('delete_booking', { p_booking: id, p_reason: el.querySelector('[name=reason]').value });
+      toast(`${r.code} deleted — bed is free again.`);
+      onDone?.(r);
+    } }],
+  });
 }
 
 // ---------------------------------------------------------------- pills
