@@ -317,3 +317,38 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;
   .ns-content [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 }
 .ns-stat-value{overflow-wrap:anywhere}
+
+/* ---------- Subscription banner & billing ---------- */
+.ns-access-banner{padding:10px 32px;font-size:13px;font-weight:600;border-bottom:1px solid var(--line)}
+.ns-access-banner a{font-weight:800;text-decoration:underline;margin-left:4px}
+.ns-access-banner.info{background:#EAF1FB;color:#2D5FA6}
+.ns-access-banner.warn{background:#FCF0DC;color:#966016}
+.ns-access-banner.danger{background:#FCE9E9;color:#B23A3A}
+.ns-dialog .ns-access-banner{padding:10px 26px}
+@media (max-width:900px){.ns-access-banner{padding:10px 16px}}
+.ns-plan{border:2px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.ns-plan.is-on{border-color:var(--green);box-shadow:0 0 0 3px rgba(28,154,108,.15)}
+.ns-plan .price{font-family:'Sora',sans-serif;font-size:28px;font-weight:800}
+.ns-plan .price small{font-size:13px;font-weight:600;color:var(--muted)}
+.ns-booting body.page-signup .ns-login-main > div{visibility:hidden}
+@media (max-width:1180px){ .ns-content [style*="grid-template-columns:1fr 1.4fr"]{grid-template-columns:1fr !important} }
+@media (max-width:560px){ .ns-content [style*="grid-template-columns:auto 1fr"]{grid-template-columns:1fr !important;justify-items:center} }
+#submit-pay{white-space:normal;height:auto;min-height:44px;padding:10px 16px}
+@media (max-width:1000px){ .ns-content [style*="grid-template-columns:repeat(3,minmax(0,1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important} }
+@media (max-width:560px){ .ns-content [style*="grid-template-columns:repeat(3,minmax(0,1fr))"]{grid-template-columns:1fr !important} }
+
+/* ---------- Calendar: drag / tap to book ---------- */
+.cal-row{user-select:none;-webkit-user-select:none}
+.cal-cell{height:40px;align-self:center;border-radius:8px}
+.cal-cell.is-today{background:#F3FAF6}
+.cal-cell.is-free{cursor:crosshair}
+.cal-cell.is-free:hover{background:#E4F3EB;box-shadow:inset 0 0 0 1px #BFE3CF}
+.cal-cell.is-sel{background:#CDEBDC !important;box-shadow:inset 0 0 0 2px #1C9A6C}
+.cal-cell.is-bad{background:#F6D5D5 !important;box-shadow:inset 0 0 0 2px #B23A3A}
+.ns-icon-del{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:transparent;color:#B23A3A;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ns-icon-del:hover,.ns-icon-del:focus-visible{background:#FCE9E9;border-color:#F0C9C9}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* keep the delete column visible when a table scrolls sideways */
+.ns-table .ns-sticky-end{position:sticky;right:0;background:#FFFFFF;box-shadow:-8px 0 8px -8px rgba(14,27,61,.18);padding-left:8px !important}
+.ns-table th.ns-sticky-end{background:#FBF9F1}
+.ns-table tr[data-href]:hover td.ns-sticky-end{background:#FBF9F1}

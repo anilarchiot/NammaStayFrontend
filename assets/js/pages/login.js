@@ -12,7 +12,10 @@ async function init() {
   $('label[for="email"]').textContent = 'Email';
   email.type = 'email'; email.autocomplete = 'username'; email.placeholder = 'you@example.com';
   pw.autocomplete = 'current-password';
-  if (setup) setup.parentElement.textContent = 'Need access? Ask your property owner to invite you.';
+  if (setup) {
+    setup.parentElement.innerHTML = 'New property? <a href="signup.html" style="font-weight:700">Start a 15-day free trial</a><br>'
+      + '<span style="font-size:12.5px">Staff: ask your property owner to invite you.</span>';
+  }
   if (DEMO) {
     const hint = document.createElement('div');
     hint.className = 'ns-demo-hint';

@@ -1,5 +1,5 @@
 import {
-  page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
+  sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
   modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, openIdDoc, param, uuidOk,
   SITE_URL, titleCase,
 } from '../core.js';
@@ -45,6 +45,7 @@ page(null, async (ctx) => {
           ${g.id_type ? `<div class="ns-muted" style="font-size:11.5px">${esc(titleCase(g.id_type))}${g.id_number ? ' · ' + esc(g.id_number) : ''}${g.nationality ? ' · ' + esc(g.nationality) : ''}</div>` : ''}</div>
         <div class="ns-guestbox-actions" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
           ${staff ? `<a href="guest-profile.html?id=${esc(g.id)}" style="font-size:12px;font-weight:700">View profile</a>` : ''}
+          ${staff ? '<button type="button" class="ns-btn" id="wa-details" style="height:30px;font-size:12px;background:#25D366;border-color:#25D366">WhatsApp details</button>' : ''}
           ${g.id_doc_path ? '<button type="button" class="ns-btn-ghost" id="view-id" style="height:30px;font-size:12px">View ID photo</button>' : ''}
         </div>
       </div>
@@ -89,6 +90,7 @@ page(null, async (ctx) => {
     <div class="ns-dialog-foot" style="padding:16px 26px;border-top:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${staff && ['pending', 'confirmed'].includes(b.status) ? '<button type="button" class="ns-btn-danger" data-act="cancel">Cancel booking</button>' : ''}
+        ${staff ? '<button type="button" class="ns-btn-danger" id="del-booking" title="Remove a booking entered by mistake">Delete booking</button>' : ''}
         ${staff && ['pending', 'confirmed'].includes(b.status) && new Date(b.check_in_at) < new Date() ? '<button type="button" class="ns-btn-ghost" data-act="no_show">Mark no-show</button>' : ''}
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -101,7 +103,11 @@ page(null, async (ctx) => {
     </div>`;
 
   const val = (n) => dlg.querySelector(`[name="${n}"]`)?.value;
-
+  $('#wa-details')?.addEventListener('click', () => sendBookingWhatsApp(b.id).catch((e) => toast(e.message, { error: true })));
+  if (staff && param('new')) {                                   // just created → offer to send details
+    history.replaceState(null, '', 'booking-detail.html?id=' + b.id);
+    sendBookingWhatsApp(b.id, { justSaved: true }).catch(() => {});
+  }
   $('#view-id')?.addEventListener('click', () => openIdDoc(g.id_doc_path).catch((e) => toast(e.message, { error: true })));
   $('#copy-link')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(selfLink); toast('Link copied.'); } catch { prompt('Copy this link:', selfLink); }
@@ -137,6 +143,11 @@ page(null, async (ctx) => {
     }
   }));
 
+  $('#del-booking')?.addEventListener('click', () => deleteBookingDialog({
+    ctx, id: b.id, guest: g.full_name, room: d.bed.room, bed: d.bed.label, checkIn: b.check_in_at, checkOut: b.check_out_at,
+    status: b.status, paidPaise: b.paid_paise, paymentsCount: d.payments.length, createdAt: b.created_at,
+    onDone: () => setTimeout(() => { location.href = 'bookings.html'; }, 600),
+  }));
   $('#pay')?.addEventListener('click', () => paymentDialog('payment'));
   $('#refund')?.addEventListener('click', () => paymentDialog('refund'));
 

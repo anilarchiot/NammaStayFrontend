@@ -1,4 +1,4 @@
-import { page, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
+import { page, param, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
 
 const STATE = {
   occupied: ['Occupied', '#FCE9E9', '#B23A3A'], reserved: ['Reserved', '#FCF0DC', '#966016'],
@@ -12,6 +12,7 @@ page('rooms', async (ctx) => {
 
   async function draw() {
     const rooms = await rpc('bed_board', { p_property: ctx.property_id });
+    const welcome = param('welcome') && !rooms.length;
     const beds = rooms.flatMap((r) => r.beds);
     setSubtitle(`${ctx.property_name} · ${rooms.length} room types · ${beds.filter((b) => b.is_active).length} beds`);
     const state = (b) => (!b.is_active ? 'off' : b.block ? 'maintenance' : b.booking ? (b.booking.status === 'checked_in' ? 'occupied' : 'reserved') : 'available');
@@ -33,10 +34,17 @@ page('rooms', async (ctx) => {
                   <div style="font-size:12.5px;font-weight:800">${esc(b.label)}</div>
                   <div style="font-size:11px;font-weight:700;color:${fg}">${l}</div>
                   <div style="font-size:11px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${who}</div></${tag}>`; }).join('')}
-            </div></div>`; }).join('') || '<div class="ns-card ns-empty">No rooms yet. Add your first room type.</div>'}
+            </div></div>`; }).join('') || (welcome
+          ? `<div class="ns-card" style="display:flex;flex-direction:column;gap:10px;grid-column:1/-1">
+              <div class="ns-h3" style="font-size:18px">Welcome to NammaStay 👋 Your free trial has started.</div>
+              <div class="ns-muted" style="font-size:14px;line-height:1.6">Step 1: add your first room type — e.g. “6-Bed Mixed Dorm” with 6 beds at ₹700.<br>
+              Step 2: add your UPI ID in Settings. Step 3: create your first booking from Check-in.</div>
+              ${manage ? '<button type="button" class="ns-btn" style="align-self:flex-start" id="first-room">+ Add your first room type</button>' : ''}</div>`
+          : '<div class="ns-card ns-empty">No rooms yet. Add your first room type.</div>')}
       </div>
       <div class="ns-muted">Tap a free bed to block it for maintenance. Tap an occupied bed to open its booking.</div>`);
 
+    document.getElementById('first-room')?.addEventListener('click', () => document.getElementById('add-room').click());
     $$('[data-edit]').forEach((btn) => btn.onclick = () => editRoom(rooms.find((r) => r.id === btn.dataset.edit)));
     $$('[data-bed]').forEach((btn) => btn.onclick = () => blockBed(beds.find((b) => b.id === btn.dataset.bed)));
   }

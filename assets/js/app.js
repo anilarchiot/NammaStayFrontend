@@ -19,7 +19,8 @@
     if (e.key === 'Escape') {
       setNav(false);
       // Esc also closes the booking-detail dialog
-      if (document.body.classList.contains('page-booking-detail')) location.href = 'bookings.html';
+      // (but not when Esc is closing a pop-up on top of it)
+      if (document.body.classList.contains('page-booking-detail') && !document.querySelector('.ns-overlay')) location.href = 'bookings.html';
     }
   });
 
