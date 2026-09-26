@@ -152,6 +152,7 @@ async function boot(key) {
     name: m.display_name || session.user.email,
     can: (...roles) => roles.includes(m.role),
   };
+  ctx.isAdmin = await rpc('is_platform_admin').catch(() => false);   // NammaStay platform admin (leads)
   applyChrome(ctx);
   const allowed = PAGE_ROLES[key];
   if (allowed && !allowed.includes(ctx.role)) {
@@ -175,6 +176,7 @@ function applyChrome(ctx) {
   if (!['owner', 'manager', 'front_desk'].includes(ctx.role)) {
     $$('a[href="check-in.html"]').forEach((a) => { a.style.display = 'none'; });
   }
+  if (ctx.isAdmin) addLeadsLink();
   if (DEMO) demoBadge();
   const out = $('.ns-signout');
   if (out) out.addEventListener('click', async (e) => {
@@ -191,6 +193,17 @@ function applyChrome(ctx) {
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
 }
+
+function addLeadsLink() {
+  const reports = $('.ns-sidebar .ns-nav-link[href="reports.html"]');
+  if (!reports || $('.ns-sidebar .ns-nav-link[href="leads.html"]')) return;
+  const a = document.createElement('a');
+  a.href = 'leads.html'; a.className = 'ns-nav-link';
+  a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path></svg><span>Leads</span>';
+  if (/leads\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+  reports.insertAdjacentElement('afterend', a);
+}
+const __PATH = () => location.pathname;
 
 function demoBadge() {
   const host = $('.ns-sidebar .ns-user') || $('.ns-sidebar');

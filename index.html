@@ -11,6 +11,7 @@
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0E1B3D">
 <link rel="icon" href="assets/img/favicon.png">
+<script src="assets/js/config.js"></script>
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -164,6 +165,29 @@
   footer nav{display:flex;gap:20px;flex-wrap:wrap;font-weight:700}
   footer nav a:hover{color:var(--ink)}
 
+  /* early-access form */
+  .lead-wrap{display:grid;grid-template-columns:1fr 1.2fr;gap:48px;align-items:start}
+  .lead-points{list-style:none;padding:0;margin:26px 0 0;display:flex;flex-direction:column;gap:14px}
+  .lead-points li{display:flex;gap:12px;font-weight:600}
+  .lead-points li::before{content:"";flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat}
+  .lead-form{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 20px 50px rgba(14,27,61,.08);display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .lead-form .full{grid-column:1/-1}
+  .lf{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .lf label{font-size:13px;font-weight:800}
+  .lf label small{font-weight:600;color:var(--muted)}
+  .lf input,.lf select,.lf textarea{height:48px;border-radius:11px;border:1px solid #E2DAC4;background:var(--paper);padding:0 14px;font:500 15px 'Manrope',sans-serif;color:var(--ink);width:100%;min-width:0}
+  .lf textarea{height:auto;min-height:92px;padding:12px 14px;resize:vertical}
+  .lf input:focus,.lf select:focus,.lf textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(28,154,108,.15)}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .form-msg{font-size:14px;font-weight:700;border-radius:10px;padding:12px 14px}
+  .form-msg.err{background:#FCE9E9;color:#B23A3A}
+  .form-done{text-align:center;padding:30px 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .form-done i{width:60px;height:60px;border-radius:50%;background:#E9F5EE;color:var(--green);font:800 30px/60px 'Sora',sans-serif;font-style:normal}
+  .form-done h3{font-size:22px}
+  .form-done p{color:var(--muted)}
+  @media (max-width:1020px){.lead-wrap{grid-template-columns:1fr;gap:28px}}
+  @media (max-width:640px){.lead-form{grid-template-columns:1fr;padding:20px}}
+
   /* reveal on scroll */
   .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
   .reveal.in{opacity:1;transform:none}
@@ -209,6 +233,7 @@
       <a href="#payments">UPI payments</a>
       <a href="#privacy">Privacy</a>
       <a href="#how">How it works</a>
+      <a href="#early-access">Early access</a>
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
@@ -229,7 +254,7 @@
         <div class="hero-ctas">
           <a class="btn btn-primary" href="login.html" data-demo>Try the live demo
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          <a class="btn btn-light" href="#" data-contact>Get early access</a>
+          <a class="btn btn-light" href="#early-access">Get early access</a>
         </div>
         <p class="hero-note">No card needed · Works in any browser · No app to install</p>
       </div>
@@ -413,6 +438,36 @@
     </div>
   </section>
 
+  <!-- EARLY ACCESS -->
+  <section id="early-access" style="padding-top:0" aria-labelledby="ea-h">
+    <div class="wrap lead-wrap">
+      <div>
+        <div class="kicker">Early access</div>
+        <h2 class="h2" id="ea-h">Get NammaStay for your property</h2>
+        <p class="sub">Tell us a little about your place. We’ll set up your rooms, beds and rates with you, and help your team get started.</p>
+        <ul class="lead-points">
+          <li>Personal setup call — we do the data entry with you</li>
+          <li>Your UPI ID connected for direct payments</li>
+          <li>Staff logins for your front desk and accountant</li>
+        </ul>
+      </div>
+      <form class="lead-form" id="lead-form" novalidate>
+        <div class="lf"><label for="lf-name">Your name *</label><input id="lf-name" name="name" autocomplete="name" required maxlength="80"></div>
+        <div class="lf"><label for="lf-phone">Phone / WhatsApp</label><input id="lf-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+91 98400 12233" maxlength="20"></div>
+        <div class="lf full"><label for="lf-email">Email <small>(phone or email needed)</small></label><input id="lf-email" name="email" type="email" autocomplete="email" maxlength="120"></div>
+        <div class="lf"><label for="lf-prop">Property name</label><input id="lf-prop" name="property_name" autocomplete="organization" maxlength="120"></div>
+        <div class="lf"><label for="lf-city">City</label><input id="lf-city" name="city" autocomplete="address-level2" maxlength="80"></div>
+        <div class="lf"><label for="lf-type">Type</label><select id="lf-type" name="property_type"><option value="hostel">Hostel</option><option value="homestay">Homestay</option><option value="hotel">Hotel / guest house</option><option value="other">Other</option></select></div>
+        <div class="lf"><label for="lf-beds">Beds or rooms</label><input id="lf-beds" name="beds" type="number" min="1" max="5000" inputmode="numeric"></div>
+        <div class="lf full"><label for="lf-msg">Anything we should know? <small>(optional)</small></label><textarea id="lf-msg" name="message" maxlength="1000"></textarea></div>
+        <div class="hp" aria-hidden="true"><label for="lf-web">Website</label><input id="lf-web" name="website" tabindex="-1" autocomplete="off"></div>
+        <div class="form-msg err full" id="lf-err" role="alert" hidden></div>
+        <button class="btn btn-primary full" type="submit" id="lf-btn">Request early access</button>
+        <p class="full" style="font-size:12.5px;color:var(--muted);text-align:center">We’ll only use these details to contact you about NammaStay.</p>
+      </form>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section id="faq" style="padding-top:0" aria-labelledby="faq-h">
     <div class="wrap">
@@ -437,7 +492,7 @@
         <p>Try NammaStay with a demo hostel right now, or talk to us about setting it up for your property.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="login.html" data-demo>Try the live demo</a>
-          <a class="btn btn-ghost-dark" href="#" data-contact>Get early access</a>
+          <a class="btn btn-ghost-dark" href="#early-access">Get early access</a>
         </div>
       </div>
     </div>
@@ -452,15 +507,18 @@
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
       <a href="login.html">Staff sign in</a>
-      <a href="#" data-contact>Contact</a>
+      <a href="#early-access">Contact</a>
+      <a href="#" data-contact hidden>WhatsApp</a>
     </nav>
   </div>
 </footer>
 
 <script>
 /* ============ EDIT THESE ============
+ * The early-access form saves to your Supabase database automatically once
+ * assets/js/config.js has your keys. Until then it falls back to:
  * whatsapp: your number with country code, digits only, e.g. '919840012345'
- * email:    where early-access requests should go, e.g. 'hello@thenammastay.in'
+ * email:    e.g. 'hello@thenammastay.in'
  * demoUrl:  the demo link. Keep 'login.html' while the site runs in demo mode.
  *           After you connect Supabase, point this to a separate demo copy.
  */
@@ -472,14 +530,59 @@ var NS_SITE = {
 /* ==================================== */
 (function () {
   var msg = 'Hi! I run a property and would like early access to NammaStay.';
-  var contact = NS_SITE.whatsapp ? 'https://wa.me/' + NS_SITE.whatsapp + '?text=' + encodeURIComponent(msg)
-    : NS_SITE.email ? 'mailto:' + NS_SITE.email + '?subject=' + encodeURIComponent('NammaStay early access') + '&body=' + encodeURIComponent(msg)
-    : '';
+  var wa = NS_SITE.whatsapp ? 'https://wa.me/' + NS_SITE.whatsapp + '?text=' + encodeURIComponent(msg) : '';
   document.querySelectorAll('[data-contact]').forEach(function (a) {
-    a.href = contact;
-    if (NS_SITE.whatsapp) { a.target = '_blank'; a.rel = 'noopener'; a.textContent = a.textContent.replace('Get early access', 'Chat on WhatsApp'); }
-    if (!NS_SITE.whatsapp && !NS_SITE.email) a.hidden = true;   // no contact set yet: show only the demo button
+    if (!wa) { a.hidden = true; return; }
+    a.href = wa; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false;
   });
+
+  /* ---- Early-access form → Supabase submit_lead (see supabase/migrations/006_marketing.sql) ---- */
+  var form = document.getElementById('lead-form');
+  var err = document.getElementById('lf-err');
+  var btn = document.getElementById('lf-btn');
+  var params = new URLSearchParams(location.search);
+  var source = ['utm_source', 'utm_medium', 'utm_campaign'].map(function (k) { return params.get(k) ? k.slice(4) + '=' + params.get(k) : ''; })
+    .filter(Boolean).join(' ') || (document.referrer && document.referrer.indexOf(location.host) < 0 ? 'ref=' + document.referrer : 'direct');
+  function fail(m) { err.textContent = m; err.hidden = false; btn.disabled = false; btn.textContent = 'Request early access'; }
+  function done(title, text) {
+    form.innerHTML = '<div class="form-done full"><i>✓</i><h3></h3><p></p></div>';
+    form.querySelector('h3').textContent = title; form.querySelector('p').textContent = text;
+  }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    err.hidden = true;
+    var d = {};
+    new FormData(form).forEach(function (v, k) { d[k] = String(v).trim(); });
+    d.source = source.slice(0, 300);
+    if (d.name.length < 2) return fail('Please enter your name.');
+    if (!d.phone && !d.email) return fail('Please add a phone number or email so we can reach you.');
+    if (d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return fail('Please check the email address.');
+    if (d.phone && d.phone.replace(/\D/g, '').length < 8) return fail('Please check the phone number.');
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    var cfg = window.NAMMASTAY_CONFIG || {};
+    if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
+      fetch(cfg.supabaseUrl.replace(/\/$/, '') + '/rest/v1/rpc/submit_lead', {
+        method: 'POST',
+        headers: { apikey: cfg.supabaseAnonKey, Authorization: 'Bearer ' + cfg.supabaseAnonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p: d })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.message || 'Something went wrong. Please try again.');
+          done('Thanks, ' + d.name.split(' ')[0] + '!', 'We’ve got your request and will contact you shortly.');
+        });
+      }).catch(function (x) { fail(/fetch|network/i.test(x.message) ? 'No connection. Please check your internet and try again.' : x.message); });
+      return;
+    }
+    // Backend not connected yet: hand the details to WhatsApp or email instead
+    var summary = 'NammaStay early access\nName: ' + d.name + (d.phone ? '\nPhone: ' + d.phone : '') + (d.email ? '\nEmail: ' + d.email : '') +
+      (d.property_name ? '\nProperty: ' + d.property_name : '') + (d.city ? '\nCity: ' + d.city : '') + '\nType: ' + d.property_type +
+      (d.beds ? '\nBeds/rooms: ' + d.beds : '') + (d.message ? '\nNote: ' + d.message : '');
+    if (NS_SITE.whatsapp) { window.open('https://wa.me/' + NS_SITE.whatsapp + '?text=' + encodeURIComponent(summary), '_blank', 'noopener'); done('Almost done!', 'Tap send in WhatsApp and we’ll reply shortly.'); return; }
+    if (NS_SITE.email) { location.href = 'mailto:' + NS_SITE.email + '?subject=' + encodeURIComponent('NammaStay early access') + '&body=' + encodeURIComponent(summary); done('Almost done!', 'Send the email that just opened and we’ll reply shortly.'); return; }
+    done('Thanks, ' + d.name.split(' ')[0] + '!', 'Demo mode: this form isn’t connected yet, so nothing was sent.');
+  });
+
   document.querySelectorAll('[data-demo]').forEach(function (a) { a.href = NS_SITE.demoUrl; });
   document.getElementById('yr').textContent = new Date().getFullYear();
 

@@ -165,6 +165,7 @@ function shift(db) {
   db.payments.forEach((p) => mv(p, ['received_at', 'created_at']));
   db.blocks.forEach((k) => mv(k, ['starts_at', 'ends_at']));
   db.guests.forEach((g) => mv(g, ['created_at', 'updated_at', 'consent_at']));
+  (db.leads || []).forEach((l) => mv(l, ['created_at', 'updated_at', 'contacted_at']));
   db.notifications.forEach((x) => mv(x, ['created_at', 'read_at']));
   db.audit.forEach((a) => mv(a, ['at']));
   db.members.forEach((m) => mv(m, ['last_seen_at']));
@@ -172,11 +173,29 @@ function shift(db) {
   return db;
 }
 
+function seedLeads() {
+  const now = Date.now(); const H = 3600e3;
+  const L = (h, name, phone, email, property_name, city, property_type, beds, message, status, notes, source) =>
+    ({ id: uuid(), name, phone, email, property_name, city, property_type, beds, message, source, status, notes,
+      contacted_at: status === 'new' ? null : new Date(now - (h - 2) * H).toISOString(),
+      created_at: new Date(now - h * H).toISOString(), updated_at: new Date(now - h * H).toISOString() });
+  return [
+    L(3, 'Meera Krishnan', '+919840055512', 'meera@zostelish.in', 'Blue Door Hostel', 'Pondicherry', 'hostel', 24, 'We use a Google Sheet today. Want UPI QR at the desk.', 'new', null, 'source=instagram'),
+    L(9, 'Rahul Varma', '+919895011223', null, 'Varma Homestay', 'Munnar', 'homestay', 5, null, 'new', null, 'direct'),
+    L(20, 'Aisha Khan', null, 'aisha@hilltop.co', 'Hilltop Backpackers', 'Manali', 'hostel', 40, 'Two properties — can staff switch between them?', 'contacted', 'Asked about multi-property. Sent demo link.', 'source=google'),
+    L(44, 'Joseph D’Souza', '+919822012345', 'joseph@goabeach.in', 'Beach Shack Stays', 'Goa', 'hotel', 12, null, 'demo_booked', 'Demo Friday 4 PM on Meet.', 'ref=https://www.google.com/'),
+    L(70, 'Priyanka S.', '+919003312345', 'priyanka@citynest.in', 'City Nest', 'Bengaluru', 'hostel', 18, 'Need Form C details for foreigners.', 'won', 'Signed up. Onboarding next week.', 'source=whatsapp'),
+    L(95, 'Karan Mehta', '+919819912345', null, 'Mehta Guest House', 'Udaipur', 'hotel', 8, null, 'lost', 'Went with an OTA channel manager.', 'direct'),
+    L(130, 'Divya Nair', '+919847099887', 'divya@kovalam.in', 'Lighthouse Homestay', 'Kovalam', 'homestay', 4, 'Just me and my mother running it.', 'contacted', null, 'source=instagram'),
+  ];
+}
+
 let DB;
 function load() {
   if (DB) return DB;
   try { DB = JSON.parse(localStorage.getItem(KEY)); } catch { DB = null; }
   DB = shift(DB && DB.bookings ? DB : seed());
+  if (!DB.leads) DB.leads = seedLeads();
   save();
   return DB;
 }
@@ -550,6 +569,37 @@ const RPC = {
     b.self_checkin_at = new Date().toISOString(); b.self_checkin_count++;
     audit(b, 'self_checkin'); notify('Self check-in submitted', b.code, b.id);
     return { ok: true, code: b.code };
+  },
+  // ---- homepage leads (NammaStay admin) ----
+  is_platform_admin: () => true,
+  submit_lead: ({ p }) => {
+    if (p.website) return { ok: true };
+    if (!p.name || p.name.trim().length < 2) fail('Please enter your name.');
+    if (!p.phone && !p.email) fail('Please enter a phone number or email so we can reach you.');
+    DB.leads.push({ id: uuid(), name: p.name.trim(), phone: cleanPhone(p.phone), email: p.email || null, property_name: p.property_name || null,
+      city: p.city || null, property_type: p.property_type || null, beds: Number(p.beds) || null, message: p.message || null, source: p.source || null,
+      status: 'new', notes: null, contacted_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+    return { ok: true };
+  },
+  lead_counts: () => {
+    const c = { all: DB.leads.length, last_7_days: DB.leads.filter((l) => T(l.created_at) > Date.now() - 7 * DAY).length };
+    DB.leads.forEach((l) => { c[l.status] = (c[l.status] || 0) + 1; });
+    return c;
+  },
+  list_leads: ({ p_status, p_q, p_cursor_at, p_cursor_id, p_limit = 50 }) => {
+    const q = (p_q || '').toLowerCase().trim(); const d = digits(q);
+    return DB.leads.filter((l) => (!p_status || l.status === p_status)
+      && (!q || [l.name, l.email, l.property_name, l.city].some((x) => (x || '').toLowerCase().includes(q)) || (d.length >= 4 && digits(l.phone).includes(d))))
+      .sort((a, b) => T(b.created_at) - T(a.created_at) || (b.id > a.id ? 1 : -1))
+      .filter((l) => !p_cursor_at || T(l.created_at) < T(p_cursor_at) || (T(l.created_at) === T(p_cursor_at) && l.id < p_cursor_id))
+      .slice(0, Math.min(p_limit, 200)).map((l) => ({ ...l }));
+  },
+  update_lead: ({ p_id, p_status, p_notes }) => {
+    const l = DB.leads.find((x) => x.id === p_id) || fail('Lead not found.');
+    if (p_status) { if (p_status !== 'new' && !l.contacted_at) l.contacted_at = new Date().toISOString(); l.status = p_status; }
+    if (p_notes !== null && p_notes !== undefined) l.notes = p_notes;
+    l.updated_at = new Date().toISOString();
+    return null;
   },
   demo_checkin_token: () => {
     const b = DB.bookings.filter((x) => ['pending', 'confirmed'].includes(x.status) && T(x.check_in_at) > Date.now() && !x.self_checkin_at)
