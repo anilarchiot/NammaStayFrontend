@@ -166,6 +166,13 @@ function shift(db) {
   db.blocks.forEach((k) => mv(k, ['starts_at', 'ends_at']));
   db.guests.forEach((g) => mv(g, ['created_at', 'updated_at', 'consent_at']));
   (db.leads || []).forEach((l) => mv(l, ['created_at', 'updated_at', 'contacted_at']));
+
+  if (db.billing) {
+    mv(db.billing.mine, ['trial_ends_at', 'paid_until']);
+    db.billing.others.forEach((o) => mv(o, ['trial_ends_at', 'paid_until', 'created_at', 'last_booking_at']));
+    db.billing.pending.forEach((x) => mv(x, ['submitted_at']));
+    db.billing.payments.forEach((x) => mv(x, ['submitted_at', 'period_start', 'period_end']));
+  }
   db.notifications.forEach((x) => mv(x, ['created_at', 'read_at']));
   db.audit.forEach((a) => mv(a, ['at']));
   db.members.forEach((m) => mv(m, ['last_seen_at']));
@@ -190,12 +197,44 @@ function seedLeads() {
   ];
 }
 
+function seedBilling() {
+  const now = Date.now(); const D = (n) => new Date(now + n * DAY).toISOString();
+  const other = (name, city, owner, email, beds, state) => ({ property_id: uuid(), name, city, owner_name: owner, owner_email: email, beds,
+    created_at: D(state === 'trial' ? -4 : -80), trial_ends_at: D(state === 'trial' ? 11 : -65),
+    paid_until: state === 'active' ? D(20) : state === 'grace' ? D(-1) : state === 'expired' ? D(-30) : null,
+    plan_id: ['active', 'grace', 'expired'].includes(state) ? 'monthly' : null, is_complimentary: false, last_booking_at: D(-1) });
+  return {
+    settings: { upi_id: 'nammastay@okaxis', payee_name: 'NammaStay', trial_days: 15, grace_days: 3, support_whatsapp: '919840000000', support_email: 'hello@thenammastay.com' },
+    plans: [{ id: 'monthly', name: 'Monthly', period_months: 1, price_paise: 165000, description: 'Billed every month', is_active: true, sort: 1 },
+            { id: 'yearly', name: 'Yearly', period_months: 12, price_paise: 1650000, description: '2 months free', is_active: true, sort: 2 }],
+    // the demo hostel itself is in its free trial so the Billing tab has something to show
+    mine: { trial_ends_at: D(11), paid_until: null, plan_id: null, is_complimentary: false },
+    payments: [],
+    others: [other('Blue Door Hostel', 'Pondicherry', 'Meera Krishnan', 'meera@bluedoor.in', 24, 'active'),
+             other('Hilltop Backpackers', 'Manali', 'Aisha Khan', 'aisha@hilltop.co', 40, 'trial'),
+             other('Beach Shack Stays', 'Goa', 'Joseph D’Souza', 'joseph@goabeach.in', 12, 'grace'),
+             other('Mehta Guest House', 'Udaipur', 'Karan Mehta', 'karan@mehta.in', 8, 'expired')],
+    pending: [{ id: uuid(), property_id: null, property: 'Hilltop Backpackers', owner_email: 'aisha@hilltop.co', plan_id: 'yearly', amount_paise: 1650000,
+                utr: '412398765432', submitted_at: D(-0.1) }],
+  };
+}
+function accessOf(x) {
+  const now = Date.now(); const grace = DB.billing.settings.grace_days * DAY;
+  if (x.is_complimentary) return 'complimentary';
+  if (x.paid_until && T(x.paid_until) > now) return 'active';
+  if (T(x.trial_ends_at) > now) return 'trial';
+  const end = Math.max(T(x.trial_ends_at), x.paid_until ? T(x.paid_until) : 0);
+  return now < end + grace ? 'grace' : 'expired';
+}
+
 let DB;
 function load() {
   if (DB) return DB;
   try { DB = JSON.parse(localStorage.getItem(KEY)); } catch { DB = null; }
   DB = shift(DB && DB.bookings ? DB : seed());
   if (!DB.leads) DB.leads = seedLeads();
+  if (!DB.billing) DB.billing = seedBilling();
+
   save();
   return DB;
 }
@@ -601,6 +640,77 @@ const RPC = {
     l.updated_at = new Date().toISOString();
     return null;
   },
+  // ---- subscription (manual UPI) ----
+  property_access: () => {
+    const m = DB.billing.mine; const state = accessOf(m);
+    const ends = state === 'trial' ? m.trial_ends_at : state === 'active' ? m.paid_until : (m.paid_until || m.trial_ends_at);
+    return { state, plan_id: m.plan_id, trial_ends_at: m.trial_ends_at, paid_until: m.paid_until, ends_at: ends,
+      days_left: ['trial', 'active'].includes(state) ? Math.max(0, Math.ceil((T(ends) - Date.now()) / DAY)) : null,
+      grace_days: DB.billing.settings.grace_days, pending_payment: DB.billing.payments.some((x) => x.status === 'pending') };
+  },
+  billing_info: () => ({ access: RPC.property_access(), plans: DB.billing.plans.filter((p) => p.is_active),
+    pay_to: { upi_id: DB.billing.settings.upi_id, payee_name: DB.billing.settings.payee_name,
+      support_whatsapp: DB.billing.settings.support_whatsapp, support_email: DB.billing.settings.support_email },
+    history: DB.billing.payments.slice().sort((a, b) => T(b.submitted_at) - T(a.submitted_at)) }),
+  submit_subscription_payment: ({ p_plan, p_utr }) => {
+    const plan = DB.billing.plans.find((p) => p.id === p_plan && p.is_active) || fail('Choose a plan.');
+    const utr = String(p_utr || '').replace(/\s/g, '').toUpperCase();
+    if (!/^[0-9A-Z]{6,35}$/.test(utr)) fail('Enter the UPI transaction ID (UTR) from your payment app.');
+    if (DB.billing.payments.some((x) => x.utr === utr && x.status !== 'rejected') || DB.billing.pending.some((x) => x.utr === utr)) fail('This UPI transaction ID was already submitted.');
+    const pay = { id: uuid(), plan_id: plan.id, amount_paise: plan.price_paise, utr, status: 'pending', submitted_at: new Date().toISOString(), review_note: null, period_start: null, period_end: null };
+    DB.billing.payments.push(pay);
+    DB.billing.pending.push({ id: pay.id, property_id: P, property: DB.properties[0].name, owner_email: 'owner@demo.nammastay', plan_id: plan.id, amount_paise: plan.price_paise, utr, submitted_at: pay.submitted_at });
+    return { id: pay.id, status: 'pending' };
+  },
+  create_my_property: () => fail('Sign-up works once NammaStay is connected to its database.'),
+  admin_subscriptions: ({ p_q }) => {
+    const m = DB.billing.mine; const q = (p_q || '').toLowerCase();
+    const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: 'Hostel Owner', owner_email: 'owner@demo.nammastay',
+      beds: activeBeds().length, created_at: DB.properties[0].created_at, last_booking_at: DB.bookings.map((b) => b.created_at).sort().pop(), ...m };
+    const list = [mine, ...DB.billing.others].map((x) => ({ ...x, state: accessOf(x) }))
+      .filter((x) => !q || [x.name, x.city, x.owner_email].some((v) => (v || '').toLowerCase().includes(q)));
+    return { settings: { ...DB.billing.settings }, plans: DB.billing.plans.map((p) => ({ ...p })), pending: DB.billing.pending.map((p) => ({ ...p })), properties: list };
+  },
+  admin_review_subscription_payment: ({ p_id, p_approve, p_note }) => {
+    const i = DB.billing.pending.findIndex((x) => x.id === p_id); if (i < 0) fail('This payment was already reviewed.');
+    const sp = DB.billing.pending[i]; DB.billing.pending.splice(i, 1);
+    const own = DB.billing.payments.find((x) => x.id === p_id);
+    const target = sp.property_id === P ? DB.billing.mine : DB.billing.others.find((o) => o.name === sp.property);
+    if (!p_approve) { if (own) Object.assign(own, { status: 'rejected', review_note: p_note || null }); return { status: 'rejected' }; }
+    const plan = DB.billing.plans.find((p) => p.id === sp.plan_id);
+    const start = new Date(Math.max(Date.now(), target.paid_until ? T(target.paid_until) : 0, T(target.trial_ends_at)));
+    const end = new Date(start); end.setMonth(end.getMonth() + plan.period_months);
+    Object.assign(target, { paid_until: end.toISOString(), plan_id: plan.id });
+    if (own) Object.assign(own, { status: 'approved', review_note: p_note || null, period_start: start.toISOString(), period_end: end.toISOString() });
+    if (sp.property_id === P) notify('Subscription payment confirmed', 'Paid until ' + end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), null);
+    return { status: 'approved', paid_until: end.toISOString() };
+  },
+  admin_update_subscription: ({ p_property, p_extend_days, p_complimentary }) => {
+    const t = p_property === P ? DB.billing.mine : DB.billing.others.find((o) => o.property_id === p_property) || fail('Property not found.');
+    if (p_extend_days) t.paid_until = new Date(Math.max(Date.now(), t.paid_until ? T(t.paid_until) : 0, T(t.trial_ends_at)) + p_extend_days * DAY).toISOString();
+    if (p_complimentary !== null && p_complimentary !== undefined) t.is_complimentary = p_complimentary;
+    return null;
+  },
+  admin_save_billing_settings: ({ p }) => {
+    const st = DB.billing.settings;
+    ['upi_id', 'payee_name', 'support_whatsapp', 'support_email'].forEach((k) => { if (k in p) st[k] = p[k] || (k === 'payee_name' ? st[k] : null); });
+    if (p.trial_days !== '') st.trial_days = Number(p.trial_days); if (p.grace_days !== '') st.grace_days = Number(p.grace_days);
+    (p.plans || []).forEach((x) => { const pl = DB.billing.plans.find((y) => y.id === x.id); if (pl) Object.assign(pl, { price_paise: x.price_paise, description: x.description, is_active: x.is_active }); });
+    return null;
+  },
+  delete_booking: ({ p_booking, p_reason }) => {
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    if (!p_reason) fail('Please choose a reason for deleting.');
+    const pays = DB.payments.filter((x) => x.booking_id === b.id);
+    DB.deleted = DB.deleted || [];
+    DB.deleted.push({ at: new Date().toISOString(), code: b.code, guest: guestOf(DB, b).full_name, reason: p_reason, check_in_at: b.check_in_at,
+      check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, by: 'Hostel Owner' });
+    DB.payments = DB.payments.filter((x) => x.booking_id !== b.id);
+    DB.bookings = DB.bookings.filter((x) => x.id !== b.id);
+    DB.notifications = DB.notifications.filter((x) => x.booking_id !== b.id);
+    return { ok: true, code: b.code, guest: guestOf(DB, b)?.full_name, payments_removed: pays.length, amount_removed_paise: b.paid_paise };
+  },
+  list_deleted_bookings: () => (DB.deleted || []).slice().sort((x, y) => T(y.at) - T(x.at)),
   demo_checkin_token: () => {
     const b = DB.bookings.filter((x) => ['pending', 'confirmed'].includes(x.status) && T(x.check_in_at) > Date.now() && !x.self_checkin_at)
       .sort((x, y) => T(x.check_in_at) - T(y.check_in_at))[0];
@@ -611,7 +721,7 @@ const RPC = {
 // ---------------------------------------------------------------- table access (the few direct reads/writes pages make)
 const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications' };
 function table(name) {
-  const st = { filters: [], order: null, limit: null, op: 'select', payload: null, head: false, returning: false };
+  const st = { filters: [], order: [], limit: null, op: 'select', payload: null, head: false, returning: false };
   const run = async (single) => {
     try {
       load();
@@ -632,10 +742,12 @@ function table(name) {
         if (name === 'properties' && v.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)) fail('Please check the email address.');
         if (name === 'beds' && 'rate_paise' in v && !(v.rate_paise >= 0)) fail('Check the rates.');
         if ('name' in v && !String(v.name || '').trim()) fail('Name can’t be empty.');
-        hit.forEach((r) => Object.assign(r, v)); data = hit;
+        hit.forEach((r) => Object.assign(r, v, { updated_at: new Date().toISOString() })); data = hit;
+      } else if (st.op === 'delete') {
+        DB[TABLES[name]] = rows.filter((r) => !hit.includes(r)); data = hit;
       } else {
         data = hit.slice();
-        if (st.order) { const [k, asc] = st.order; data.sort((x, y) => (x[k] > y[k] ? 1 : x[k] < y[k] ? -1 : 0) * (asc ? 1 : -1)); }
+        if (st.order.length) data.sort((x, y) => { for (const [k, asc] of st.order) { const c = (x[k] > y[k] ? 1 : x[k] < y[k] ? -1 : 0) * (asc ? 1 : -1); if (c) return c; } return 0; });
         if (st.limit) data = data.slice(0, st.limit);
       }
       if (st.op !== 'select') save();
@@ -648,7 +760,10 @@ function table(name) {
     select(_cols, opts) { if (st.op === 'select') st.head = !!opts?.head; else st.returning = true; return api; },
     eq(k, v) { st.filters.push((r) => r[k] === v); return api; },
     is(k, v) { st.filters.push((r) => (r[k] ?? null) === v); return api; },
-    order(k, o = {}) { st.order = [k, o.ascending !== false]; return api; },
+    order(k, o = {}) { st.order.push([k, o.ascending !== false]); return api; },
+    gte(k, v) { st.filters.push((r) => r[k] >= v); return api; },
+    lte(k, v) { st.filters.push((r) => r[k] <= v); return api; },
+    delete() { st.op = 'delete'; return api; },
     limit(n) { st.limit = n; return api; },
     insert(p) { st.op = 'insert'; st.payload = p; return api; },
     update(p) { st.op = 'update'; st.payload = p; return api; },
@@ -706,6 +821,7 @@ export function createDemoClient() {
     storage: {
       from: () => ({
         upload: async (path, file) => { files.set(path, file); return { data: { path }, error: null }; },
+        remove: async (paths) => { paths.forEach((x) => files.delete(x)); return { data: paths, error: null }; },
         createSignedUrl: async (path) => ok({ signedUrl: URL.createObjectURL(files.get(path) || sampleIdCard(path)) }),
       }),
     },

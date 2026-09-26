@@ -1,12 +1,16 @@
-import { page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, avatar, pill, $, $$ } from '../core.js';
+import { page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
-const TABS = ['property', 'team', 'rooms', 'notifications'];
+const TABS = ['property', 'team', 'rooms', 'notifications', 'billing'];
+const STATE = { trial: ['Free trial', 'blue'], active: ['Active', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Free — complimentary', 'green'] };
 
 page('settings', async (ctx) => {
   const owner = ctx.can('owner');
   const tabsRow = $$('.ns-main > div').find((d) => /Users & roles/.test(d.textContent) && d.children.length === 4);
   const tabEls = tabsRow ? [...tabsRow.children] : [];
+  if (tabsRow && tabEls.length === 4) {                 // add the Billing tab next to the design's four
+    const t = tabEls[0].cloneNode(false); t.textContent = 'Billing'; tabsRow.appendChild(t); tabEls.push(t);
+  }
   const styles = tabEls.map((t) => t.getAttribute('style') || '');
   const onStyle = styles.find((s) => /#1C9A6C|border-bottom:2px solid #1/i.test(s)) || styles[1] || '';
   const offStyle = styles.find((s) => s !== onStyle) || '';
@@ -168,11 +172,83 @@ page('settings', async (ctx) => {
       };
     },
 
+    // ------------------------------------------------------------ Billing (subscription)
+    async billing() {
+      const b = await rpc('billing_info', { p_property: ctx.property_id });
+      const a = b.access; const [label, color] = STATE[a.state] || [a.state, 'grey'];
+      const plans = b.plans; let chosen = plans.find((x) => x.id === a.plan_id) || plans[plans.length - 1] || plans[0];
+      const owner = ctx.can('owner'); const upi = b.pay_to?.upi_id;
+      const until = a.state === 'trial' ? `Trial ends ${fmtDate(a.trial_ends_at)}` : a.state === 'active' ? `Paid until ${fmtDate(a.paid_until)}`
+        : a.state === 'complimentary' ? 'No payment needed' : `Ended ${fmtDate(a.ends_at)}`;
+      const HIST = { pending: ['Waiting for confirmation', 'amber'], approved: ['Confirmed', 'green'], rejected: ['Not confirmed', 'red'] };
+      content(`
+        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px;align-self:start">
+            <div class="ns-h3">Your NammaStay plan</div>
+            <div>${pill(label, color)}</div>
+            <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800">${a.days_left != null ? `${a.days_left} day${a.days_left === 1 ? '' : 's'} left` : esc(label)}</div>
+            <div class="ns-muted" style="font-size:13.5px">${esc(until)}</div>
+            ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using NammaStay meanwhile.</div>' : ''}
+            ${a.state === 'expired' ? '<div class="ns-error">New bookings are paused. Your data is safe — renew below to continue.</div>' : ''}
+            <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property — all features, unlimited staff and bookings.
+              ${b.pay_to?.support_whatsapp || b.pay_to?.support_email ? `<br>Questions? ${b.pay_to.support_whatsapp ? `<a href="https://wa.me/${esc(b.pay_to.support_whatsapp.replace(/\D/g, ''))}" target="_blank" rel="noopener" style="font-weight:700">WhatsApp us</a>` : ''} ${b.pay_to.support_email ? `<a href="mailto:${esc(b.pay_to.support_email)}" style="font-weight:700">${esc(b.pay_to.support_email)}</a>` : ''}` : ''}</div>
+          </div>
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
+            ${a.state === 'complimentary' ? '<div class="ns-h3">Your property has complimentary access — nothing to pay.</div>' : `
+            <div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="plans">
+              ${plans.map((x) => `<button type="button" class="ns-plan${x.id === chosen?.id ? ' is-on' : ''}" data-plan="${esc(x.id)}">
+                <b style="font-size:15px">${esc(x.name)}</b>
+                <span class="price">${rupees(x.price_paise)} <small>/ ${x.period_months === 1 ? 'month' : x.period_months === 12 ? 'year' : x.period_months + ' months'}</small></span>
+                <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
+            </div>
+            ${!owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
+              <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
+              <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                <div style="font-size:13.5px;line-height:1.6"><b>1.</b> Pay <b id="amt"></b> to <b>${esc(upi)}</b> (${esc(b.pay_to.payee_name)}) — scan the QR or <a id="upi-open" style="font-weight:700">open your UPI app</a>.</div>
+                <div style="font-size:13.5px"><b>2.</b> Enter the 12-digit UPI transaction ID (UTR) below.</div>
+                <input class="ns-input" id="utr" placeholder="e.g. 412345678901" autocomplete="off" inputmode="numeric" maxlength="35">
+                <button type="button" class="ns-btn" id="submit-pay">I’ve paid — submit for confirmation</button>
+              </div>
+            </div>`}`}
+          </div>
+        </div>
+        ${b.history.length ? `<div class="ns-card" style="padding:0;overflow:hidden"><div class="ns-h3" style="padding:18px 20px">Payment history</div>
+          <div style="overflow-x:auto"><table class="ns-table" style="min-width:600px"><thead><tr><th>Submitted</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Covers</th></tr></thead><tbody>
+          ${b.history.map((h) => `<tr><td>${fmtDayTime(h.submitted_at)}</td><td>${esc((plans.find((x) => x.id === h.plan_id) || { name: h.plan_id }).name)}</td>
+            <td style="font-weight:700">${rupees(h.amount_paise)}</td><td class="ns-muted">${esc(h.utr)}</td><td>${pill(...HIST[h.status])}${h.review_note ? `<div class="ns-muted">${esc(h.review_note)}</div>` : ''}</td>
+            <td class="ns-muted">${h.period_end ? `${fmtDate(h.period_start)} – ${fmtDate(h.period_end)}` : '—'}</td></tr>`).join('')}
+          </tbody></table></div></div>` : ''}`);
+
+      const draw = async () => {
+        if (!$('#qr') || !chosen) return;
+        $('#amt').textContent = rupees(chosen.price_paise);
+        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: chosen.price_paise, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
+        $('#upi-open').href = link;
+        const url = await qrDataUrl(link);
+        if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
+      };
+      $$('[data-plan]').forEach((p) => p.onclick = () => {
+        chosen = plans.find((x) => x.id === p.dataset.plan);
+        $$('[data-plan]').forEach((x) => x.classList.toggle('is-on', x === p)); draw();
+      });
+      $('#submit-pay')?.addEventListener('click', async (e) => {
+        const utr = $('#utr').value.replace(/\s/g, '');
+        if (!/^[0-9A-Za-z]{6,35}$/.test(utr)) return toast('Enter the UPI transaction ID (UTR) from your payment app.', { error: true });
+        e.target.disabled = true;
+        try { await rpc('submit_subscription_payment', { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr }); toast('Thanks! We’ll confirm your payment shortly.'); show('billing'); }
+        catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
+      });
+      draw();
+    },
+
     // ------------------------------------------------------------ Notifications
     async notifications() {
-      const [p, recent] = await Promise.all([
+      const [p, recent, deleted] = await Promise.all([
         q(sb.from('properties').select('*').eq('id', ctx.property_id).single()),
         q(sb.from('notifications').select('title, body, booking_id, created_at, read_at').eq('property_id', ctx.property_id).order('created_at', { ascending: false }).limit(15)),
+        rpc('list_deleted_bookings', { p_property: ctx.property_id, p_limit: 50 }).catch(() => []),
       ]);
       content(`
         <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:20px">
@@ -196,6 +272,15 @@ page('settings', async (ctx) => {
                 <div><div style="font-size:13px;font-weight:${n.read_at ? 600 : 800}">${esc(n.title)}</div><div class="ns-muted">${esc(n.body || '')}</div></div>
                 <div class="ns-muted" style="white-space:nowrap">${fmtDayTime(n.created_at)}</div></a>`).join('') || '<div class="ns-empty">No notifications yet.</div>'}
           </div>
+        </div>
+        <div class="ns-card" style="padding:0;overflow:hidden;grid-column:1/-1" id="deleted-bookings">
+          <div style="padding:18px 20px"><div class="ns-h3">Deleted bookings</div><div class="ns-muted">Bookings removed as mistakes — kept here for your records.</div></div>
+          <div style="overflow-x:auto"><table class="ns-table" style="min-width:760px"><thead><tr><th>Deleted</th><th>Booking</th><th>Guest</th><th>Stay</th><th>Paid</th><th>Reason</th><th>By</th></tr></thead><tbody>
+          ${deleted.map((x) => `<tr><td>${fmtDayTime(x.at)}</td><td style="font-weight:700">${esc(x.code)}</td><td>${esc(x.guest || '')}</td>
+            <td class="ns-muted">${x.check_in_at ? fmtDayTime(x.check_in_at) + ' → ' + fmtDayTime(x.check_out_at) : ''}</td>
+            <td>${x.paid_paise ? rupees(x.paid_paise) : '—'}</td><td>${esc(x.reason || '')}</td><td class="ns-muted">${esc(x.by || '')}</td></tr>`).join('')
+            || '<tr><td colspan="7" class="ns-empty">No deleted bookings.</td></tr>'}
+          </tbody></table></div>
         </div>`);
       $('#save-email').onclick = async () => {
         try { await q(sb.from('properties').update({ email: $('#alert-email').value.trim() || null }).eq('id', ctx.property_id)); toast('Saved.'); }
