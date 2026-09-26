@@ -28,7 +28,8 @@ Budget about 2–3 hours for the first setup.
 | `supabase/migrations/001–005` | The database: run in order. |
 | `supabase/tests/01_security_checks.sql` | Security checks — run before launch and after every change. |
 | `supabase/tests/02_load_test.sql` | 1.5 lakh-booking load test — **separate test project only**. |
-| `supabase/functions/` | `notify-booking` (emails) and `purge-id-docs` (privacy cleanup). |
+| `supabase/functions/` | `notify-booking` (booking emails), `notify-lead` (homepage leads), `purge-id-docs` (privacy cleanup). |
+| `supabase/SETUP_ALL.sql` | 001 + 002 + 003 + 006 in one file. |
 
 ---
 
@@ -48,6 +49,9 @@ Supabase → **SQL Editor** → New query. Paste and **Run** each file, in order
 1. `supabase/migrations/001_schema.sql` — tables, indexes, double-booking guard
 2. `supabase/migrations/002_security.sql` — row-level security, grants, private ID bucket
 3. `supabase/migrations/003_functions.sql` — every query the app uses
+4. `supabase/migrations/006_marketing.sql` — homepage early-access form (leads)
+
+Shortcut: `supabase/SETUP_ALL.sql` contains all four in one file — paste it once and Run.
 
 If a file errors, fix and re-run that file only after dropping what it created (simplest on a new project: **Settings → General → Reset/delete project** and start again).
 
@@ -56,6 +60,13 @@ If a file errors, fix and re-run that file only after dropping what it created (
 1. **Authentication → Users → Add user → Create new user**: your email + strong password, tick **Auto confirm**.
 2. Open `supabase/migrations/004_seed.sql`, replace `owner@example.com` with that email, run it.
    It creates Social Backpackers Hostel, the 6-bed dorm (3 lower ₹700, 3 upper ₹600) and the 3-bed dorm (3 lower ₹850), and makes you the owner. Rename beds or change rates later in **Rooms & beds**.
+
+**Make yourself the NammaStay admin** (to see homepage leads at `/leads.html`), with your own email:
+```sql
+insert into public.platform_admins (user_id)
+  select id from auth.users where lower(email) = lower('you@example.com')
+on conflict do nothing;
+```
 
 ## 4. Lock down login
 
@@ -78,7 +89,7 @@ Run `supabase/tests/01_security_checks.sql` in the SQL Editor. Expected:
 | 1. Tables without RLS | 0 rows |
 | 2. Anonymous table grants | 0 rows |
 | 3. Direct staff writes to bookings/payments | 0 rows |
-| 4. Functions anonymous visitors can call | exactly `checkin_upload_allowed`, `selfcheckin_get`, `selfcheckin_submit` |
+| 4. Functions anonymous visitors can call | exactly `checkin_upload_allowed`, `selfcheckin_get`, `selfcheckin_submit`, `submit_lead` |
 | 5. Definer functions without fixed search_path | 0 rows |
 | 6. `guest-ids` bucket | `public = false` |
 | 7. Double booking | NOTICE `PASS` |
@@ -121,6 +132,14 @@ Also open **Advisors → Security Advisor** and **Performance Advisor** in Supab
 5. Settings page in NammaStay → fill **Booking alerts email**.
 
 Staff also see every new booking and online check-in instantly via the bell badge (no setup needed).
+
+### 7b. Homepage lead emails
+```bash
+supabase secrets set LEADS_NOTIFY_EMAIL=you@example.com
+supabase functions deploy notify-lead --no-verify-jwt
+```
+Then **Database → Webhooks → Create**: table `leads`, event **Insert**, Edge Function `notify-lead`, header `x-webhook-secret: <your WEBHOOK_SECRET>`.
+Every early-access request then emails you, sends the person a thank-you, and appears in the app under **Leads**.
 
 ## 8. Automatic ID-photo deletion
 
