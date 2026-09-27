@@ -1,0 +1,375 @@
+/* NammaStay — shared styles
+   Page designs keep their exact inline values; this file handles
+   the app shell, navigation and responsive behaviour. */
+
+:root{
+  --navy:#0E1B3D; --ink:#101A3D; --cream:#FBF3DE; --paper:#FFFDF6;
+  --green:#1C9A6C; --line:#E7DFC7; --muted:#6B7280; --nav-text:#AEB6C9;
+  --sidebar-w:248px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:'Manrope',system-ui,sans-serif;background:var(--cream);color:var(--ink)}
+a{color:var(--green);text-decoration:none}
+img{max-width:100%}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:6px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:0}
+
+/* ---------- App shell ---------- */
+.ns-shell{display:flex;min-height:100vh;width:100%;background:var(--cream)}
+.ns-sidebar{
+  width:var(--sidebar-w);flex-shrink:0;height:100vh;position:sticky;top:0;
+  background:var(--navy);padding:24px 16px;display:flex;flex-direction:column;overflow-y:auto;z-index:40;
+}
+.ns-brand{display:flex;align-items:center;gap:10px;padding:8px 8px 24px 8px}
+.ns-brand img,.ns-mobile-brand img{background:var(--cream);border-radius:8px;padding:3px;object-fit:contain}
+.ns-brand > span,.ns-mobile-brand > span{font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:var(--cream)}
+.ns-brand > span span,.ns-mobile-brand > span span{color:var(--green)}
+.ns-nav{display:flex;flex-direction:column;gap:2px}
+.ns-nav-link{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px;
+  color:var(--nav-text);font-size:14px;font-weight:600;transition:background .15s,color .15s;
+}
+.ns-nav-link:hover{background:#18264D;color:#FFFFFF}
+.ns-nav-link.is-active{background:var(--green);color:#FFFFFF;font-weight:700}
+.ns-nav-link svg{flex-shrink:0}
+.ns-sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid #22305A;padding-top:12px}
+.ns-user{display:flex;align-items:center;gap:10px;padding:12px 8px 4px 8px;line-height:1.3}
+.ns-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+.ns-user-name{font-size:13px;font-weight:700;color:var(--cream)}
+.ns-user-sub{font-size:11px;color:#8B93A8}
+.ns-signout{font-size:13px;padding:9px 12px}
+
+.ns-main{flex:1;min-width:0;min-height:100vh;display:flex;flex-direction:column}
+.ns-content{flex:1;min-width:0}
+.ns-content[style*="display:grid"] > *,
+.ns-content [style*="display:grid"] > *{min-width:0}
+.ns-mobilebar,.ns-scrim{display:none}
+
+/* clickable table rows */
+tr[data-href]{cursor:pointer}
+tr[data-href]:hover{background:#FBF9F1}
+
+/* ---------- Sign in ---------- */
+.ns-login{display:flex;min-height:100vh;width:100%;background:var(--cream)}
+.ns-login-aside{width:39%;max-width:560px;min-height:100vh}
+.ns-login-main{flex:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 24px}
+
+.ns-login-brand{display:none;align-items:center;gap:10px}
+.ns-login-brand img{background:#FFFDF6;border:1px solid var(--line);border-radius:10px;padding:3px}
+.ns-login-brand > span{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--ink)}
+.ns-login-brand > span span{color:var(--green)}
+
+/* ---------- Booking detail (modal page) ---------- */
+.ns-modal-page{width:100%;min-height:100vh;height:100vh}
+.ns-ghost-sidebar{width:var(--sidebar-w);height:100%}
+
+/* ---------- Mobile self check-in ---------- */
+.ns-page-mobile{background:#E9E1C8}
+.ns-phone{width:100%;max-width:480px;min-height:100vh;margin:0 auto;box-shadow:0 0 0 1px var(--line)}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1180px){
+  .ns-content [style*="grid-template-columns:1.3fr 1fr"],
+  .ns-content [style*="grid-template-columns:1.5fr 1fr"],
+  .ns-content [style*="grid-template-columns:1fr 340px"],
+  .ns-content [style*="grid-template-columns:1fr 380px"],
+  .ns-content [style*="grid-template-columns:340px 1fr"],
+  .ns-content[style*="grid-template-columns:1fr 380px"],
+  .ns-content[style*="grid-template-columns:1fr 340px"],
+  .ns-content[style*="grid-template-columns:340px 1fr"]{grid-template-columns:1fr !important}
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) !important}
+  .ns-content div:has(> table){overflow-x:auto !important}
+  .ns-content table{min-width:820px}
+}
+
+@media (max-width:900px){
+  .ns-sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 40px rgba(14,27,61,.35)}
+  .ns-sidebar.is-open{transform:none}
+  .ns-scrim{position:fixed;inset:0;background:rgba(14,27,61,.45);z-index:30}
+  .ns-scrim.is-open{display:block}
+  .ns-mobilebar{
+    display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;
+    height:56px;padding:0 12px;background:var(--navy);
+  }
+  .ns-menu-btn{width:40px;height:40px;border:0;border-radius:9px;background:transparent;color:var(--cream);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ns-mobile-brand{display:flex;align-items:center;gap:8px}
+  .ns-mobile-brand img{border-radius:6px;padding:2px}
+
+  /* page header row */
+  .ns-main > [style*="height:76px"]{height:auto !important;min-height:64px;flex-wrap:wrap;gap:12px;padding:14px 16px !important}
+  .ns-main > [style*="height:76px"] > div:last-child{flex-wrap:wrap}
+  .ns-content{padding:16px !important}
+  .ns-main > [style*="height:56px"]{overflow-x:auto;padding:0 8px !important;white-space:nowrap}
+  .ns-content div:has(> [style="flex:1;"]){flex-wrap:wrap;row-gap:10px}
+
+  .ns-content [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr) !important}
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(2,1fr) !important}
+  .ns-content [style*="justify-content:space-between"]{flex-wrap:wrap;row-gap:10px}
+  .ns-content [style*="gap:8px"][style*="display:flex"]:not([style*="align-items:center;gap:8px;height"]){flex-wrap:wrap}
+
+  /* wide timelines scroll sideways inside their card */
+  .page-calendar .ns-content{overflow-x:auto}
+  .page-calendar .ns-content > *{min-width:820px}
+  .page-bookings .ns-content > div:first-child{overflow-x:auto}
+  .page-bookings .ns-content > div:first-child > div:first-child{flex-shrink:0;width:84px !important;padding-right:8px}
+  .page-bookings .ns-content > div:first-child > [style*="repeat(7"]{min-width:520px}
+
+  .ns-login-aside{display:none !important}
+  .ns-login-brand{display:flex}
+  .ns-ghost-sidebar{display:none}
+}
+
+@media (max-width:700px){
+  [style*="grid-column:1/3"]{grid-column:1/-1 !important}
+  .ns-content [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+}
+@media (max-width:560px){
+  .ns-content [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr !important}
+  .ns-content [style*="grid-template-columns:repeat(4"],
+  .ns-content [style*="grid-template-columns:repeat(5"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  .ns-dialog [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
+
+/* =====================================================================
+   Live mode (connected to Supabase): shared components used by the
+   page scripts in assets/js/pages/. Values match the design tokens.
+   ===================================================================== */
+.ns-booting .ns-content,
+.ns-booting .ns-dialog > *,
+.ns-booting .ns-phone-body{visibility:hidden}
+.ns-booting .ns-main::after{
+  content:"";position:fixed;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;
+  border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:ns-spin .8s linear infinite;
+}
+@keyframes ns-spin{to{transform:rotate(360deg)}}
+
+.ns-card{background:#FFFFFF;border:1px solid var(--line);border-radius:16px;padding:20px}
+.ns-card-dark{background:var(--navy);border-radius:16px;padding:20px;color:var(--cream)}
+.ns-h3{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;margin:0}
+.ns-muted{font-size:12px;color:var(--muted)}
+.ns-stat{background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px}
+.ns-stat-label{font-size:12px;color:var(--muted);font-weight:600}
+.ns-stat-value{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;margin-top:6px}
+.ns-stat-sub{font-size:11px;color:var(--muted);font-weight:700;margin-top:4px}
+.ns-stat.is-dark{background:var(--navy);border-color:var(--navy)}
+.ns-stat.is-dark .ns-stat-label{color:var(--nav-text)}
+.ns-stat.is-dark .ns-stat-value{color:var(--cream)}
+
+.ns-btn,.ns-btn-ghost,.ns-btn-danger{
+  height:40px;padding:0 16px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font:700 13px 'Manrope',system-ui,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none;
+}
+.ns-btn{background:var(--green);color:#FFFFFF;border:1px solid var(--green)}
+.ns-btn:hover{background:#178A60}
+.ns-btn-ghost{background:#FFFFFF;color:var(--ink);border:1px solid #E2DAC4}
+.ns-btn-ghost:hover{background:#FBF9F1}
+.ns-btn-danger{background:#FFFFFF;color:#B23A3A;border:1px solid #F0C9C9}
+.ns-btn[disabled],.ns-btn-ghost[disabled],.ns-btn-danger[disabled]{opacity:.55;cursor:not-allowed}
+.ns-btn-lg{height:50px;font-size:15px;border-radius:10px;width:100%}
+
+.ns-field{display:flex;flex-direction:column;gap:6px}
+.ns-field > label{font-size:12px;font-weight:700;color:var(--ink)}
+.ns-input{
+  height:44px;border-radius:10px;border:1px solid #E2DAC4;padding:0 14px;font:500 13.5px 'Manrope',system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);width:100%;
+}
+textarea.ns-input{height:auto;min-height:72px;padding:12px 14px;resize:vertical}
+.ns-input:focus{border-color:var(--green);outline:none;box-shadow:0 0 0 3px rgba(28,154,108,.15)}
+.ns-input[aria-invalid="true"]{border-color:#B23A3A}
+.ns-help{font-size:11.5px;color:var(--muted)}
+.ns-error{font-size:12.5px;color:#B23A3A;font-weight:600}
+
+.ns-pill{display:inline-block;font-size:11px;padding:4px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.ns-pill.green{background:#E9F5EE;color:#157A56}
+.ns-pill.amber{background:#FCF0DC;color:#966016}
+.ns-pill.red{background:#FCE9E9;color:#B23A3A}
+.ns-pill.navy{background:#101A3D;color:#FFFFFF}
+.ns-pill.grey{background:#F3EFE1;color:#6B7280}
+.ns-pill.blue{background:#EAF1FB;color:#2D5FA6}
+.ns-pill.purple{background:#F0E5F7;color:#7B3FA0}
+
+.ns-chip{padding:8px 16px;border-radius:20px;background:#FFFFFF;border:1px solid var(--line);color:var(--muted);
+  font:600 12.5px 'Manrope',system-ui,sans-serif;cursor:pointer}
+.ns-chip.is-on{background:#101A3D;border-color:#101A3D;color:#FFFFFF;font-weight:700}
+
+.ns-avatar-sm{width:30px;height:30px;border-radius:50%;background:#F0EBDB;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--ink);flex-shrink:0}
+
+.ns-table{width:100%;border-collapse:collapse}
+.ns-table th{text-align:left;padding:12px;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.03em;background:#FBF9F1;white-space:nowrap}
+.ns-table td{padding:13px 12px;font-size:12.5px;border-top:1px solid #F3EFE1;vertical-align:middle}
+.ns-table th:first-child,.ns-table td:first-child{padding-left:20px}
+.ns-table th:last-child,.ns-table td:last-child{padding-right:20px}
+.ns-table tr[data-href]:hover td{background:#FBF9F1}
+.ns-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+
+.ns-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #F3EFE1}
+.ns-list-row:last-child{border-bottom:0}
+
+.ns-search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:9px;background:var(--paper);border:1px solid var(--line)}
+.ns-search input{border:0;background:transparent;outline:none;font:500 13px 'Manrope',system-ui,sans-serif;color:var(--ink);width:220px;max-width:50vw}
+
+/* dialogs & toasts */
+.ns-overlay{position:fixed;inset:0;background:rgba(14,27,61,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:12px}
+.ns-modal{background:#FFFFFF;border-radius:20px;box-shadow:0 24px 60px rgba(14,27,61,.35);width:480px;max-width:100%;
+  max-height:calc(100vh - 24px);display:flex;flex-direction:column;overflow:hidden}
+.ns-modal-head{padding:20px 24px;border-bottom:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ns-modal-body{padding:20px 24px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.ns-modal-foot{padding:16px 24px;border-top:1px solid #F0EBDB;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.ns-x{width:32px;height:32px;border-radius:8px;background:#F5F1E3;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ns-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#FFFFFF;
+  padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;box-shadow:0 10px 30px rgba(14,27,61,.3);max-width:calc(100vw - 32px)}
+.ns-toast.is-error{background:#B23A3A}
+
+/* notification bell */
+.ns-bell{position:relative;width:36px;height:36px;border-radius:9px;border:0;background:transparent;color:var(--nav-text);
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ns-bell:hover{background:#18264D;color:#FFFFFF}
+.ns-bell-count{position:absolute;top:2px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#E2A03F;
+  color:var(--navy);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.ns-sidebar .ns-bell{position:absolute;top:30px;right:14px}
+.ns-mobilebar .ns-bell{margin-left:auto;color:var(--cream)}
+
+.ns-seg{display:flex;gap:8px}
+.ns-seg button{flex:1;text-align:center;padding:10px 0;border-radius:8px;border:1px solid #2A3963;background:transparent;color:var(--nav-text);
+  font:700 12.5px 'Manrope',system-ui,sans-serif;cursor:pointer}
+.ns-seg button.is-on{background:var(--green);border-color:var(--green);color:#FFFFFF}
+.ns-seg.light button{border-color:#E2DAC4;color:var(--muted);background:#FFFFFF}
+.ns-seg.light button.is-on{background:var(--green);border-color:var(--green);color:#FFFFFF}
+
+.ns-bars{display:flex;align-items:flex-end;gap:14px;height:170px;padding:0 4px}
+.ns-bars > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%}
+.ns-bars .bar-fill{width:100%;background:#EEF2E9;border-radius:8px 8px 0 0;min-height:2px}
+.ns-bars .is-today .bar-fill{background:var(--green)}
+.ns-meter{height:6px;border-radius:4px;background:#22305A;overflow:hidden}
+.ns-meter > span{display:block;height:100%;background:var(--green)}
+
+@media (max-width:900px){
+  .ns-search input{width:140px}
+  .ns-modal-foot .ns-btn,.ns-modal-foot .ns-btn-ghost{flex:1}
+}
+.ns-booting .ns-phone > :not(:first-child){visibility:hidden}
+.ns-demo-badge{margin:0 4px 12px;padding:10px 12px;border-radius:10px;background:#18264D;color:#AEB6C9;font-size:11.5px;line-height:1.5}
+.ns-demo-badge b{color:#E2A03F}
+.ns-demo-badge button{background:none;border:0;padding:0;color:#FBF3DE;font:700 11.5px 'Manrope',system-ui,sans-serif;text-decoration:underline;cursor:pointer}
+.ns-demo-hint{padding:10px 12px;border-radius:10px;background:#FCF0DC;color:#966016;font-size:12.5px;line-height:1.5;margin-bottom:4px}
+
+/* ---------- Layout fixes: nothing overlaps or gets clipped at any width ---------- */
+[hidden]{display:none !important}                 /* hidden fields must stay hidden even with display:flex */
+.ns-table td{white-space:nowrap}                    /* dates & amounts stay on one line; tables scroll sideways */
+.ns-input{min-width:0;text-overflow:ellipsis}
+.ns-field{min-width:0}
+.ns-content [style*="display:grid"] > *{min-width:0}
+
+@media (max-width:1180px){
+  .ns-content [style*="grid-template-columns:1.4fr 1fr"],
+  .ns-content [style*="grid-template-columns:1.6fr 1fr"],
+  .ns-content [style*="grid-template-columns:1fr 1.2fr"]{grid-template-columns:1fr !important}
+}
+@media (max-width:700px){
+  .ns-modal [style*="grid-template-columns:1fr 1fr"],
+  .ns-modal [style*="grid-template-columns:1fr 1fr 1fr"],
+  .ns-dialog [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  .ns-modal [style*="grid-template-columns:1fr 110px 100px"]{grid-template-columns:1fr 96px !important}
+  .ns-modal [style*="grid-template-columns:1fr 110px 100px"] > label{grid-column:1/-1}
+  .ns-guestbox{flex-wrap:wrap}
+  .ns-guestbox-actions{flex-direction:row !important;width:100%;justify-content:space-between;align-items:center !important}
+  .ns-dialog-foot,.ns-dialog-foot > div{width:100%}
+  .ns-dialog-foot .ns-btn,.ns-dialog-foot .ns-btn-ghost,.ns-dialog-foot .ns-btn-danger{flex:1 1 auto}
+  .ns-modal-body{padding:16px 18px}
+  .ns-modal-head,.ns-modal-foot{padding-left:18px;padding-right:18px}
+}
+.ns-dialog > *:first-child,.ns-dialog-foot,.ns-modal-head,.ns-modal-foot{flex-shrink:0}
+.ns-modal-body{flex:1 1 auto;min-height:0}
+
+/* ---------- Page header: title, search and buttons never collide ---------- */
+.ns-main > [style*="height:76px"]{height:auto !important;min-height:76px;flex-wrap:wrap;gap:12px 20px;padding-top:14px !important;padding-bottom:14px !important}
+.ns-main > [style*="height:76px"] > div:first-child{flex:1 1 240px;min-width:0}
+.ns-main > [style*="height:76px"] > div:last-child{flex:0 1 auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;min-width:0;max-width:100%}
+.ns-main > [style*="height:76px"] > div:last-child > a,
+.ns-main > [style*="height:76px"] > div:last-child > button,
+.ns-main > [style*="height:76px"] > div:last-child > select{flex-shrink:0;white-space:nowrap}
+.ns-search{flex:1 1 200px;min-width:0}
+.ns-search input{width:100% !important;min-width:0;max-width:none}
+@media (max-width:700px){
+  .ns-main > [style*="height:76px"] > div:last-child{flex:1 1 100%;justify-content:flex-start}
+  .ns-main > [style*="height:76px"] > div:last-child > .ns-search{flex:1 1 160px}
+}
+
+/* ---------- Date & time fields: stay inside their box on every browser (incl. iPhone Safari) ---------- */
+input[type="date"],input[type="time"],input[type="datetime-local"]{
+  -webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;box-sizing:border-box;
+  line-height:normal;padding-right:10px
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value{text-align:left;margin:0}
+input[type="datetime-local"]::-webkit-datetime-edit{padding:0;overflow:hidden}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;cursor:pointer}
+@media (max-width:1100px){
+  .ns-content [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+}
+.ns-stat-value{overflow-wrap:anywhere}
+
+/* ---------- Subscription banner & billing ---------- */
+.ns-access-banner{padding:10px 32px;font-size:13px;font-weight:600;border-bottom:1px solid var(--line)}
+.ns-access-banner a{font-weight:800;text-decoration:underline;margin-left:4px}
+.ns-access-banner.info{background:#EAF1FB;color:#2D5FA6}
+.ns-access-banner.warn{background:#FCF0DC;color:#966016}
+.ns-access-banner.danger{background:#FCE9E9;color:#B23A3A}
+.ns-dialog .ns-access-banner{padding:10px 26px}
+@media (max-width:900px){.ns-access-banner{padding:10px 16px}}
+.ns-plan{border:2px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.ns-plan.is-on{border-color:var(--green);box-shadow:0 0 0 3px rgba(28,154,108,.15)}
+.ns-plan .price{font-family:'Sora',sans-serif;font-size:28px;font-weight:800}
+.ns-plan .price small{font-size:13px;font-weight:600;color:var(--muted)}
+.ns-booting body.page-signup .ns-login-main > div{visibility:hidden}
+@media (max-width:1180px){ .ns-content [style*="grid-template-columns:1fr 1.4fr"]{grid-template-columns:1fr !important} }
+@media (max-width:560px){ .ns-content [style*="grid-template-columns:auto 1fr"]{grid-template-columns:1fr !important;justify-items:center} }
+#submit-pay{white-space:normal;height:auto;min-height:44px;padding:10px 16px}
+@media (max-width:1000px){ .ns-content [style*="grid-template-columns:repeat(3,minmax(0,1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important} }
+@media (max-width:560px){ .ns-content [style*="grid-template-columns:repeat(3,minmax(0,1fr))"]{grid-template-columns:1fr !important} }
+
+/* ---------- Calendar: drag / tap to book ---------- */
+.cal-row{user-select:none;-webkit-user-select:none}
+.cal-cell{height:40px;align-self:center;border-radius:8px}
+.cal-cell.is-today{background:#F3FAF6}
+.cal-cell.is-free{cursor:crosshair}
+.cal-cell.is-free:hover{background:#E4F3EB;box-shadow:inset 0 0 0 1px #BFE3CF}
+.cal-cell.is-sel{background:#CDEBDC !important;box-shadow:inset 0 0 0 2px #1C9A6C}
+.cal-cell.is-bad{background:#F6D5D5 !important;box-shadow:inset 0 0 0 2px #B23A3A}
+.ns-icon-del{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:transparent;color:#B23A3A;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ns-icon-del:hover,.ns-icon-del:focus-visible{background:#FCE9E9;border-color:#F0C9C9}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* keep the delete column visible when a table scrolls sideways */
+.ns-table .ns-sticky-end{position:sticky;right:0;background:#FFFFFF;box-shadow:-8px 0 8px -8px rgba(14,27,61,.18);padding-left:8px !important}
+.ns-table th.ns-sticky-end{background:#FBF9F1}
+.ns-table tr[data-href]:hover td.ns-sticky-end{background:#FBF9F1}
+
+/* ---------- ID photo upload (front / back) ---------- */
+.ns-id-drop{position:relative;display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 12px;border:1.5px dashed #D9CFB2;border-radius:12px;background:var(--paper);cursor:pointer;font-size:12.5px;font-weight:700;color:#6B7280;overflow:hidden}
+.ns-id-drop:hover,.ns-id-drop:focus-within{border-color:var(--green);color:var(--ink)}
+.ns-id-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.ns-id-drop img{width:64px;height:46px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.ns-id-drop span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:560px){ .ns-id-upload,.ns-id-grid{grid-template-columns:1fr !important} }
+.ns-nav-section{margin:14px 12px 4px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6C7BA8}
+.ns-guestbox-actions{flex-wrap:wrap}
+@media (max-width:700px){ .ns-guestbox-actions .ns-btn,.ns-guestbox-actions .ns-btn-ghost{white-space:normal;height:auto;min-height:30px;padding:6px 10px} }
+.ns-icon-edit{width:34px;height:34px;border-radius:8px;border:1px solid transparent;color:#2D5FA6;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.ns-icon-edit:hover,.ns-icon-edit:focus-visible{background:#EAF1FB;border-color:#C9DAF2}
+.ns-icon-del{vertical-align:middle}
+/* rooms/beds rows in a booking */
+@media (max-width:560px){
+  .unit-row{grid-template-columns:1fr 1fr !important}
+  .unit-row > .ns-field:first-child{grid-column:1/-1}
+  .unit-row > [data-remove]{grid-column:1/-1;justify-self:end}
+  .ns-modal [style*="grid-template-columns:1fr 100px 90px 90px"]{grid-template-columns:1fr 72px 60px 64px !important;gap:6px !important}
+}
