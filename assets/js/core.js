@@ -1,12 +1,21 @@
 // NammaStay — shared front-end core (ES module, no build step).
 // Every page script imports from here.
 const CFG = window.NAMMASTAY_CONFIG || {};
-/** LIVE = connected to Supabase. Otherwise the in-browser demo backend runs with sample data. */
-export const LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
-export const DEMO = !LIVE;
+/** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
+const DEMO_ON = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('demo');
+    if (q === '1') localStorage.setItem('ns.demo.on', '1');
+    if (q === '0') { localStorage.removeItem('ns.demo.on'); localStorage.removeItem('ns.demo.session'); }
+    return localStorage.getItem('ns.demo.on') === '1';
+  } catch { return false; }
+})();
+export const DEMO = DEMO_ON;
+export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
 export const sb = LIVE
   ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey)
-  : (await import('./demo-backend.js')).createDemoClient();
+  : DEMO ? (await import('./demo-backend.js')).createDemoClient() : null;
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
 export const TZ = 'Asia/Kolkata';
@@ -73,7 +82,7 @@ function friendly(error) {
   const m = error?.message || String(error || '');
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No connection. Check your internet and try again.';
   if (/JWT|session|refresh token/i.test(m)) return 'Your session expired. Please sign in again.';
-  if (/subscription has ended/i.test(m)) return m;
+  if (/subscription has ended|account is suspended/i.test(m)) return m;
   return m || 'Something went wrong. Please try again.';
 }
 export async function rpc(fn, args = {}) {
@@ -98,6 +107,20 @@ const PAGE_ROLES = {
 const NAV_KEY = {
   'guest-profile.html': 'guests', 'check-in.html': 'checkin', 'reports.html': 'reports', 'settings.html': 'settings',
 };
+// Words follow the property type: hostels/PGs sell beds, hotels/homestays sell rooms
+const WORDS = {
+  hostel: { kind: 'hostel', unit: 'bed', Unit: 'Bed', units: 'beds', Units: 'Beds', setup: 'Rooms & beds', group: 'Room', groups: 'room types',
+    perf: 'RevPAB', perfLong: 'Revenue per available bed per night', example: '“6-Bed Mixed Dorm” with 6 beds at ₹700' },
+  hotel: { kind: 'hotel', unit: 'room', Unit: 'Room', units: 'rooms', Units: 'Rooms', setup: 'Rooms', group: 'Room type', groups: 'room types',
+    perf: 'RevPAR', perfLong: 'Revenue per available room per night', example: '“Deluxe Double” with 4 rooms (101–104) at ₹2,500' },
+  homestay: { kind: 'homestay', unit: 'room', Unit: 'Room', units: 'rooms', Units: 'Rooms', setup: 'Rooms', group: 'Room type', groups: 'room types',
+    perf: 'RevPAR', perfLong: 'Revenue per available room per night', example: '“Garden Room” at ₹1,800 for 2 guests' },
+};
+export let W = WORDS.hostel;
+export const setKind = (k) => { W = WORDS[k] || WORDS.hostel; return W; };
+export const roomsMode = () => W.unit === 'room';
+export const guestsText = (adults, children) => `${adults || 1} adult${(adults || 1) > 1 ? 's' : ''}${children ? ` · ${children} child${children > 1 ? 'ren' : ''}` : ''}`;
+
 export const ROLE_LABEL = { owner: 'Owner', manager: 'Manager', front_desk: 'Front desk', accountant: 'Accountant' };
 
 class Stop extends Error {}
@@ -118,6 +141,7 @@ export function showFatal(message, { signIn = false } = {}) {
 
 /** Run a page: check the login, apply the role, then render. */
 export function page(key, fn) {
+  if (NOT_CONNECTED) { location.replace('login.html'); return; }
   (async () => {
     try {
       const ctx = await boot(key);
@@ -131,12 +155,28 @@ export function page(key, fn) {
   })();
 }
 
+export const TEMP_KEY = 'ns.temp.session';
+export function markBrowserSession() { try { document.cookie = 'ns_alive=1; path=/; SameSite=Lax'; } catch { /* ignore */ } }
 async function boot(key) {
+  // "Keep me signed in" was unticked and the browser has since been closed → sign out
+  if (LIVE) {
+    let temp = false; try { temp = localStorage.getItem(TEMP_KEY) === '1'; } catch { /* ignore */ }
+    if (temp && !/(^|;\s*)ns_alive=1/.test(document.cookie)) {
+      await sb.auth.signOut().catch(() => {});
+      try { localStorage.removeItem(TEMP_KEY); } catch { /* ignore */ }
+    }
+  }
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     const here = location.pathname.split('/').pop() + location.search;
     location.replace('login.html?next=' + encodeURIComponent(here));
     throw new Stop();
+  }
+  // Properties added for this email by NammaStay admin get linked on sign-in
+  const claimKey = 'ns.claimed.' + session.user.id;
+  if (Date.now() - Number(localStorage.getItem(claimKey) || 0) > 5 * 60e3) {
+    await rpc('claim_property_invites').catch(() => 0);
+    localStorage.setItem(claimKey, String(Date.now()));
   }
   const mems = await rpc('my_memberships');
   if (!mems?.length) {
@@ -148,7 +188,10 @@ async function boot(key) {
   const saved = localStorage.getItem('ns.property');
   const m = mems.find((x) => x.property_id === saved) || mems[0];
   localStorage.setItem('ns.property', m.property_id);
+  const kindRow = await sb.from('properties').select('kind').eq('id', m.property_id).limit(1).then((r) => (r.data && r.data[0]) || {}, () => ({}));
+  setKind(kindRow.kind);
   const ctx = {
+    kind: W.kind, words: W,
     user: session.user, memberships: mems,
     property_id: m.property_id, property_name: m.property_name, role: m.role,
     name: m.display_name || session.user.email,
@@ -177,6 +220,8 @@ function applyChrome(ctx) {
     const k = NAV_KEY[a.getAttribute('href')];
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
+  const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
+  $$('.ns-mobile-nav a[href="rooms.html"], .ns-drawer a[href="rooms.html"]').forEach((a) => { const sp = a.querySelector('span') || a; sp.textContent = W.setup; });
   if (!['owner', 'manager', 'front_desk'].includes(ctx.role)) {
     $$('a[href="check-in.html"]').forEach((a) => { a.style.display = 'none'; });
   }
@@ -202,6 +247,13 @@ function applyChrome(ctx) {
 function accessBanner(ctx) {
   const a = ctx.access;
   const main = $('.ns-main') || $('.ns-dialog');
+  if (a?.state === 'suspended' && main) {
+    const el = document.createElement('div'); el.className = 'ns-access-banner danger'; el.setAttribute('role', 'alert');
+    el.innerHTML = '<b>This account is suspended — new bookings are paused.</b> Your data is safe. Please contact NammaStay support.';
+    const mb = $('.ns-mobilebar'); if (mb && mb.parentNode === main) mb.insertAdjacentElement('afterend', el); else main.prepend(el);
+    rpc('property_suspension', { p_property: ctx.property_id }).then((x) => { if (x?.reason) el.insertAdjacentHTML('beforeend', ` <span style="font-weight:600">Reason: ${esc(x.reason)}</span>`); }).catch(() => {});
+    return;
+  }
   if (!a || !main || ['complimentary', 'active'].includes(a.state) && !(a.state === 'active' && a.days_left <= 5)) return;
   const canPay = ctx.can('owner');
   const link = canPay ? ' <a href="settings.html?tab=billing">Choose a plan →</a>' : ' Ask the owner to renew.';
@@ -224,7 +276,15 @@ function addLeadsLink() {
   a.href = 'leads.html'; a.className = 'ns-nav-link';
   a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path></svg><span>Leads</span>';
   if (/leads\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-  reports.insertAdjacentElement('afterend', a);
+  const ad = document.createElement('a');
+  ad.href = 'admin.html'; ad.className = 'ns-nav-link';
+  ad.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span>Admin panel</span>';
+  if (/admin\.html$/.test(__PATH())) { ad.classList.add('is-active'); ad.setAttribute('aria-current', 'page'); }
+  const label = document.createElement('div');
+  label.className = 'ns-nav-section'; label.textContent = 'NammaStay admin';
+  reports.insertAdjacentElement('afterend', label);
+  label.insertAdjacentElement('afterend', ad);
+  ad.insertAdjacentElement('afterend', a);
   const b = document.createElement('a');
   b.href = 'subscribers.html'; b.className = 'ns-nav-link';
   b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg><span>Subscribers</span>';
@@ -238,8 +298,19 @@ function demoBadge() {
   if (!host || $('.ns-demo-badge')) return;
   const el = document.createElement('div');
   el.className = 'ns-demo-badge';
-  el.innerHTML = '<b>Demo mode</b> · sample data saved in this browser. <button type="button">Reset</button>';
-  el.querySelector('button').addEventListener('click', async () => {
+  const k = sb.kind?.() || 'hostel';
+  el.innerHTML = `<b>Demo mode</b> · sample data saved in this browser. <button type="button" data-reset>Reset</button> · <button type="button" data-exit>Exit demo</button>
+    <div style="margin-top:6px">Try as: ${[['hostel', 'Hostel'], ['hotel', 'Hotel'], ['homestay', 'Homestay']].map(([v, l]) =>
+      `<button type="button" data-kind="${v}" style="${v === k ? 'color:#E2A03F;text-decoration:none' : ''}">${l}</button>`).join(' · ')}</div>`;
+  el.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.kind === k) return;
+    sb.setKind(b.dataset.kind); location.replace('dashboard.html');
+  }));
+  el.querySelector('[data-exit]').addEventListener('click', async () => {
+    try { localStorage.removeItem('ns.demo.on'); } catch { /* ignore */ }
+    location.replace('login.html?demo=0');
+  });
+  el.querySelector('[data-reset]').addEventListener('click', async () => {
     if (await confirmDialog('Reset demo data', 'Start again with fresh sample bookings? Changes you made in the demo will be cleared.', { confirmLabel: 'Reset' })) {
       sb.reset(); location.reload();
     }
@@ -441,7 +512,8 @@ export function bookingMessage({ booking: b, guest: g, bed, property: p, contact
     : b.status === 'pending' ? `We’ve received your booking request at ${p.name}. We’ll confirm it shortly.`
     : `Your booking at ${p.name} is confirmed. ✅`;
   const lines = [`Hi ${first}! 🙏`, head, '',
-    `*Booking:* ${b.code}`, `*Name:* ${g.full_name}`, `*Bed:* ${bed.room} · ${bed.label}`,
+    `*Booking:* ${b.code}`, `*Name:* ${g.full_name}`, `*${W.Unit}:* ${bed.room} · ${bed.label}`,
+    ...(roomsMode() ? [`*Guests:* ${guestsText(b.visitors, b.children)}`] : []),
     `*Check-in:* ${waDate(b.check_in_at)}`, `*Check-out:* ${waDate(b.check_out_at)}`,
     `*Nights:* ${b.nights}`,
     `*Total:* ${rupees(b.total_paise)}${b.paid_paise ? ` · Paid: ${rupees(b.paid_paise)}` : ''}${b.balance_paise > 0 ? ` · *Balance due: ${rupees(b.balance_paise)}*` : ''}`];
@@ -455,30 +527,135 @@ export function bookingMessage({ booking: b, guest: g, bed, property: p, contact
   lines.push('', b.status === 'checked_in' ? 'Enjoy your stay!' : 'See you soon!');
   return lines.join('\n');
 }
-/** Show the message (editable) with an "Open WhatsApp" button. */
+// ---- Booking confirmation as a picture card (ticket design) ----
+function cardInfo(d, contact) {
+  const b = d.booking; const tz = { timeZone: TZ };
+  const day = (x) => new Intl.DateTimeFormat('en-IN', { ...tz, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(x)).replace('Sept', 'Sep');
+  const dnum = (x) => new Intl.DateTimeFormat('en-IN', { ...tz, day: 'numeric' }).format(new Date(x));
+  const mon = (x) => new Intl.DateTimeFormat('en-IN', { ...tz, month: 'short' }).format(new Date(x)).replace('Sept', 'Sep').toUpperCase();
+  const head = b.status === 'checked_in' ? 'Welcome — you’re checked in' : b.status === 'pending' ? 'Booking request received' : 'Booking confirmed';
+  return { property: d.property.name, code: b.code, guest: d.guest.full_name, first: String(d.guest.full_name || '').split(/\s+/)[0],
+    room: d.bed.room, bed: d.bed.label, nights: b.nights, status: b.status, head,
+    inDay: day(b.check_in_at), inTime: fmtTime(b.check_in_at), outDay: day(b.check_out_at), outTime: fmtTime(b.check_out_at),
+    inNum: dnum(b.check_in_at), inMon: mon(b.check_in_at), outNum: dnum(b.check_out_at), outMon: mon(b.check_out_at),
+    guests: roomsMode() ? guestsText(b.visitors, b.children) : null,
+    total: rupees(b.total_paise), paid: b.paid_paise ? rupees(b.paid_paise) : null, balance: b.balance_paise > 0 ? rupees(b.balance_paise) : null,
+    address: [contact.address, contact.city].filter(Boolean).join(', '), phone: contact.phone || '' };
+}
+function rr(x, px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
+function fit(x, text, maxW, size, weight = 800, fam = 'Sora') {
+  let s2 = size; x.font = `${weight} ${s2}px ${fam}, Manrope, system-ui, sans-serif`;
+  while (x.measureText(text).width > maxW && s2 > 18) { s2 -= 2; x.font = `${weight} ${s2}px ${fam}, Manrope, system-ui, sans-serif`; }
+  let t = String(text); while (x.measureText(t).width > maxW && t.length > 3) t = t.slice(0, -2) + '…';
+  return t;
+}
+const F = (w, px, fam = 'Manrope') => `${w} ${px}px ${fam}, system-ui, sans-serif`;
+const C = { navy: '#0E1B3D', navy2: '#1D2F63', cream: '#FBF3DE', green: '#1C9A6C', mint: '#7BE0B6', amber: '#E2A03F', muted: '#8B93A8', ink: '#101A3D', line: '#E7DFC7' };
+
+export function drawBookingCard(i) {
+  const c = document.createElement('canvas'); const x = c.getContext('2d');
+  const label = (t, px, py, col = C.muted) => { x.fillStyle = col; x.font = F(800, 20); x.fillText(t.toUpperCase(), px, py); };
+  const val = (t, px, py, size = 34, col = C.ink, maxW = 400) => { x.fillStyle = col; x.font = F(800, size, 'Sora'); x.fillText(fit(x, t, maxW, size), px, py); };
+  // Ticket (boarding-pass) design
+  const W = 1200; const H = 620; c.width = W; c.height = H;
+  x.fillStyle = '#E9E1C8'; x.fillRect(0, 0, W, H);
+  rr(x, 30, 30, W - 60, H - 60, 36); x.fillStyle = C.cream; x.fill();
+  // left band
+  x.save(); rr(x, 30, 30, W - 60, H - 60, 36); x.clip();
+  x.fillStyle = C.navy; x.fillRect(30, 30, W - 60, 120);
+  x.font = F(800, 22); const stTxt = '● ' + i.head.toUpperCase(); const stW = x.measureText(stTxt).width;
+  const propName = fit(x, i.property, 860 - 70 - stW - 30, 34); x.fillStyle = C.cream; x.fillText(propName, 70, 102);
+  x.fillStyle = i.status === 'pending' ? C.amber : C.mint; x.font = F(800, 22); x.textAlign = 'right'; x.fillText(stTxt, 860, 100); x.textAlign = 'left';
+  // stub
+  x.fillStyle = C.green; x.fillRect(900, 30, W - 930, H - 60);
+  x.restore();
+  // perforation
+  x.fillStyle = '#E9E1C8'; x.beginPath(); x.arc(900, 30, 26, 0, Math.PI * 2); x.arc(900, H - 30, 26, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = C.cream; x.lineWidth = 4; x.setLineDash([10, 12]); x.beginPath(); x.moveTo(900, 70); x.lineTo(900, H - 70); x.stroke(); x.setLineDash([]);
+  label('Guest', 70, 205); val(i.guest, 70, 255, 46, C.ink, 780);
+  label('Check-in', 70, 330); val(i.inDay, 70, 372, 32); x.fillStyle = C.muted; x.font = F(700, 24); x.fillText(i.inTime, 70, 406);
+  label('Check-out', 360, 330); val(i.outDay, 360, 372, 32); x.fillStyle = C.muted; x.font = F(700, 24); x.fillText(i.outTime, 360, 406);
+  label('Nights', 650, 330); val(String(i.nights), 650, 372, 32);
+  label('Bed', 70, 470); val(`${i.room} · ${i.bed}`, 70, 512, 30, C.ink, 780);
+  x.fillStyle = C.muted; x.font = F(600, 20); x.fillText(fit(x, [i.address, i.phone].filter(Boolean).join('   ·   '), 780, 20, 600, 'Manrope'), 70, 560);
+  // stub text
+  x.save(); x.translate(1015, H / 2); x.rotate(-Math.PI / 2); x.textAlign = 'center';
+  x.fillStyle = 'rgba(255,255,255,.75)'; x.font = F(800, 20); x.fillText('BOOKING', 0, -62);
+  x.fillStyle = '#FFFFFF'; x.font = F(800, 52, 'Sora'); x.fillText(i.code, 0, -8);
+  x.font = F(800, 22); x.fillStyle = i.balance ? '#FFE8B8' : '#D8FFEC'; x.fillText(i.balance ? `BALANCE ${i.balance}` : i.paid ? 'FULLY PAID ✓' : `TOTAL ${i.total}`, 0, 40);
+  x.restore();
+  return c;
+}
+
+/** Send booking details to the guest: ticket picture card or text. */
 export async function sendBookingWhatsApp(bookingId, { justSaved = false } = {}) {
   const d = await rpc('booking_detail', { p_booking: bookingId });
   const contact = await sb.from('properties').select('name, address, city, phone').eq('id', d.property.id).limit(1)
     .then((r) => (r.data && r.data[0]) || {}, () => ({}));
   const text = bookingMessage({ booking: d.booking, guest: d.guest, bed: d.bed, property: d.property, contact });
+  const info = cardInfo(d, contact);
   const num = waNumber(d.guest.phone);
-  const link = () => `https://wa.me/${num}?text=${encodeURIComponent(m.el.querySelector('#wa-text').value)}`;
+  const caption = `${info.head} — ${info.property}\n${info.guest} · ${info.code}\n${info.inDay}, ${info.inTime} → ${info.outDay}, ${info.outTime}`
+    + (d.booking.self_checkin_token && ['pending', 'confirmed'].includes(d.booking.status) && !d.booking.self_checkin_at
+      ? `\n\nCheck in online: ${SITE_URL}/self-check-in.html?t=${d.booking.self_checkin_token}` : '');
+  const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] }));
+  const canCopyImg = !!(window.ClipboardItem && navigator.clipboard?.write);
+  let blob = null; let url = null;
+  try { await document.fonts?.ready; } catch { /* fonts are optional */ }
+
   const m = modal({
-    title: justSaved ? `Booking ${d.booking.code} saved ✓` : 'Send booking details',
-    width: 520,
+    title: justSaved ? `Booking ${d.booking.code} saved ✓` : 'Send booking details', width: 620,
     body: `${justSaved ? '<div style="font-size:14px">Send the booking details to the guest on WhatsApp?</div>' : ''}
       ${num ? `<div class="ns-muted" style="font-size:13px">To <b>${esc(d.guest.full_name)}</b> · ${esc(d.guest.phone)}</div>`
         : '<div class="ns-demo-hint">No phone number saved for this guest — WhatsApp will ask you to pick the contact.</div>'}
-      <textarea class="ns-input" id="wa-text" rows="14" style="font-size:13px;line-height:1.5">${esc(text)}</textarea>
-      <div class="ns-help">You can edit the message before sending.</div>`,
-    actions: [{ label: justSaved ? 'Not now' : 'Close' },
-      { label: 'Copy', onClick: async (el) => {
-        const t = el.querySelector('#wa-text').value;
-        try { await navigator.clipboard.writeText(t); toast('Message copied.'); } catch { el.querySelector('#wa-text').select(); toast('Select and copy the message.'); }
-        return false;
-      } },
-      { label: 'Open WhatsApp', kind: 'primary', onClick: () => { window.open(link(), '_blank', 'noopener'); return true; } }],
+      <div class="ns-seg light" role="tablist" id="wa-mode"><button type="button" class="is-on" data-mode="card">🖼 Picture card</button><button type="button" data-mode="text">💬 Text message</button></div>
+      <div id="wa-card-pane" style="display:flex;flex-direction:column;gap:10px">
+        <img id="wa-card" alt="Booking card preview" style="width:100%;border-radius:12px;box-shadow:0 10px 26px rgba(14,27,61,.18);background:#F5F1E3;max-height:52vh;object-fit:contain">
+        <div class="ns-help" id="wa-card-help">${canShareFiles ? 'Tap <b>Share card</b> → choose <b>WhatsApp</b> → the guest. The card goes with a short caption.'
+          : canCopyImg ? 'Click <b>Copy image</b>, then paste it (Ctrl+V) into the guest’s chat in WhatsApp — <b>Open chat</b> opens it for you.'
+          : 'Click <b>Download</b>, then attach the image in the guest’s WhatsApp chat.'}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button type="button" class="ns-btn-ghost" id="wa-dl">Download</button>
+          ${canCopyImg ? '<button type="button" class="ns-btn-ghost" id="wa-copy">Copy image</button>' : ''}
+          ${canShareFiles ? '<button type="button" class="ns-btn" id="wa-share" style="background:#25D366;border-color:#25D366">Share card</button>'
+            : `<a class="ns-btn" id="wa-chat" style="background:#25D366;border-color:#25D366" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${encodeURIComponent(caption)}">Open chat</a>`}
+        </div>
+      </div>
+      <div id="wa-text-pane" hidden style="display:flex;flex-direction:column;gap:10px">
+        <textarea class="ns-input" id="wa-text" rows="14" style="font-size:13px;line-height:1.5">${esc(text)}</textarea>
+        <div class="ns-help">You can edit the message before sending.</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="ns-btn-ghost" id="wa-copy-text">Copy</button>
+          <button type="button" class="ns-btn" id="wa-open" style="background:#25D366;border-color:#25D366">Open WhatsApp</button></div>
+      </div>`,
+    actions: [{ label: justSaved ? 'Not now' : 'Close' }],
   });
+  const $m = (sel) => m.el.querySelector(sel);
+  const fileName = () => `${info.code}-booking.png`;
+  const render = async () => {
+    const canvas = drawBookingCard(info);
+    blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(blob); $m('#wa-card').src = url;
+  };
+  $m('#wa-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mode]'); if (!b) return;
+    m.el.querySelectorAll('#wa-mode button').forEach((x) => x.classList.toggle('is-on', x === b));
+    $m('#wa-card-pane').hidden = b.dataset.mode !== 'card'; $m('#wa-text-pane').hidden = b.dataset.mode !== 'text';
+  });
+  $m('#wa-dl').onclick = () => { const a = document.createElement('a'); a.href = url; a.download = fileName(); a.click(); };
+  $m('#wa-copy')?.addEventListener('click', async () => {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast('Card copied — paste it into the WhatsApp chat.'); }
+    catch { toast('Couldn’t copy the image — use Download instead.', { error: true }); }
+  });
+  $m('#wa-share')?.addEventListener('click', async () => {
+    const f = new File([blob], fileName(), { type: 'image/png' });
+    try { await navigator.share({ files: [f], text: caption, title: info.head }); } catch { /* cancelled */ }
+  });
+  $m('#wa-copy-text').onclick = async () => {
+    try { await navigator.clipboard.writeText($m('#wa-text').value); toast('Message copied.'); } catch { $m('#wa-text').select(); toast('Select and copy the message.'); }
+  };
+  $m('#wa-open').onclick = () => window.open(`https://wa.me/${num}?text=${encodeURIComponent($m('#wa-text').value)}`, '_blank', 'noopener');
+  await render();
   return m;
 }
 
@@ -493,7 +670,7 @@ export function deleteBookingDialog({ ctx, id, guest, room, bed, checkIn, checkO
   modal({
     title: `Delete ${guest}’s stay?`,
     body: `<p style="margin:0;font-size:14px;line-height:1.6">This removes only this stay — <b>${esc(room)} · ${esc(bed)}</b>,
-        <b>${fmtDayTime(checkIn)} → ${fmtDayTime(checkOut)}</b> — and frees the bed for those dates.
+        <b>${fmtDayTime(checkIn)} → ${fmtDayTime(checkOut)}</b> — and frees the ${W.unit} for those dates.
         ${esc(guest)}’s profile and other bookings are not affected.</p>
       ${status === 'checked_in' ? '<div class="ns-demo-hint">This guest is <b>checked in right now</b>. Only delete if the booking was entered by mistake — to end a real stay, use <b>Check out</b>.</div>' : ''}
       ${paidPaise > 0 ? `<div class="ns-error" style="font-weight:600">${rupees(paidPaise)} paid on this booking will be deleted too. If you really received this money, record it on the correct booking.</div>` : ''}
@@ -503,6 +680,35 @@ export function deleteBookingDialog({ ctx, id, guest, room, bed, checkIn, checkO
     actions: [{ label: 'Keep booking' }, { label: 'Delete booking', kind: 'danger', onClick: async (el) => {
       const r = await rpc('delete_booking', { p_booking: id, p_reason: el.querySelector('[name=reason]').value });
       toast(`${r.code} deleted — bed is free again.`);
+      onDone?.(r);
+    } }],
+  });
+}
+
+// ---------------------------------------------------------------- delete a guest completely (owner / manager)
+export async function deleteGuestDialog(ctx, guestId, onDone) {
+  if (!ctx.can('owner', 'manager')) { toast('Only the owner or manager can delete a guest.', { error: true }); return; }
+  const d = await rpc('guest_profile', { p_guest: guestId });
+  const g = d.guest; const n = d.stays.length;
+  const active = d.stays.filter((x) => ['pending', 'confirmed', 'checked_in'].includes(x.status));
+  const inHouse = active.some((x) => x.status === 'checked_in');
+  modal({
+    title: `Delete ${g.full_name}?`,
+    body: `<p style="margin:0;font-size:14px;line-height:1.6">This permanently removes <b>${esc(g.full_name)}</b>’s profile${n ? `, <b>all ${n} booking${n > 1 ? 's' : ''}</b>` : ''}${d.spend_paise ? ` and <b>${rupees(d.spend_paise)}</b> in payments` : ''}${g.id_doc_path || g.id_doc_back_path ? ', and their ID photos' : ''}.</p>
+      ${d.spend_paise ? `<div class="ns-error" style="font-weight:600">${rupees(d.spend_paise)} will be removed from your revenue and reports.</div>` : ''}
+      ${inHouse ? '<div class="ns-demo-hint">This guest is <b>checked in right now</b> — their ${W.unit} will show as free.</div>'
+        : active.length ? `<div class="ns-demo-hint">${active.length} upcoming booking${active.length > 1 ? 's' : ''} will be cancelled and the ${W.units} freed.</div>` : ''}
+      ${n ? `<div class="ns-muted" style="font-size:12.5px">To delete just one stay instead, use the 🗑 on that row in Stay history.</div>` : ''}
+      ${field('Reason', `<select class="ns-input" name="reason">${options([['Entered by mistake', 'Entered by mistake'], ['Duplicate guest', 'Duplicate guest'],
+        ['Guest asked to delete their data', 'Guest asked to delete their data'], ['Test entry', 'Test entry'], ['Other', 'Other']], 'Entered by mistake')}</select>`)}
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600"><input type="checkbox" name="sure" style="margin-top:2px">
+        I understand this can’t be undone.</label>
+      <div class="ns-help">A copy of each deleted booking is kept in Settings → Notifications → Deleted bookings.</div>`,
+    actions: [{ label: 'Keep guest' }, { label: 'Delete guest', kind: 'danger', onClick: async (el) => {
+      if (!el.querySelector('[name=sure]').checked) throw new Error('Tick the box to confirm.');
+      const r = await rpc('delete_guest', { p_guest: guestId, p_reason: el.querySelector('[name=reason]').value });
+      if (r.id_doc_paths?.length) await sb.storage.from('guest-ids').remove(r.id_doc_paths).catch(() => {});
+      toast(`${r.guest} deleted${r.bookings_removed ? ` with ${r.bookings_removed} booking${r.bookings_removed > 1 ? 's' : ''}` : ''}.`);
       onDone?.(r);
     } }],
   });
@@ -566,6 +772,64 @@ export async function uploadIdDoc(path, file) {
     ? 'Upload not allowed. The link may have expired.' : error.message);
   return path;
 }
+// ---- ID photos: front + back, shown inside the app (new tabs get blocked as pop-ups)
+const isPdf = (p) => /\.pdf$/i.test(p || '');
+export async function viewIdDocs({ front, back, name }) {
+  const sides = [['Front', front], ['Back', back]].filter(([, p]) => p);
+  if (!sides.length) { toast('No ID photo on file for this guest.', { error: true }); return; }
+  const loaded = await Promise.all(sides.map(async ([label, path]) => {
+    const [view, dl] = await Promise.all([
+      sb.storage.from('guest-ids').createSignedUrl(path, 300),
+      sb.storage.from('guest-ids').createSignedUrl(path, 300, { download: `${String(name || 'guest').replace(/\W+/g, '-')}-id-${label.toLowerCase()}${isPdf(path) ? '.pdf' : '.jpg'}` }),
+    ]);
+    return { label, path, url: view.data?.signedUrl, dl: dl.data?.signedUrl || view.data?.signedUrl, error: view.error?.message };
+  }));
+  modal({
+    title: `ID · ${name || ''}`, width: sides.length > 1 ? 900 : 560,
+    body: `<div style="display:grid;grid-template-columns:repeat(${sides.length},minmax(0,1fr));gap:16px" class="ns-id-grid">
+      ${loaded.map((x) => `<figure style="margin:0;display:flex;flex-direction:column;gap:8px;min-width:0">
+          <figcaption style="font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.04em">${x.label} side</figcaption>
+          ${x.error || !x.url ? `<div class="ns-empty" style="border:1px dashed #E2DAC4;border-radius:12px">Couldn’t load this file${x.error ? ': ' + esc(x.error) : ''}.<br>It may have been deleted after the retention period.</div>`
+            : isPdf(x.path) ? `<div class="ns-empty" style="border:1px dashed #E2DAC4;border-radius:12px">PDF document</div>`
+            : `<img src="${esc(x.url)}" alt="${x.label} of ID" style="width:100%;max-height:60vh;object-fit:contain;background:#F5F1E3;border-radius:12px" data-img>`}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${x.url ? `<a class="ns-btn-ghost" style="height:34px;font-size:12px" href="${esc(x.url)}" target="_blank" rel="noopener">Open full size</a>
+              <a class="ns-btn-ghost" style="height:34px;font-size:12px" href="${esc(x.dl)}" download>Download</a>` : ''}
+          </div></figure>`).join('')}
+      </div>
+      <div class="ns-help">Links expire in 5 minutes. ID photos are deleted automatically after the retention period in Settings.</div>`,
+    actions: [{ label: 'Close' }],
+  }).el.querySelectorAll('[data-img]').forEach((img) => img.addEventListener('error', () => {
+    img.outerHTML = '<div class="ns-empty" style="border:1px dashed #E2DAC4;border-radius:12px">Couldn’t load this image. It may have been deleted after the retention period.</div>';
+  }));
+}
+/** Two file inputs (front / back) with a small preview each */
+export function idUploadFields({ front = 'ID photo — front', back = 'ID photo — back (not needed for passports)', hasFront = false, hasBack = false } = {}) {
+  const one = (name, label, has) => `<div class="ns-field"><label>${esc(label)}</label>
+    <label class="ns-id-drop"><input type="file" name="${name}" accept="image/*,application/pdf" capture="environment">
+      <img alt="" hidden><span>${has ? 'Replace photo' : 'Take or choose a photo'}</span></label></div>`;
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="ns-id-upload">${one('id_file', front, hasFront)}${one('id_file_back', back, hasBack)}</div>`;
+}
+export function wireIdPreviews(root) {
+  root.querySelectorAll('.ns-id-drop input[type=file]').forEach((inp) => inp.addEventListener('change', () => {
+    const f = inp.files[0]; const img = inp.parentElement.querySelector('img'); const span = inp.parentElement.querySelector('span');
+    if (!f) { img.hidden = true; return; }
+    if (/^image\//.test(f.type)) { img.src = URL.createObjectURL(f); img.hidden = false; } else img.hidden = true;
+    span.textContent = f.name.length > 28 ? f.name.slice(0, 25) + '…' : f.name;
+  }));
+}
+/** Upload whichever sides were chosen. Returns { id_doc_path?, id_doc_back_path? } */
+export async function uploadIdSides(root, folder) {
+  const out = {};
+  for (const [name, key] of [['id_file', 'id_doc_path'], ['id_file_back', 'id_doc_back_path']]) {
+    const f = root.querySelector(`[name=${name}]`)?.files?.[0];
+    if (!f) continue;
+    const small = await compressImage(f);
+    out[key] = await uploadIdDoc(`${folder}/${newId()}.${small.type === 'application/pdf' ? 'pdf' : 'jpg'}`, small);
+  }
+  return out;
+}
+
 export async function openIdDoc(path) {
   const { data, error } = await sb.storage.from('guest-ids').createSignedUrl(path, 120);
   if (error) throw new Error(error.message);

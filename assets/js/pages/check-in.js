@@ -1,4 +1,4 @@
-import { newId,
+import { newId, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, uploadIdSides,
   page, rpc, q, sb, $, esc, rupees, toPaise, ymd, addDays, daysBetween, fromInputDT, field, options,
   ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content,
 } from '../core.js';
@@ -22,7 +22,6 @@ page('checkin', async (ctx) => {
         <div id="returning" hidden></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name || '')}" ${existing ? 'disabled' : ''}>`)}
-          ${field('Number of visitors', '<input class="ns-input" name="visitors" type="number" min="1" max="20" value="1">')}
           ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone || '')}" ${existing ? 'disabled' : ''}>`)}
           ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email || '')}" ${existing ? 'disabled' : ''}>`)}
           ${existing ? '' : `
@@ -30,8 +29,8 @@ page('checkin', async (ctx) => {
           ${field('Nationality', '<input class="ns-input" name="nationality" list="nat" placeholder="India"><datalist id="nat"><option>India</option><option>Germany</option><option>France</option><option>United Kingdom</option><option>United States</option><option>Spain</option><option>Israel</option><option>Netherlands</option><option>Australia</option></datalist>')}
           ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Select…</option>${options(ID_TYPES, 'aadhaar')}</select>`)}
           ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
-          <div style="grid-column:1/3">${field('ID photo (optional)', '<input class="ns-input" name="id_file" type="file" accept="image/*,application/pdf" capture="environment" style="padding:10px">',
-            'Compressed before upload. Deleted automatically after the retention period in Settings.')}</div>`}
+          <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
+            <div class="ns-help" style="margin-top:6px">Compressed before upload. Deleted automatically after the retention period in Settings.</div></div>`}
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280">
           <input type="checkbox" name="send_confirmation" checked style="width:16px;height:16px;accent-color:#1C9A6C">
@@ -43,9 +42,10 @@ page('checkin', async (ctx) => {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           ${field('Check-in date & time *', `<input class="ns-input" name="check_in_at" type="datetime-local" value="${preIn}T14:00">`)}
           ${field('Check-out date & time *', `<input class="ns-input" name="check_out_at" type="datetime-local" value="${preOut}T11:00">`)}
-          ${field('Bed *', '<select class="ns-input" name="bed_id"><option value="">Loading free beds…</option></select>')}
           ${field('Booked via', `<select class="ns-input" name="source">${options(SOURCES, 'walk_in')}</select>`)}
         </div>
+        <div id="units" style="display:flex;flex-direction:column;gap:10px"></div>
+        <button type="button" class="ns-btn-ghost" id="add-unit" style="align-self:flex-start">+ Add another ${W.unit}</button>
         ${field('Note (optional)', '<textarea class="ns-input" name="note" maxlength="2000" placeholder="Late arrival, special request, etc."></textarea>')}
       </div>
     </div>
@@ -53,7 +53,7 @@ page('checkin', async (ctx) => {
     <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
       <div class="ns-card-dark" style="padding:24px;display:flex;flex-direction:column;gap:16px">
         <div class="ns-h3" style="color:#FBF3DE">Booking summary</div>
-        ${L('<span id="s-bed">No bed selected</span><span id="s-rate"></span>')}
+        <div id="s-lines" style="display:flex;flex-direction:column;gap:8px"></div>
         ${L('<span>Nights</span><span id="s-nights">1</span>')}
         <div style="height:1px;background:#22305A"></div>
         <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;color:#FBF3DE"><span>Total</span><span id="s-total">₹0</span></div>
@@ -71,38 +71,69 @@ page('checkin', async (ctx) => {
     </div>`, 'padding:28px 32px;display:grid;grid-template-columns:1fr 380px;gap:24px;');
 
   const f = (n) => document.querySelector(`[name="${n}"]`);
+  wireIdPreviews(document.querySelector('.ns-content'));
   const nights = () => {
     const a = f('check_in_at').value.slice(0, 10); const b = f('check_out_at').value.slice(0, 10);
     return a && b ? Math.max(1, daysBetween(a, b)) : 1;
   };
 
-  function summary() {
-    const bed = state.beds.find((x) => x.id === f('bed_id').value);
-    state.bed = bed || null;
-    $('#s-bed').textContent = bed ? `${bed.room_name} · ${bed.label}` : 'No bed selected';
-    $('#s-rate').textContent = bed ? `${rupees(bed.rate_paise)} / night` : '';
-    $('#s-nights').textContent = nights();
-    $('#s-total').textContent = rupees(bed ? bed.rate_paise * nights() : 0);
-    const startsToday = f('check_in_at').value.slice(0, 10) === today;
-    $('#checkin-now').hidden = !startsToday;
+  // ---- one or more rooms/beds in this booking
+  const rooms = roomsMode();
+  const unitsBox = $('#units');
+  const rowHtml = (first) => `<div class="unit-row" style="display:grid;grid-template-columns:${rooms ? '1fr 90px 90px' : '1fr'}${first ? '' : ' 40px'};gap:10px;align-items:end">
+      ${field(first ? `${W.Unit} *` : `Another ${W.unit}`, '<select class="ns-input" name="unit"></select>')}
+      ${rooms ? `${field('Adults', '<input class="ns-input" name="adults" type="number" min="1" max="20" value="2">')}${field('Children', '<input class="ns-input" name="children" type="number" min="0" max="20" value="0">')}` : ''}
+      ${first ? '' : `<button type="button" class="ns-icon-del" data-remove aria-label="Remove this ${W.unit}" title="Remove">✕</button>`}
+    </div>`;
+  const addRow = (first = false) => {
+    unitsBox.insertAdjacentHTML('beforeend', rowHtml(first));
+    const row = unitsBox.lastElementChild; fillSelect(row.querySelector('[name=unit]')); summary();
+  };
+  const rowsData = () => [...unitsBox.querySelectorAll('.unit-row')].map((r) => ({
+    el: r, unit: state.beds.find((x) => x.id === r.querySelector('[name=unit]').value) || null,
+    adults: rooms ? Math.max(1, parseInt(r.querySelector('[name=adults]').value, 10) || 1) : 1,
+    children: rooms ? Math.max(0, parseInt(r.querySelector('[name=children]').value, 10) || 0) : 0 }));
+  const extraFor = (u, adults) => Math.max(0, adults - (u.base_guests || 1)) * (u.extra_guest_paise || 0);
+  const lineTotal = (r) => (r.unit ? (r.unit.rate_paise + extraFor(r.unit, r.adults)) * nights() : 0);
+  function fillSelect(sel, keep) {
+    const chosen = [...unitsBox.querySelectorAll('[name=unit]')].filter((x) => x !== sel).map((x) => x.value);
+    const cur = keep ?? sel.value;
+    const list = state.beds.filter((x) => !chosen.includes(x.id));
+    sel.innerHTML = list.length
+      ? `<option value="">Choose a ${W.unit}…</option>` + list.map((x) => `<option value="${esc(x.id)}" ${x.id === cur ? 'selected' : ''}>${esc(x.room_name)} · ${esc(x.label)} — ${rupees(x.rate_paise)}/night${rooms && x.max_guests ? ` · up to ${x.max_guests}` : ''}</option>`).join('')
+      : `<option value="">No ${W.units} free for these dates</option>`;
   }
-
+  function summary() {
+    const rows = rowsData(); const n = nights();
+    state.bed = rows[0]?.unit || null;
+    $('#s-lines').innerHTML = rows.filter((r) => r.unit).map((r) => {
+      const ex = extraFor(r.unit, r.adults);
+      const over = rooms && r.adults + r.children > (r.unit.max_guests || 1);
+      return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#AEB6C9"><span>${esc(r.unit.room_name)} · ${esc(r.unit.label)}${rooms ? `<br><small>${guestsText(r.adults, r.children)}${ex ? ` · +${rupees(ex)} extra guest` : ''}</small>` : ''}
+        ${over ? `<br><small style="color:#FF9B9B">Fits up to ${r.unit.max_guests}</small>` : ''}</span><span>${rupees(r.unit.rate_paise + ex)} / night</span></div>`;
+    }).join('') || `<div style="font-size:13px;color:#AEB6C9">No ${W.unit} selected</div>`;
+    $('#s-nights').textContent = n;
+    $('#s-total').textContent = rupees(rows.reduce((t, r) => t + lineTotal(r), 0));
+    $('#checkin-now').hidden = f('check_in_at').value.slice(0, 10) !== today;
+    $('#add-unit').hidden = !state.beds.length || rows.length >= Math.min(10, state.beds.length);
+  }
   async function loadBeds() {
     const inAt = fromInputDT(f('check_in_at').value); const outAt = fromInputDT(f('check_out_at').value);
-    const sel = f('bed_id');
     if (!inAt || !outAt || new Date(outAt) <= new Date(inAt)) {
-      sel.innerHTML = '<option value="">Check-out must be after check-in</option>'; summary(); return;
+      state.beds = []; unitsBox.querySelectorAll('[name=unit]').forEach((x) => { x.innerHTML = '<option value="">Check-out must be after check-in</option>'; }); summary(); return;
     }
-    const keep = sel.value || preBed;
     state.beds = await rpc('available_beds', { p_property: ctx.property_id, p_in: inAt, p_out: outAt });
-    sel.innerHTML = state.beds.length
-      ? '<option value="">Choose a bed…</option>' + state.beds.map((x) =>
-        `<option value="${esc(x.id)}" ${x.id === keep ? 'selected' : ''}>${esc(x.room_name)} · ${esc(x.label)} — ${rupees(x.rate_paise)}/night</option>`).join('')
-      : '<option value="">No beds free for these dates</option>';
+    const sels = [...unitsBox.querySelectorAll('[name=unit]')];
+    sels.forEach((x, i) => fillSelect(x, x.value || (i === 0 ? preBed : '')));
     summary();
   }
+  unitsBox.addEventListener('change', (e) => { if (e.target.name === 'unit') unitsBox.querySelectorAll('[name=unit]').forEach((x) => { if (x !== e.target) fillSelect(x); }); summary(); });
+  unitsBox.addEventListener('input', (e) => { if (['adults', 'children'].includes(e.target.name)) summary(); });
+  unitsBox.addEventListener('click', (e) => { const b = e.target.closest('[data-remove]'); if (b) { b.closest('.unit-row').remove(); unitsBox.querySelectorAll('[name=unit]').forEach((x) => fillSelect(x)); summary(); } });
+  $('#add-unit').addEventListener('click', () => addRow(false));
+  addRow(true);
+
   ['check_in_at', 'check_out_at'].forEach((n) => f(n).addEventListener('change', loadBeds));
-  f('bed_id').addEventListener('change', summary);
 
   $('#method').addEventListener('click', (e) => {
     const b = e.target.closest('[data-m]'); if (!b) return;
@@ -131,41 +162,45 @@ page('checkin', async (ctx) => {
     const err = $('#err'); err.hidden = true;
     const fail = (m) => { err.textContent = m; err.hidden = false; err.scrollIntoView({ block: 'center' }); };
     if (!existing && !f('full_name').value.trim()) return fail('Enter the guest’s full name.');
-    if (!f('bed_id').value) return fail('Choose a bed.');
+    const rows = rowsData();
+    if (!rows[0].unit) return fail(`Choose a ${W.unit}.`);
+    if (rows.some((r) => !r.unit)) return fail(`Choose a ${W.unit} in every row, or remove the empty one.`);
+    const tooMany = rooms && rows.find((r) => r.adults + r.children > (r.unit.max_guests || 1));
+    if (tooMany) return fail(`${tooMany.unit.label} fits up to ${tooMany.unit.max_guests} guests.`);
     const paid = f('paid_now').value ? toPaise(f('paid_now').value) : 0;
     if (Number.isNaN(paid) || paid < 0) return fail('Enter a valid amount paid.');
-    const total = state.bed.rate_paise * nights();
-    if (paid > total) return fail(`Paid now can’t be more than the total (${rupees(total)}).`);
+    const first = lineTotal(rows[0]);
+    if (paid > first) return fail(`Paid now can’t be more than the first ${W.unit}’s total (${rupees(first)}). Record the rest on the other bookings.`);
     if (paid > 0 && state.method === 'upi' && !f('reference').value.trim()) return fail('Enter the UPI transaction ID (UTR).');
 
     btn.disabled = true;
+    const made = [];
     try {
-      let idPath = null;
-      const file = f('id_file')?.files?.[0];
-      if (file) {
-        const small = await compressImage(file);
-        idPath = await uploadIdDoc(`${ctx.property_id}/staff/${newId()}.${small.type === 'application/pdf' ? 'pdf' : 'jpg'}`, small);
+      const ids = existing ? {} : await uploadIdSides(document.querySelector('.ns-content'), `${ctx.property_id}/staff`);
+      let guestId = existing?.id || null;
+      for (const [i, r] of rows.entries()) {
+        const res = await rpc('create_booking', { p: {
+          property_id: ctx.property_id,
+          guest_id: guestId,
+          guest: guestId ? null : {
+            full_name: f('full_name').value.trim(), phone: f('phone').value, email: f('email').value,
+            dob: f('dob').value, nationality: f('nationality').value, id_type: f('id_type').value,
+            id_number: f('id_number').value, id_doc_path: ids.id_doc_path || null, id_doc_back_path: ids.id_doc_back_path || null,
+          },
+          bed_id: r.unit.id, visitors: r.adults, children: r.children,
+          check_in_at: fromInputDT(f('check_in_at').value),
+          check_out_at: fromInputDT(f('check_out_at').value),
+          status, source: f('source').value,
+          note: f('note').value + (rows.length > 1 ? `${f('note').value ? '\n' : ''}Group booking: ${i + 1} of ${rows.length}` : ''),
+          send_confirmation: i === 0 && f('send_confirmation').checked,
+          payment: i === 0 && paid > 0 ? { amount_paise: paid, method: state.method, reference: f('reference').value || null } : null,
+        } });
+        guestId = guestId || res.guest_id; made.push(res);
       }
-      const res = await rpc('create_booking', { p: {
-        property_id: ctx.property_id,
-        guest_id: existing?.id || null,
-        guest: existing ? null : {
-          full_name: f('full_name').value.trim(), phone: f('phone').value, email: f('email').value,
-          dob: f('dob').value, nationality: f('nationality').value, id_type: f('id_type').value,
-          id_number: f('id_number').value, id_doc_path: idPath,
-        },
-        bed_id: f('bed_id').value,
-        visitors: f('visitors').value || 1,
-        check_in_at: fromInputDT(f('check_in_at').value),
-        check_out_at: fromInputDT(f('check_out_at').value),
-        status, source: f('source').value, note: f('note').value,
-        send_confirmation: f('send_confirmation').checked,
-        payment: paid > 0 ? { amount_paise: paid, method: state.method, reference: f('reference').value || null } : null,
-      } });
-      toast(`${res.code} saved.`);
-      location.href = `booking-detail.html?id=${res.id}&new=1`;
+      toast(made.length > 1 ? `${made.length} ${W.units} booked: ${made.map((x) => x.code).join(', ')}` : `${made[0].code} saved.`);
+      location.href = `booking-detail.html?id=${made[0].id}&new=1`;
     } catch (e) {
-      fail(e.message); btn.disabled = false;
+      fail(made.length ? `${made.map((x) => x.code).join(', ')} saved, but the next ${W.unit} failed: ${e.message}` : e.message); btn.disabled = false;
       if (/already booked/.test(e.message)) loadBeds();
     }
   }

@@ -352,3 +352,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;
 .ns-table .ns-sticky-end{position:sticky;right:0;background:#FFFFFF;box-shadow:-8px 0 8px -8px rgba(14,27,61,.18);padding-left:8px !important}
 .ns-table th.ns-sticky-end{background:#FBF9F1}
 .ns-table tr[data-href]:hover td.ns-sticky-end{background:#FBF9F1}
+
+/* ---------- ID photo upload (front / back) ---------- */
+.ns-id-drop{position:relative;display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 12px;border:1.5px dashed #D9CFB2;border-radius:12px;background:var(--paper);cursor:pointer;font-size:12.5px;font-weight:700;color:#6B7280;overflow:hidden}
+.ns-id-drop:hover,.ns-id-drop:focus-within{border-color:var(--green);color:var(--ink)}
+.ns-id-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.ns-id-drop img{width:64px;height:46px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.ns-id-drop span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:560px){ .ns-id-upload,.ns-id-grid{grid-template-columns:1fr !important} }
+.ns-nav-section{margin:14px 12px 4px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6C7BA8}
+.ns-guestbox-actions{flex-wrap:wrap}
+@media (max-width:700px){ .ns-guestbox-actions .ns-btn,.ns-guestbox-actions .ns-btn-ghost{white-space:normal;height:auto;min-height:30px;padding:6px 10px} }
+.ns-icon-edit{width:34px;height:34px;border-radius:8px;border:1px solid transparent;color:#2D5FA6;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.ns-icon-edit:hover,.ns-icon-edit:focus-visible{background:#EAF1FB;border-color:#C9DAF2}
+.ns-icon-del{vertical-align:middle}
+/* rooms/beds rows in a booking */
+@media (max-width:560px){
+  .unit-row{grid-template-columns:1fr 1fr !important}
+  .unit-row > .ns-field:first-child{grid-column:1/-1}
+  .unit-row > [data-remove]{grid-column:1/-1;justify-self:end}
+  .ns-modal [style*="grid-template-columns:1fr 100px 90px 90px"]{grid-template-columns:1fr 72px 60px 64px !important;gap:6px !important}
+}

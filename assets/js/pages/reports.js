@@ -1,4 +1,4 @@
-import { page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDay, ymd, addDays, downloadCsv, options, $ } from '../core.js';
+import { W, page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDay, ymd, addDays, downloadCsv, options, $ } from '../core.js';
 
 const SOURCE = { walk_in: 'Walk-in', direct: 'Direct', ota: 'Hostelworld / OTA', referral: 'Referral' };
 
@@ -23,7 +23,7 @@ page('reports', async (ctx) => {
     content(`
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
         ${kpi('Revenue', rupees(r.revenue))}${kpi('Avg. occupancy', Math.round(r.occupancy * 100) + '%')}
-        ${kpi('Avg. length of stay', r.alos + ' nights')}${kpi('RevPAB', rupees(Math.round(r.revpab / 100) * 100), 'Revenue per available bed per night')}</div>
+        ${kpi('Avg. length of stay', r.alos + ' nights')}${kpi(W.perf, rupees(Math.round(r.revpab / 100) * 100), W.perfLong)}</div>
       <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px">
         <div class="ns-card" style="display:flex;flex-direction:column;gap:18px">
           <div style="display:flex;justify-content:space-between;align-items:center"><div class="ns-h3">Revenue by week</div>
@@ -33,7 +33,7 @@ page('reports', async (ctx) => {
                 <div style="background:#EDE7D3;border-radius:6px 6px 0 0;height:${(w.cash / maxW) * 100}%"></div>
                 <div style="background:#1C9A6C;height:${(w.digital / maxW) * 100}%"></div></div>
               <div class="ns-muted" style="font-size:10.5px">${fmtDay(w.start + 'T12:00:00+05:30')}</div></div>`).join('')}</div>
-          <table class="ns-table"><thead><tr><th>Room type</th><th>Beds</th><th>Occupancy</th><th style="text-align:right">Revenue</th></tr></thead>
+          <table class="ns-table"><thead><tr><th>Room type</th><th>${W.Units}</th><th>Occupancy</th><th style="text-align:right">Revenue</th></tr></thead>
             <tbody>${r.rooms.map((x) => `<tr><td style="font-weight:700">${esc(x.name)}</td><td>${x.beds}</td>
               <td style="font-weight:700;color:${x.occupancy >= 0.8 ? '#157A56' : '#966016'}">${Math.round(x.occupancy * 100)}%</td>
               <td style="text-align:right;font-weight:700">${rupees(x.revenue)}</td></tr>`).join('')}</tbody></table>

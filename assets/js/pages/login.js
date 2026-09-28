@@ -1,4 +1,4 @@
-import { DEMO, sb, $, modal, toast, reveal, SITE_URL, param } from '../core.js';
+import { DEMO, NOT_CONNECTED, markBrowserSession, esc, sb, $, modal, toast, reveal, SITE_URL, param } from '../core.js';
 
 init();
 
@@ -16,10 +16,21 @@ async function init() {
     setup.parentElement.innerHTML = 'New property? <a href="signup.html" style="font-weight:700">Start a 15-day free trial</a><br>'
       + '<span style="font-size:12.5px">Staff: ask your property owner to invite you.</span>';
   }
+  if (NOT_CONNECTED) {                       // keys missing: nobody can sign in
+    const box = document.createElement('div');
+    box.className = 'ns-error'; box.setAttribute('role', 'alert');
+    box.innerHTML = 'Sign-in is unavailable right now — this site isn’t connected to its database. Please try again later.'
+      + '<br><a href="login.html?demo=1" style="font-weight:800">Explore the demo instead →</a>';
+    email.closest('div').parentElement.insertAdjacentElement('beforebegin', box);
+    [email, pw].forEach((i) => { i.disabled = true; });
+    btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; btn.setAttribute('aria-disabled', 'true');
+    reveal();
+    return;
+  }
   if (DEMO) {
     const hint = document.createElement('div');
     hint.className = 'ns-demo-hint';
-    hint.innerHTML = '<b>Demo mode:</b> sign in with any email and password to explore with sample data.';
+    hint.innerHTML = '<b>Demo mode:</b> sign in with any email and password to explore with sample data (nothing is saved to a real account). <a href="login.html?demo=0" style="font-weight:800">Exit demo</a>';
     email.closest('div').parentElement.insertAdjacentElement('beforebegin', hint);
     email.value = email.value || 'owner@demo.nammastay';
     pw.value = pw.value || 'demo-password';
@@ -40,7 +51,19 @@ async function init() {
   });
   const { data: { session } } = await sb.auth.getSession();
   if (session && /type=invite/.test(hash)) setPassword('Welcome! Choose your password', next);
-  else if (session && !/type=recovery/.test(hash)) location.replace(next);
+  else if (session && !/type=recovery/.test(hash) && !DEMO) {
+    // Already signed in on this device: ask instead of skipping the password silently
+    const box = $('.ns-login-main > div'); const brand = box.querySelector('.ns-login-brand')?.outerHTML || '';
+    box.innerHTML = `${brand}<div class="ns-card" style="display:flex;flex-direction:column;gap:14px;text-align:center">
+        <div class="ns-h3" style="font-size:18px">You’re signed in</div>
+        <div class="ns-muted" style="font-size:14px">as <b>${esc(session.user.email)}</b> on this device</div>
+        <a class="ns-btn ns-btn-lg" href="${esc(next)}">Continue</a>
+        <button type="button" class="ns-btn-ghost" id="switch-acct">Not you? Sign out</button>
+        <div class="ns-help">On a shared computer, always sign out when you finish.</div></div>`;
+    $('#switch-acct').onclick = async () => { await sb.auth.signOut(); try { localStorage.removeItem('ns.temp.session'); } catch { /* ignore */ } location.replace('login.html'); };
+    reveal(); return;
+  }
+  else if (session && DEMO) location.replace(next);
   reveal();
 
   async function signIn(e) {
@@ -48,12 +71,15 @@ async function init() {
     err.hidden = true;
     if (!email.value.trim() || !pw.value) return fail('Enter your email and password.');
     btn.style.opacity = '.6'; btn.style.pointerEvents = 'none';
+    const keep = document.querySelector('.ns-login-main input[type=checkbox]')?.checked !== false;
     const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value });
     btn.style.opacity = ''; btn.style.pointerEvents = '';
     if (error) {
       return fail(/Invalid login/i.test(error.message) ? 'That email and password don’t match.'
         : /rate|too many/i.test(error.message) ? 'Too many attempts. Wait a minute and try again.' : error.message);
     }
+    try { if (keep) localStorage.removeItem('ns.temp.session'); else localStorage.setItem('ns.temp.session', '1'); } catch { /* ignore */ }
+    markBrowserSession();
     location.replace(next);
   }
   btn.addEventListener('click', signIn);

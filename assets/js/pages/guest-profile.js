@@ -1,5 +1,5 @@
-import { deleteBookingDialog, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
-  toast, openIdDoc, param, uuidOk, $ } from '../core.js';
+import { W, deleteGuestDialog, deleteBookingDialog, modal, field, options, ID_TYPES, compressImage, uploadIdDoc, newId, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
+  toast, viewIdDocs, idUploadFields, wireIdPreviews, uploadIdSides, param, uuidOk, $ } from '../core.js';
 
 page('guests', async (ctx) => {
   const id = param('id');
@@ -14,6 +14,10 @@ page('guests', async (ctx) => {
   const wa = g.phone ? `https://wa.me/${g.phone.replace(/\D/g, '')}` : null;
   head.innerHTML = `${wa ? `<a class="ns-btn-ghost" href="${esc(wa)}" target="_blank" rel="noopener">Message guest</a>` : ''}
     <a class="ns-btn" href="check-in.html?guest=${esc(g.id)}">+ New booking</a>`;
+  if (ctx.can('owner', 'manager', 'front_desk')) {
+    head.insertAdjacentHTML('afterbegin', '<button type="button" class="ns-btn-ghost" id="edit-guest">✎ Edit profile</button>');
+    if (ctx.can('owner', 'manager')) head.insertAdjacentHTML('afterbegin', '<button type="button" class="ns-btn-danger" id="delete-guest">Delete guest</button>');
+  }
 
   const canDelete = ctx.can('owner', 'manager', 'front_desk');
   const row = (l, v) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0"><span class="ns-muted" style="font-size:12.5px">${l}</span><b style="font-weight:700;text-align:right">${v}</b></div>`;
@@ -30,7 +34,7 @@ page('guests', async (ctx) => {
         ${row('Date of birth', g.dob ? fmtDate(g.dob + 'T12:00:00+05:30') : '—')}
         ${row('ID type', g.id_type ? esc(titleCase(g.id_type)) : '—')}
         ${row('ID number', esc(g.id_number || '—'))}
-        ${g.id_doc_path ? '<button type="button" class="ns-btn-ghost" id="view-id" style="width:100%;margin-top:8px">View ID photo</button>' : '<div class="ns-muted" style="margin-top:6px">No ID photo on file.</div>'}
+        ${g.id_doc_path || g.id_doc_back_path ? `<button type="button" class="ns-btn-ghost" id="view-id" style="width:100%;margin-top:8px">View ID${g.id_doc_path && g.id_doc_back_path ? ' (front & back)' : ''}</button>` : '<div class="ns-muted" style="margin-top:6px">No ID photo on file.</div>'}
       </div>
       <div class="ns-card"><div class="ns-h3" style="margin-bottom:8px">Lifetime</div>
         ${row('Total stays', d.visits)}${row('Total paid', rupees(d.spend_paise))}
@@ -41,7 +45,7 @@ page('guests', async (ctx) => {
     </div>
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
       <div class="ns-card" style="padding:0;overflow:hidden"><div style="padding:18px 20px" class="ns-h3">Stay history</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>Bed</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th>${canDelete ? '<th class="ns-sticky-end"><span class="sr-only">Delete</span></th>' : ''}</tr></thead>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>${W.Unit}</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th>${canDelete ? '<th class="ns-sticky-end"><span class="sr-only">Delete</span></th>' : ''}</tr></thead>
         <tbody>${d.stays.map((s) => `<tr data-href="booking-detail.html?id=${esc(s.id)}" tabindex="0" style="cursor:pointer"><td style="font-weight:700">${esc(s.code)}</td>
           <td style="white-space:normal;min-width:130px">${esc(s.room)} · ${esc(s.bed)}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
           <td style="font-weight:700">${rupees(s.paid_paise)}</td><td>${statusPill(s.status)}</td>
@@ -53,7 +57,11 @@ page('guests', async (ctx) => {
           <a class="ns-btn" href="booking-detail.html?id=${esc(d.current.id)}">View active booking</a></div>` : ''}
     </div>`, 'padding:24px 32px;display:grid;grid-template-columns:340px 1fr;gap:20px;');
 
-  $('#view-id')?.addEventListener('click', () => openIdDoc(g.id_doc_path).catch((e) => toast(e.message, { error: true })));
+  $('#edit-guest')?.addEventListener('click', () => editGuest(ctx, g));
+  $('#delete-guest')?.addEventListener('click', () => deleteGuestDialog(ctx, g.id, () => setTimeout(() => { location.href = 'guest-profile.html'; }, 600))
+    .catch((e) => toast(e.message, { error: true })));
+  if (param('edit') && $('#edit-guest')) { history.replaceState(null, '', 'guest-profile.html?id=' + g.id); editGuest(ctx, g); }
+  $('#view-id')?.addEventListener('click', () => viewIdDocs({ front: g.id_doc_path, back: g.id_doc_back_path, name: g.full_name }).catch((e) => toast(e.message, { error: true })));
   $('#save-notes').onclick = async () => {
     try { await q(sb.from('guests').update({ notes: $('#notes').value.trim() || null }).eq('id', g.id)); toast('Notes saved.'); }
     catch (e) { toast(e.message, { error: true }); }
@@ -78,18 +86,61 @@ async function guestList(ctx) {
   setSubtitle(ctx.property_name);
   const head = headerActions();
   head.innerHTML = '<div class="ns-search"><span>Search</span></div>';
+  const canDel = ctx.can('owner', 'manager');
   const recent = await q(sb.from('guests').select('id, full_name, phone, nationality, created_at')
     .eq('property_id', ctx.property_id).order('created_at', { ascending: false }).limit(25));
   const render = (rows, title) => content(`<div class="ns-card" style="padding:0;overflow:hidden">
       <div style="padding:18px 20px" class="ns-h3">${esc(title)}</div>
-      <table class="ns-table"><thead><tr><th>Guest</th><th>Phone</th><th>Nationality</th></tr></thead><tbody>
+      <div style="overflow-x:auto"><table class="ns-table" style="min-width:520px"><thead><tr><th>Guest</th><th>Phone</th><th>Nationality</th><th class="ns-sticky-end"><span class="sr-only">Actions</span></th></tr></thead><tbody>
       ${rows.map((g) => `<tr data-href="guest-profile.html?id=${esc(g.id)}" tabindex="0" style="cursor:pointer"><td><div style="display:flex;gap:10px;align-items:center">${avatar(g.full_name)}<b>${esc(g.full_name)}</b></div></td>
-        <td>${esc(g.phone || '—')}</td><td>${esc(g.nationality || '—')}</td></tr>`).join('') || '<tr><td colspan="3" class="ns-empty">No guests found.</td></tr>'}
-      </tbody></table></div>`);
+        <td>${esc(g.phone || '—')}</td><td>${esc(g.nationality || '—')}</td>
+        <td class="ns-sticky-end" style="white-space:nowrap;text-align:right">
+          <a class="ns-icon-edit" href="guest-profile.html?id=${esc(g.id)}&edit=1" aria-label="Edit ${esc(g.full_name)}" title="Edit profile"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"></path></svg></a>
+          ${canDel ? `<button type="button" class="ns-icon-del" data-del-guest="${esc(g.id)}" aria-label="Delete ${esc(g.full_name)}" title="Delete guest"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button>` : ''}</td></tr>`).join('')
+        || '<tr><td colspan="4" class="ns-empty">No guests found.</td></tr>'}
+      </tbody></table></div></div>`);
   render(recent, 'Recently added guests');
   headerSearch('Search name or phone…', async (v) => {
     if (v.length < 3) return render(recent, 'Recently added guests');
     render(await rpc('search_guests', { p_property: ctx.property_id, p_q: v }), `Results for “${v}”`);
   });
-  document.querySelector('.ns-content').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href; });
+  document.querySelector('.ns-content').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del-guest]');
+    if (del) { e.stopPropagation(); deleteGuestDialog(ctx, del.dataset.delGuest, () => setTimeout(() => location.reload(), 500)).catch((err) => toast(err.message, { error: true })); return; }
+    if (e.target.closest('.ns-icon-edit')) return;                    // the link handles it
+    const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href;
+  });
+}
+
+function editGuest(ctx, g) {
+  const nat = ['India', 'Germany', 'France', 'United Kingdom', 'United States', 'Spain', 'Israel', 'Netherlands', 'Australia', 'Italy', 'Japan'];
+  modal({
+    title: 'Edit guest profile', width: 600,
+    body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="grid-column:1/-1">${field('Full name *', `<input class="ns-input" name="full_name" maxlength="120" value="${esc(g.full_name)}">`)}</div>
+        ${field('Phone', `<input class="ns-input" name="phone" type="tel" value="${esc(g.phone || '')}" placeholder="+91 98400 12233">`)}
+        ${field('Email', `<input class="ns-input" name="email" type="email" value="${esc(g.email || '')}">`)}
+        ${field('Date of birth', `<input class="ns-input" name="dob" type="date" value="${esc(g.dob || '')}">`)}
+        ${field('Nationality', `<input class="ns-input" name="nationality" list="edit-nat" value="${esc(g.nationality || '')}"><datalist id="edit-nat">${nat.map((n) => `<option>${n}</option>`).join('')}</datalist>`)}
+        ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">None</option>${options(ID_TYPES, g.id_type || '')}</select>`)}
+        ${field('ID number', `<input class="ns-input" name="id_number" autocomplete="off" value="${esc(g.id_number || '')}">`, 'Aadhaar: only the last 4 digits are kept.')}
+        <div style="grid-column:1/-1">${idUploadFields({ front: g.id_doc_path ? 'ID front — replace (optional)' : 'ID front (optional)',
+          back: g.id_doc_back_path ? 'ID back — replace (optional)' : 'ID back (optional)', hasFront: !!g.id_doc_path, hasBack: !!g.id_doc_back_path })}
+          <div class="ns-help" style="margin-top:6px">${g.id_doc_path || g.id_doc_back_path ? 'An old photo is deleted when you replace it.' : 'Compressed before upload.'}</div></div>
+        <div style="grid-column:1/-1">${field('Notes', `<textarea class="ns-input" name="notes" maxlength="2000" placeholder="Preferences, requests…">${esc(g.notes || '')}</textarea>`)}</div>
+      </div>`,
+    actions: [{ label: 'Cancel' }, { label: 'Save changes', kind: 'primary', onClick: async (el) => {
+      const v = (n) => el.querySelector(`[name=${n}]`).value.trim();
+      if (v('full_name').length < 2) throw new Error('Please enter the guest’s full name.');
+      const p = { full_name: v('full_name'), phone: v('phone'), email: v('email'), dob: v('dob'), nationality: v('nationality'),
+        id_type: v('id_type'), id_number: v('id_number'), notes: v('notes') };
+      Object.assign(p, await uploadIdSides(el, `${ctx.property_id}/staff`));
+      const r = await rpc('update_guest', { p_guest: g.id, p });
+      const old = [r.old_id_doc_path, r.old_id_doc_back_path].filter(Boolean);
+      if (old.length) await sb.storage.from('guest-ids').remove(old).catch(() => {});
+      toast('Guest profile saved.');
+      setTimeout(() => location.reload(), 400);
+    } }],
+  });
+  wireIdPreviews(document.querySelector('.ns-modal'));
 }

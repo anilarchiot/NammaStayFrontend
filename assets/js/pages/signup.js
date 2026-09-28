@@ -1,5 +1,5 @@
 // Self sign-up: 1) create account → 2) create property → 15-day free trial starts.
-import { DEMO, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
+import { DEMO, NOT_CONNECTED, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
 
 const box = $('.ns-login-main > div');
 const brand = box.querySelector('.ns-login-brand').outerHTML;
@@ -15,15 +15,21 @@ const fail = (m) => { const e = $('#err'); e.textContent = m; e.hidden = false; 
 init();
 
 async function init() {
+  if (NOT_CONNECTED) {
+    render('Start your free trial', 'Sign-up is unavailable right now. Please try again later.', '<a class="ns-btn ns-btn-lg" href="index.html">Back to home</a>');
+    return;
+  }
   if (DEMO) {
-    render('Start your free trial', 'Sign-up opens once NammaStay is connected to its database.',
+    render('Start your free trial', 'You’re in the demo. Exit the demo to create a real account.',
       `<div class="ns-demo-hint">This site is in demo mode. You can explore everything with sample data.</div>
-       <a class="ns-btn ns-btn-lg" href="login.html">Open the demo</a>`);
+       <a class="ns-btn ns-btn-lg" href="login.html">Back to the demo</a>
+       <a class="ns-btn-ghost ns-btn-lg" href="signup.html?demo=0" style="height:48px">Exit demo and sign up</a>`);
     return;
   }
   const { data: { session } } = await sb.auth.getSession();
   if (session || param('step') === 'property') {
     if (!session) { location.replace('login.html?next=' + encodeURIComponent('signup.html?step=property')); return; }
+    await rpc('claim_property_invites').catch(() => 0);          // property already set up for this email?
     const mems = await rpc('my_memberships').catch(() => []);
     if (mems.length) { location.replace('dashboard.html'); return; }
     return propertyStep(session);
@@ -35,7 +41,7 @@ function accountStep() {
   render('Start your 15-day free trial', 'No card needed. Takes about 2 minutes.', `
     <div style="display:flex;flex-direction:column;gap:16px">
       ${input('name', 'Your name', 'autocomplete="name" maxlength="80"')}
-      ${input('email', 'Email', 'type="email" autocomplete="email"')}
+      ${input('email', 'Email', `type="email" autocomplete="email" value="${esc(param('email') || '')}"`)}
       ${input('pw', 'Password', 'type="password" autocomplete="new-password" minlength="10"')}
       <div class="ns-help" style="margin-top:-8px">At least 10 characters.</div>
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#6B7280">

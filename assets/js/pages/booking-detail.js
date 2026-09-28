@@ -1,6 +1,6 @@
 import {
-  sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
-  modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, openIdDoc, param, uuidOk,
+  W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
+  modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, viewIdDocs, param, uuidOk,
   SITE_URL, titleCase,
 } from '../core.js';
 
@@ -46,19 +46,20 @@ page(null, async (ctx) => {
         <div class="ns-guestbox-actions" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
           ${staff ? `<a href="guest-profile.html?id=${esc(g.id)}" style="font-size:12px;font-weight:700">View profile</a>` : ''}
           ${staff ? '<button type="button" class="ns-btn" id="wa-details" style="height:30px;font-size:12px;background:#25D366;border-color:#25D366">WhatsApp details</button>' : ''}
-          ${g.id_doc_path ? '<button type="button" class="ns-btn-ghost" id="view-id" style="height:30px;font-size:12px">View ID photo</button>' : ''}
+          ${g.id_doc_path || g.id_doc_back_path ? `<button type="button" class="ns-btn-ghost" id="view-id" style="height:30px;font-size:12px">View ID${g.id_doc_path && g.id_doc_back_path ? ' (front & back)' : ''}</button>` : ''}
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        ${field('Room / Bed', `<div class="ns-input" style="display:flex;align-items:center">${esc(d.bed.room)} · ${esc(d.bed.label)}</div>`)}
+        ${field(roomsMode() ? 'Room' : 'Room / Bed', `<div class="ns-input" style="display:flex;align-items:center">${esc(d.bed.room)} · ${esc(d.bed.label)}${roomsMode() ? ` · ${guestsText(b.visitors, b.children)}` : ''}</div>`)}
         ${field('Nights', `<div class="ns-input" style="display:flex;align-items:center">${b.nights} night${b.nights > 1 ? 's' : ''} · ${rupees(b.rate_paise)}/night</div>`)}
         ${field('Check-in', `<input class="ns-input" type="datetime-local" name="check_in_at" value="${toInputDT(b.check_in_at)}" ${editable && b.status !== 'checked_in' ? '' : 'disabled'}>`)}
         ${field('Check-out', `<input class="ns-input" type="datetime-local" name="check_out_at" value="${toInputDT(b.check_out_at)}" ${editable ? '' : 'disabled'}>`)}
       </div>
 
       <div style="border:1px solid #F0EBDB;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">Room charge (${b.nights} night${b.nights > 1 ? 's' : ''})</span><b style="font-weight:600">${rupees(b.total_paise)}</b></div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">${roomsMode() ? 'Room' : 'Room'} charge (${b.nights} night${b.nights > 1 ? 's' : ''} × ${rupees(b.rate_paise)})</span><b style="font-weight:600">${rupees(b.rate_paise * b.nights)}</b></div>
+        ${b.extra_paise ? `<div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">Extra adult (${b.nights} × ${rupees(b.extra_paise)})</span><b style="font-weight:600">${rupees(b.extra_paise * b.nights)}</b></div>` : ''}
         ${d.payments.map((p) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;gap:8px">
             <span class="ns-muted" style="font-size:12.5px">${p.kind === 'refund' ? 'Refund' : 'Paid'} ${fmtDayTime(p.received_at)} ${methodPill(p.method)} ${p.reference ? '<span style="font-size:11px">' + esc(p.reference) + '</span>' : ''}</span>
             <b style="font-weight:600;color:${p.kind === 'refund' ? '#B23A3A' : '#157A56'}">${p.kind === 'refund' ? '−' : ''}${rupees(p.amount_paise)}</b></div>`).join('')}
@@ -108,7 +109,7 @@ page(null, async (ctx) => {
     history.replaceState(null, '', 'booking-detail.html?id=' + b.id);
     sendBookingWhatsApp(b.id, { justSaved: true }).catch(() => {});
   }
-  $('#view-id')?.addEventListener('click', () => openIdDoc(g.id_doc_path).catch((e) => toast(e.message, { error: true })));
+  $('#view-id')?.addEventListener('click', () => viewIdDocs({ front: g.id_doc_path, back: g.id_doc_back_path, name: g.full_name }).catch((e) => toast(e.message, { error: true })));
   $('#copy-link')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(selfLink); toast('Link copied.'); } catch { prompt('Copy this link:', selfLink); }
   });
@@ -127,7 +128,7 @@ page(null, async (ctx) => {
   dlg.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', async () => {
     const act = btn.dataset.act;
     if (['cancel', 'no_show'].includes(act)
-      && !await confirmDialog(LABEL[act], `${LABEL[act]} ${b.code} for ${g.full_name}? This frees the bed.`, { confirmLabel: LABEL[act], danger: true })) return;
+      && !await confirmDialog(LABEL[act], `${LABEL[act]} ${b.code} for ${g.full_name}? This frees the ${W.unit}.`, { confirmLabel: LABEL[act], danger: true })) return;
     btn.disabled = true;
     try {
       await rpc('booking_action', { p_booking: b.id, p_action: act, p_force: false });

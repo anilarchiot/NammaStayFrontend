@@ -1,11 +1,11 @@
 // Calendar — every bed, every night. Drag across a bed's row (or tap the first
 // and last night on a phone) to create a booking for those dates.
-import { sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
+import { W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, $, $$ } from '../core.js';
 
 const DAYS = 9;
 const LIVE = ['pending', 'confirmed', 'checked_in'];
-const TIP = '<b style="color:#157A56">Tip:</b> drag across a bed’s free nights to book them — on a phone, tap the first night, then the last.';
+const TIP = () => `<b style="color:#157A56">Tip:</b> drag across a ${W.unit}’s free nights to book them — on a phone, tap the first night, then the last.`;
 
 page('calendar', async (ctx) => {
   const staff = ctx.can('owner', 'manager', 'front_desk');
@@ -68,11 +68,11 @@ page('calendar', async (ctx) => {
 
     content(`
       <div class="ns-card" style="padding:18px 20px;overflow-x:auto">
-        ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP}</div>` : ''}
+        ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP()}</div>` : ''}
         <div style="min-width:760px">
           <div style="display:grid;grid-template-columns:140px 1fr"><div></div>
             <div class="row" style="height:auto">${days.map((x) => `<div style="text-align:center;font-size:11.5px;font-weight:${x === today ? 800 : 600};color:${x === today ? '#157A56' : '#6B7280'}">${fmtWeekday(x)}</div>`).join('')}</div></div>
-          ${rows || '<div class="ns-empty">No beds set up yet. Add them in Rooms & beds.</div>'}
+          ${rows || '<div class="ns-empty">No ${W.units} set up yet. Add them in ${W.setup}.</div>'}
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:#6B7280">
           <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#1C9A6C"></span> Confirmed / paid</span>
@@ -104,7 +104,7 @@ page('calendar', async (ctx) => {
     cellsOf(sel.bed).forEach((c) => { const i = +c.dataset.i; if (i >= lo && i <= hi) c.classList.add(bad ? 'is-bad' : 'is-sel'); });
   }
   const hint = (html) => { const h = $('#cal-hint'); if (h) h.innerHTML = html; };
-  const clearSel = () => { sel = null; paint(); hint(TIP); };
+  const clearSel = () => { sel = null; paint(); hint(TIP()); };
 
   function finish() {
     const lo = Math.min(sel.a, sel.b); const hi = Math.max(sel.a, sel.b);
@@ -183,11 +183,14 @@ page('calendar', async (ctx) => {
           ${field('Check-in', `<input class="ns-input" type="datetime-local" name="in" value="${inDay}T14:00">`)}
           ${field('Check-out', `<input class="ns-input" type="datetime-local" name="out" value="${outDay}T11:00">`)}
         </div>
-        <div id="qb-sum" class="ns-demo-hint" style="background:#E9F5EE;color:#157A56">Checking the bed…</div>
+        <div id="qb-sum" class="ns-demo-hint" style="background:#E9F5EE;color:#157A56">Checking the ${W.unit}…</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           ${field('Guest name *', '<input class="ns-input" name="name" autocomplete="off" maxlength="120">')}
           ${field('Phone', '<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233">')}
         </div>
+        ${roomsMode() ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${field('Adults', '<input class="ns-input" name="adults" type="number" min="1" max="20" value="2">')}
+          ${field('Children', '<input class="ns-input" name="children" type="number" min="0" max="20" value="0">')}</div>` : ''}
         <div id="qb-returning"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           ${field('Status', `<select class="ns-input" name="status">${options([['confirmed', 'Confirmed — arriving later'], ['pending', 'Pending (not confirmed yet)'],
@@ -202,7 +205,7 @@ page('calendar', async (ctx) => {
         { label: 'Save booking', kind: 'primary', onClick: async (el) => {
           const v = (n) => el.querySelector(`[name=${n}]`).value.trim();
           if (!guestId && v('name').length < 2) throw new Error('Enter the guest’s name.');
-          if (rate === null) throw new Error('This bed isn’t free for those dates.');
+          if (rate === null) throw new Error(`This ${W.unit} isn’t free for those dates.`);
           const paid = v('paid') ? toPaise(v('paid')) : 0;
           if (Number.isNaN(paid) || paid < 0) throw new Error('Enter a valid amount paid.');
           if (paid > 0 && v('method') === 'upi' && !v('ref')) throw new Error('Enter the UPI transaction ID (UTR).');
@@ -210,11 +213,12 @@ page('calendar', async (ctx) => {
             property_id: ctx.property_id, bed_id: bed.id, guest_id: guestId,
             guest: guestId ? null : { full_name: v('name'), phone: v('phone') },
             check_in_at: fromInputDT(v('in')), check_out_at: fromInputDT(v('out')),
-            status: v('status'), source: v('source'), visitors: 1,
+            status: v('status'), source: v('source'),
+            visitors: roomsMode() ? Math.max(1, parseInt(v('adults'), 10) || 1) : 1, children: roomsMode() ? Math.max(0, parseInt(v('children'), 10) || 0) : 0,
             payment: paid > 0 ? { amount_paise: paid, method: v('method'), reference: v('ref') || null } : null,
           } });
           toast(`${res.code} booked for ${bed.label}.`);
-          hint(TIP); draw();
+          hint(TIP()); draw();
           setTimeout(() => sendBookingWhatsApp(res.id, { justSaved: true }).catch(() => {}), 150);
         } }],
     });
@@ -229,9 +233,17 @@ page('calendar', async (ctx) => {
       if (!me) return bad(`${bed.label} isn’t free for all of those dates.`);
       const n = Math.max(1, Math.round((new Date(f('out').value.slice(0, 10)) - new Date(f('in').value.slice(0, 10))) / 864e5));
       rate = me.rate_paise; box.className = 'ns-demo-hint'; box.style.cssText = 'background:#E9F5EE;color:#157A56';
-      box.innerHTML = `✓ ${esc(bed.label)} is free · <b>${n} night${n > 1 ? 's' : ''}</b> × ${rupees(rate)} = <b>${rupees(n * rate)}</b>`;
+      let extra = 0; let capNote = '';
+      if (roomsMode()) {
+        const ad = Math.max(1, parseInt(f('adults').value, 10) || 1); const ch = Math.max(0, parseInt(f('children').value, 10) || 0);
+        extra = Math.max(0, ad - (me.base_guests || 1)) * (me.extra_guest_paise || 0);
+        if (ad + ch > (me.max_guests || 1)) { rate = null; box.className = 'ns-error'; box.style.cssText = ''; box.textContent = `${bed.label} fits up to ${me.max_guests} guests.`; return; }
+        capNote = ` · ${guestsText(ad, ch)}${extra ? ` (+${rupees(extra)} extra adult)` : ''}`;
+      }
+      box.innerHTML = `✓ ${esc(bed.label)} is free${capNote} · <b>${n} night${n > 1 ? 's' : ''}</b> × ${rupees(rate + extra)} = <b>${rupees(n * (rate + extra))}</b>`;
     };
     ['in', 'out'].forEach((n) => f(n).addEventListener('change', check));
+    if (roomsMode()) ['adults', 'children'].forEach((n) => f(n).addEventListener('input', check));
     f('method').addEventListener('change', () => { m.el.querySelector('#qb-ref').hidden = f('method').value !== 'upi'; });
     f('phone').addEventListener('input', debounce(async () => {
       const digits = f('phone').value.replace(/\D/g, ''); const box = m.el.querySelector('#qb-returning');

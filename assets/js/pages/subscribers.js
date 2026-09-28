@@ -2,7 +2,7 @@
 import { page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
   confirmDialog, toast, field, showFatal, $, $$ } from '../core.js';
 
-const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Complimentary', 'grey'] };
+const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Complimentary', 'grey'], suspended: ['Suspended', 'red'] };
 
 page(null, async (ctx) => {
   if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
@@ -41,14 +41,15 @@ page(null, async (ctx) => {
 
       <div class="ns-card" style="padding:0;overflow:hidden">
         <div class="ns-h3" style="padding:18px 20px">Properties</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:900px"><thead><tr><th>Property</th><th>Owner</th><th>Beds</th><th>Status</th><th>Access until</th><th>Last booking</th><th></th></tr></thead><tbody>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:900px"><thead><tr><th>Property</th><th>Owner</th><th>Beds / rooms</th><th>Status</th><th>Access until</th><th>Last booking</th><th></th></tr></thead><tbody>
         ${d.properties.map((p) => { const [l, c] = STATE[p.state] || [p.state, 'grey'];
           const until = p.is_complimentary ? '—' : p.state === 'trial' ? `Trial · ${fmtDate(p.trial_ends_at)}` : p.paid_until ? fmtDate(p.paid_until) : fmtDate(p.trial_ends_at);
           return `<tr><td style="font-weight:700">${esc(p.name)}<div class="ns-muted" style="font-weight:500">${esc(p.city || '')} · joined ${fmtDate(p.created_at)}</div></td>
             <td>${esc(p.owner_name || '')}<div class="ns-muted">${esc(p.owner_email || '')}</div></td><td>${p.beds}</td>
             <td>${pill(l, c)}${p.plan_id && plan[p.plan_id] ? `<div class="ns-muted">${esc(plan[p.plan_id].name)}</div>` : ''}</td>
             <td>${until}</td><td class="ns-muted">${p.last_booking_at ? fmtDate(p.last_booking_at) : 'None yet'}</td>
-            <td><button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-manage="${esc(p.property_id)}">Manage</button></td></tr>`; }).join('')
+            <td style="white-space:nowrap"><a class="ns-btn-ghost" style="height:32px;font-size:12px" href="admin.html?id=${esc(p.property_id)}">Open</a>
+              <button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-manage="${esc(p.property_id)}">Manage</button></td></tr>`; }).join('')
           || '<tr><td colspan="7" class="ns-empty">No properties found.</td></tr>'}
         </tbody></table></div>
       </div>
@@ -63,13 +64,22 @@ page(null, async (ctx) => {
           ${field('Free trial (days)', `<input class="ns-input" name="trial_days" type="number" min="0" max="90" value="${s.trial_days}">`, 'Applies to new sign-ups.')}
           ${field('Grace after expiry (days)', `<input class="ns-input" name="grace_days" type="number" min="0" max="30" value="${s.grace_days}">`, 'Bookings keep working this long after access ends.')}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-          ${d.plans.map((p) => `<div style="border:1px solid #F0EBDB;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px" data-plan="${esc(p.id)}">
-            <b>${esc(p.name)} · ${p.period_months} month${p.period_months > 1 ? 's' : ''}</b>
-            ${field('Price (₹)', `<input class="ns-input" name="price" inputmode="decimal" value="${p.price_paise / 100}">`)}
-            ${field('Label', `<input class="ns-input" name="description" value="${esc(p.description || '')}">`)}
-            <label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" name="is_active" ${p.is_active ? 'checked' : ''}> Offered to customers</label></div>`).join('')}
-        </div>
+        ${[['homestay', 'Homestays'], ['hostel', 'Hostels & PGs'], ['hotel', 'Hotels'], [null, 'Other plans']].map(([k, title]) => {
+          const list = d.plans.filter((p) => (p.kind || null) === k).sort((a, b) => a.sort - b.sort);
+          if (!list.length) return '';
+          return `<div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6B7280">${title}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+            ${list.map((p) => `<div style="border:1px solid #F0EBDB;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px" data-plan="${esc(p.id)}">
+              <b>${esc(p.name)} ${p.is_quote ? '· quote' : `· ${p.period_months} month${p.period_months > 1 ? 's' : ''}`}</b>
+              ${p.is_quote ? '<div class="ns-muted">Shows “Contact us” — no online payment.</div>' : field('Price (₹)', `<input class="ns-input" name="price" inputmode="decimal" value="${p.price_paise / 100}">`)}
+              ${field('Label', `<input class="ns-input" name="description" value="${esc(p.description || '')}">`)}
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                ${field('From rooms', `<input class="ns-input" name="min_units" type="number" min="0" value="${p.min_units ?? ''}" placeholder="any">`)}
+                ${field('Up to rooms', `<input class="ns-input" name="max_units" type="number" min="1" value="${p.max_units ?? ''}" placeholder="any">`)}</div>
+              <label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" name="is_active" ${p.is_active ? 'checked' : ''}> Offered to customers</label></div>`).join('')}
+            </div></div>`;
+        }).join('')}
+        <div class="ns-help">“Rooms” = active beds for hostels, rooms for hotels & homestays. Each owner only sees the plans that fit their property; a homestay above its limit gets hotel prices.</div>
         <button type="button" class="ns-btn" id="save-billing" style="align-self:flex-start">Save billing settings</button>
       </div>`);
 
@@ -101,9 +111,12 @@ page(null, async (ctx) => {
     });
     $('#save-billing').onclick = async (e) => {
       const v = (n) => $(`#bset > div [name="${n}"]`)?.value?.trim() ?? '';
-      const plans = $$('#bset [data-plan]').map((el) => ({ id: el.dataset.plan, price_paise: toPaise(el.querySelector('[name=price]').value),
-        description: el.querySelector('[name=description]').value, is_active: el.querySelector('[name=is_active]').checked }));
-      if (plans.some((p) => !(p.price_paise >= 0))) return toast('Check the prices.', { error: true });
+      const plans = $$('#bset [data-plan]').map((el) => ({ id: el.dataset.plan,
+        ...(el.querySelector('[name=price]') ? { price_paise: toPaise(el.querySelector('[name=price]').value) } : {}),
+        description: el.querySelector('[name=description]').value, is_active: el.querySelector('[name=is_active]').checked,
+        min_units: el.querySelector('[name=min_units]').value, max_units: el.querySelector('[name=max_units]').value }));
+      if (plans.some((p) => 'price_paise' in p && !(p.price_paise >= 0))) return toast('Check the prices.', { error: true });
+      if (plans.some((p) => p.min_units && p.max_units && Number(p.min_units) > Number(p.max_units))) return toast('“From rooms” can’t be more than “Up to rooms”.', { error: true });
       if (v('upi_id') && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(v('upi_id'))) return toast('That UPI ID doesn’t look right (e.g. name@okaxis).', { error: true });
       e.target.disabled = true;
       try {

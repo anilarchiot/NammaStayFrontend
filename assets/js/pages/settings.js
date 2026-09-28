@@ -1,15 +1,15 @@
-import { page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { W, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
-const TABS = ['property', 'team', 'rooms', 'notifications', 'billing'];
-const STATE = { trial: ['Free trial', 'blue'], active: ['Active', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Free — complimentary', 'green'] };
+const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
+const STATE = { trial: ['Free trial', 'blue'], active: ['Active', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Free — complimentary', 'green'], suspended: ['Suspended', 'red'] };
 
 page('settings', async (ctx) => {
   const owner = ctx.can('owner');
   const tabsRow = $$('.ns-main > div').find((d) => /Users & roles/.test(d.textContent) && d.children.length === 4);
   const tabEls = tabsRow ? [...tabsRow.children] : [];
-  if (tabsRow && tabEls.length === 4) {                 // add the Billing tab next to the design's four
-    const t = tabEls[0].cloneNode(false); t.textContent = 'Billing'; tabsRow.appendChild(t); tabEls.push(t);
+  if (tabsRow && tabEls.length === 4) {                 // add Billing and My account next to the design's four
+    for (const label of ['Billing', 'My account']) { const t = tabEls[0].cloneNode(false); t.textContent = label; tabsRow.appendChild(t); tabEls.push(t); }
   }
   const styles = tabEls.map((t) => t.getAttribute('style') || '');
   const onStyle = styles.find((s) => /#1C9A6C|border-bottom:2px solid #1/i.test(s)) || styles[1] || '';
@@ -90,7 +90,8 @@ page('settings', async (ctx) => {
           <div class="ns-card" style="padding:0;overflow:hidden">
             <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px">
               <div><div class="ns-h3">Team members</div><div class="ns-muted">${members.length} people have access to ${esc(ctx.property_name)}</div></div>
-              ${owner ? '<button type="button" class="ns-btn" id="invite">+ Invite member</button>' : ''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">${!DEMO ? '<button type="button" class="ns-btn-ghost" id="signout-all">Sign out on all devices</button>' : ''}
+          ${owner ? '<button type="button" class="ns-btn" id="invite">+ Invite member</button>' : ''}</div></div>
             <div style="overflow-x:auto"><table class="ns-table" style="min-width:520px"><thead><tr><th>Name</th><th>Role</th><th>Last active</th><th></th></tr></thead><tbody>
               ${members.map((m) => `<tr><td><div style="display:flex;gap:10px;align-items:center">${avatar(m.display_name || m.email)}<div>
                   <div style="font-weight:700">${esc(m.display_name || m.email)}${m.user_id === ctx.user.id ? ' (you)' : ''}</div><div class="ns-muted" style="font-size:11px">${esc(m.email || '')}</div></div></div></td>
@@ -123,6 +124,11 @@ page('settings', async (ctx) => {
         } }],
       });
       $('#invite')?.addEventListener('click', () => memberDialog(null));
+      $('#signout-all')?.addEventListener('click', async () => {
+        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere — this computer, your phone and any other device. Staff accounts are not affected.', { confirmLabel: 'Sign out everywhere' })) return;
+        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
+        location.replace('login.html');
+      });
       $$('[data-role]').forEach((b) => b.onclick = () => memberDialog(byId[b.dataset.role]));
       $$('[data-remove]').forEach((b) => b.onclick = async () => {
         const m = byId[b.dataset.remove];
@@ -138,9 +144,9 @@ page('settings', async (ctx) => {
       content(`
         <div class="ns-card" style="padding:0;overflow:hidden">
           <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px">
-            <div><div class="ns-h3">Room types & pricing</div><div class="ns-muted">Nightly rate per bed. Changes apply to new bookings.</div></div>
-            <a class="ns-btn-ghost" href="rooms.html">Manage rooms & beds →</a></div>
-          <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Room type</th><th>Bed</th><th>Type</th><th>Rate / night (₹)</th><th>In use</th></tr></thead><tbody>
+            <div><div class="ns-h3">Room types & pricing</div><div class="ns-muted">Nightly rate per ${W.unit}. Changes apply to new bookings.</div></div>
+            <a class="ns-btn-ghost" href="rooms.html">Manage ${W.setup.toLowerCase()} →</a></div>
+          <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Room type</th><th>${W.Unit}</th><th>Type</th><th>Rate / night (₹)</th><th>In use</th></tr></thead><tbody>
             ${rooms.flatMap((r) => r.beds.map((b, i) => `<tr data-bed="${esc(b.id)}">
               <td style="font-weight:700">${i === 0 ? esc(r.name) + `<div class="ns-muted" style="font-weight:500">${esc(r.description || '')}</div>` : ''}</td>
               <td>${esc(b.label)}</td><td class="ns-muted">${esc(b.position[0].toUpperCase() + b.position.slice(1))}</td>
@@ -152,7 +158,7 @@ page('settings', async (ctx) => {
         </div>`);
       const avg = () => {
         const rates = $$('[name=rate]').map((i) => toPaise(i.value)).filter((x) => x >= 0);
-        $('#avg').textContent = rates.length ? `Average ${rupees(rates.reduce((a, b) => a + b, 0) / rates.length)} per bed · full house ${rupees(rates.reduce((a, b) => a + b, 0))} per night` : '';
+        $('#avg').textContent = rates.length ? `Average ${rupees(rates.reduce((a, b) => a + b, 0) / rates.length)} per ${W.unit} · full house ${rupees(rates.reduce((a, b) => a + b, 0))} per night` : '';
       };
       $$('[name=rate]').forEach((i) => i.addEventListener('input', avg)); avg();
       $('#save-rates').onclick = async (e) => {
@@ -176,7 +182,12 @@ page('settings', async (ctx) => {
     async billing() {
       const b = await rpc('billing_info', { p_property: ctx.property_id });
       const a = b.access; const [label, color] = STATE[a.state] || [a.state, 'grey'];
-      const plans = b.plans; let chosen = plans.find((x) => x.id === a.plan_id) || plans[plans.length - 1] || plans[0];
+      const plans = b.plans; const payable = plans.filter((x) => !x.is_quote);
+      let chosen = payable.find((x) => x.id === a.plan_id) || payable[payable.length - 1] || null;
+      const KIND = { hostel: 'hostels & PGs', hotel: 'hotels', homestay: 'homestays' };
+      const tierNote = `Prices for ${KIND[b.kind] || 'your property'} · you have ${b.units} ${b.units === 1 ? W.unit : W.units}`;
+      const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for NammaStay for ' + ctx.property_name)}`
+        : b.pay_to?.support_email ? `mailto:${b.pay_to.support_email}?subject=${encodeURIComponent('NammaStay quote — ' + ctx.property_name)}` : null;
       const owner = ctx.can('owner'); const upi = b.pay_to?.upi_id;
       const until = a.state === 'trial' ? `Trial ends ${fmtDate(a.trial_ends_at)}` : a.state === 'active' ? `Paid until ${fmtDate(a.paid_until)}`
         : a.state === 'complimentary' ? 'No payment needed' : `Ended ${fmtDate(a.ends_at)}`;
@@ -195,14 +206,18 @@ page('settings', async (ctx) => {
           </div>
           <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
             ${a.state === 'complimentary' ? '<div class="ns-h3">Your property has complimentary access — nothing to pay.</div>' : `
-            <div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div>
+            <div><div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div><div class="ns-muted" style="margin-top:4px">${esc(tierNote)}</div></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="plans">
-              ${plans.map((x) => `<button type="button" class="ns-plan${x.id === chosen?.id ? ' is-on' : ''}" data-plan="${esc(x.id)}">
+              ${plans.map((x) => x.is_quote ? `<div class="ns-plan" style="cursor:default">
+                <b style="font-size:15px">${esc(x.name)}</b><span class="price" style="font-size:22px">Custom</span>
+                <span class="ns-muted">${esc(x.description || '')}</span>
+                ${contact ? `<a class="ns-btn-ghost" style="height:34px;font-size:12px" href="${esc(contact)}" target="_blank" rel="noopener">Contact us for a quote</a>` : ''}</div>`
+                : `<button type="button" class="ns-plan${x.id === chosen?.id ? ' is-on' : ''}" data-plan="${esc(x.id)}">
                 <b style="font-size:15px">${esc(x.name)}</b>
                 <span class="price">${rupees(x.price_paise)} <small>/ ${x.period_months === 1 ? 'month' : x.period_months === 12 ? 'year' : x.period_months + ' months'}</small></span>
                 <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
             </div>
-            ${!owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
+            ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
             <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
               <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
               <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
@@ -230,7 +245,7 @@ page('settings', async (ctx) => {
         if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
       };
       $$('[data-plan]').forEach((p) => p.onclick = () => {
-        chosen = plans.find((x) => x.id === p.dataset.plan);
+        chosen = payable.find((x) => x.id === p.dataset.plan);
         $$('[data-plan]').forEach((x) => x.classList.toggle('is-on', x === p)); draw();
       });
       $('#submit-pay')?.addEventListener('click', async (e) => {
@@ -241,6 +256,65 @@ page('settings', async (ctx) => {
         catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
       });
       draw();
+    },
+
+    // ------------------------------------------------------------ My account (password, email, devices)
+    async account() {
+      const email = ctx.user.email;
+      content(`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="pw-card">
+            <div class="ns-h3">Change password</div>
+            <div class="ns-muted">Signed in as <b>${esc(email)}</b></div>
+            ${field('Current password', '<input class="ns-input" type="password" name="cur" autocomplete="current-password">')}
+            ${field('New password', '<input class="ns-input" type="password" name="new1" autocomplete="new-password" minlength="10">', 'At least 10 characters. Don’t reuse a password from another site.')}
+            ${field('Type the new password again', '<input class="ns-input" type="password" name="new2" autocomplete="new-password">')}
+            <button type="button" class="ns-btn" id="save-pw" style="align-self:flex-start">Change password</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="ns-h3">Change email</div>
+              ${field('New email', '<input class="ns-input" type="email" name="new-email" autocomplete="email">', 'We send a confirmation link to the new address. Your email changes after you click it.')}
+              <button type="button" class="ns-btn-ghost" id="save-email2" style="align-self:flex-start">Change email</button>
+            </div>
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:10px">
+              <div class="ns-h3">Devices</div>
+              <div class="ns-muted">Signed in on a phone or computer you no longer use? Sign out everywhere.</div>
+              <button type="button" class="ns-btn-ghost" id="signout-all2" style="align-self:flex-start">Sign out on all devices</button>
+            </div>
+          </div>
+        </div>`);
+      $('#save-pw').onclick = async (e) => {
+        const v = (n) => $(`#pw-card [name=${n}]`).value;
+        if (!v('cur')) return toast('Enter your current password.', { error: true });
+        if (v('new1').length < 10) return toast('The new password needs at least 10 characters.', { error: true });
+        if (v('new1') !== v('new2')) return toast('The two new passwords don’t match.', { error: true });
+        if (v('new1') === v('cur')) return toast('Choose a password different from the current one.', { error: true });
+        e.target.disabled = true;
+        try {
+          const chk = await sb.auth.signInWithPassword({ email, password: v('cur') });   // confirm it's really you
+          if (chk.error) throw new Error('Your current password is not correct.');
+          const { error } = await sb.auth.updateUser({ password: v('new1') });
+          if (error) throw new Error(error.message);
+          $$('#pw-card input').forEach((i) => { i.value = ''; });
+          toast('Password changed. Use the new one next time you sign in.');
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#save-email2').onclick = async (e) => {
+        const ne = $('[name=new-email]').value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ne)) return toast('Enter a valid email address.', { error: true });
+        e.target.disabled = true;
+        try {
+          const { error } = await sb.auth.updateUser({ email: ne });
+          if (error) throw new Error(error.message);
+          toast(`Check ${ne} for a confirmation link. Your email changes after you click it.`, { ms: 7000 });
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#signout-all2').onclick = async () => {
+        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere, including this device.', { confirmLabel: 'Sign out everywhere' })) return;
+        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
+        location.replace('login.html');
+      };
     },
 
     // ------------------------------------------------------------ Notifications
