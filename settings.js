@@ -1,15 +1,15 @@
 import { W, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
-const TABS = ['property', 'team', 'rooms', 'notifications', 'billing'];
+const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
 const STATE = { trial: ['Free trial', 'blue'], active: ['Active', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Free — complimentary', 'green'], suspended: ['Suspended', 'red'] };
 
 page('settings', async (ctx) => {
   const owner = ctx.can('owner');
   const tabsRow = $$('.ns-main > div').find((d) => /Users & roles/.test(d.textContent) && d.children.length === 4);
   const tabEls = tabsRow ? [...tabsRow.children] : [];
-  if (tabsRow && tabEls.length === 4) {                 // add the Billing tab next to the design's four
-    const t = tabEls[0].cloneNode(false); t.textContent = 'Billing'; tabsRow.appendChild(t); tabEls.push(t);
+  if (tabsRow && tabEls.length === 4) {                 // add Billing and My account next to the design's four
+    for (const label of ['Billing', 'My account']) { const t = tabEls[0].cloneNode(false); t.textContent = label; tabsRow.appendChild(t); tabEls.push(t); }
   }
   const styles = tabEls.map((t) => t.getAttribute('style') || '');
   const onStyle = styles.find((s) => /#1C9A6C|border-bottom:2px solid #1/i.test(s)) || styles[1] || '';
@@ -90,7 +90,8 @@ page('settings', async (ctx) => {
           <div class="ns-card" style="padding:0;overflow:hidden">
             <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px">
               <div><div class="ns-h3">Team members</div><div class="ns-muted">${members.length} people have access to ${esc(ctx.property_name)}</div></div>
-              ${owner ? '<button type="button" class="ns-btn" id="invite">+ Invite member</button>' : ''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">${!DEMO ? '<button type="button" class="ns-btn-ghost" id="signout-all">Sign out on all devices</button>' : ''}
+          ${owner ? '<button type="button" class="ns-btn" id="invite">+ Invite member</button>' : ''}</div></div>
             <div style="overflow-x:auto"><table class="ns-table" style="min-width:520px"><thead><tr><th>Name</th><th>Role</th><th>Last active</th><th></th></tr></thead><tbody>
               ${members.map((m) => `<tr><td><div style="display:flex;gap:10px;align-items:center">${avatar(m.display_name || m.email)}<div>
                   <div style="font-weight:700">${esc(m.display_name || m.email)}${m.user_id === ctx.user.id ? ' (you)' : ''}</div><div class="ns-muted" style="font-size:11px">${esc(m.email || '')}</div></div></div></td>
@@ -123,6 +124,11 @@ page('settings', async (ctx) => {
         } }],
       });
       $('#invite')?.addEventListener('click', () => memberDialog(null));
+      $('#signout-all')?.addEventListener('click', async () => {
+        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere — this computer, your phone and any other device. Staff accounts are not affected.', { confirmLabel: 'Sign out everywhere' })) return;
+        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
+        location.replace('login.html');
+      });
       $$('[data-role]').forEach((b) => b.onclick = () => memberDialog(byId[b.dataset.role]));
       $$('[data-remove]').forEach((b) => b.onclick = async () => {
         const m = byId[b.dataset.remove];
@@ -250,6 +256,65 @@ page('settings', async (ctx) => {
         catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
       });
       draw();
+    },
+
+    // ------------------------------------------------------------ My account (password, email, devices)
+    async account() {
+      const email = ctx.user.email;
+      content(`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="pw-card">
+            <div class="ns-h3">Change password</div>
+            <div class="ns-muted">Signed in as <b>${esc(email)}</b></div>
+            ${field('Current password', '<input class="ns-input" type="password" name="cur" autocomplete="current-password">')}
+            ${field('New password', '<input class="ns-input" type="password" name="new1" autocomplete="new-password" minlength="10">', 'At least 10 characters. Don’t reuse a password from another site.')}
+            ${field('Type the new password again', '<input class="ns-input" type="password" name="new2" autocomplete="new-password">')}
+            <button type="button" class="ns-btn" id="save-pw" style="align-self:flex-start">Change password</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="ns-h3">Change email</div>
+              ${field('New email', '<input class="ns-input" type="email" name="new-email" autocomplete="email">', 'We send a confirmation link to the new address. Your email changes after you click it.')}
+              <button type="button" class="ns-btn-ghost" id="save-email2" style="align-self:flex-start">Change email</button>
+            </div>
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:10px">
+              <div class="ns-h3">Devices</div>
+              <div class="ns-muted">Signed in on a phone or computer you no longer use? Sign out everywhere.</div>
+              <button type="button" class="ns-btn-ghost" id="signout-all2" style="align-self:flex-start">Sign out on all devices</button>
+            </div>
+          </div>
+        </div>`);
+      $('#save-pw').onclick = async (e) => {
+        const v = (n) => $(`#pw-card [name=${n}]`).value;
+        if (!v('cur')) return toast('Enter your current password.', { error: true });
+        if (v('new1').length < 10) return toast('The new password needs at least 10 characters.', { error: true });
+        if (v('new1') !== v('new2')) return toast('The two new passwords don’t match.', { error: true });
+        if (v('new1') === v('cur')) return toast('Choose a password different from the current one.', { error: true });
+        e.target.disabled = true;
+        try {
+          const chk = await sb.auth.signInWithPassword({ email, password: v('cur') });   // confirm it's really you
+          if (chk.error) throw new Error('Your current password is not correct.');
+          const { error } = await sb.auth.updateUser({ password: v('new1') });
+          if (error) throw new Error(error.message);
+          $$('#pw-card input').forEach((i) => { i.value = ''; });
+          toast('Password changed. Use the new one next time you sign in.');
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#save-email2').onclick = async (e) => {
+        const ne = $('[name=new-email]').value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ne)) return toast('Enter a valid email address.', { error: true });
+        e.target.disabled = true;
+        try {
+          const { error } = await sb.auth.updateUser({ email: ne });
+          if (error) throw new Error(error.message);
+          toast(`Check ${ne} for a confirmation link. Your email changes after you click it.`, { ms: 7000 });
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#signout-all2').onclick = async () => {
+        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere, including this device.', { confirmLabel: 'Sign out everywhere' })) return;
+        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
+        location.replace('login.html');
+      };
     },
 
     // ------------------------------------------------------------ Notifications

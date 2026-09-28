@@ -1,12 +1,21 @@
 // NammaStay — shared front-end core (ES module, no build step).
 // Every page script imports from here.
 const CFG = window.NAMMASTAY_CONFIG || {};
-/** LIVE = connected to Supabase. Otherwise the in-browser demo backend runs with sample data. */
-export const LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
-export const DEMO = !LIVE;
+/** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
+const DEMO_ON = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('demo');
+    if (q === '1') localStorage.setItem('ns.demo.on', '1');
+    if (q === '0') { localStorage.removeItem('ns.demo.on'); localStorage.removeItem('ns.demo.session'); }
+    return localStorage.getItem('ns.demo.on') === '1';
+  } catch { return false; }
+})();
+export const DEMO = DEMO_ON;
+export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
 export const sb = LIVE
   ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey)
-  : (await import('./demo-backend.js')).createDemoClient();
+  : DEMO ? (await import('./demo-backend.js')).createDemoClient() : null;
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
 export const TZ = 'Asia/Kolkata';
@@ -132,6 +141,7 @@ export function showFatal(message, { signIn = false } = {}) {
 
 /** Run a page: check the login, apply the role, then render. */
 export function page(key, fn) {
+  if (NOT_CONNECTED) { location.replace('login.html'); return; }
   (async () => {
     try {
       const ctx = await boot(key);
@@ -145,7 +155,17 @@ export function page(key, fn) {
   })();
 }
 
+export const TEMP_KEY = 'ns.temp.session';
+export function markBrowserSession() { try { document.cookie = 'ns_alive=1; path=/; SameSite=Lax'; } catch { /* ignore */ } }
 async function boot(key) {
+  // "Keep me signed in" was unticked and the browser has since been closed → sign out
+  if (LIVE) {
+    let temp = false; try { temp = localStorage.getItem(TEMP_KEY) === '1'; } catch { /* ignore */ }
+    if (temp && !/(^|;\s*)ns_alive=1/.test(document.cookie)) {
+      await sb.auth.signOut().catch(() => {});
+      try { localStorage.removeItem(TEMP_KEY); } catch { /* ignore */ }
+    }
+  }
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     const here = location.pathname.split('/').pop() + location.search;
@@ -279,13 +299,17 @@ function demoBadge() {
   const el = document.createElement('div');
   el.className = 'ns-demo-badge';
   const k = sb.kind?.() || 'hostel';
-  el.innerHTML = `<b>Demo mode</b> · sample data saved in this browser. <button type="button" data-reset>Reset</button>
+  el.innerHTML = `<b>Demo mode</b> · sample data saved in this browser. <button type="button" data-reset>Reset</button> · <button type="button" data-exit>Exit demo</button>
     <div style="margin-top:6px">Try as: ${[['hostel', 'Hostel'], ['hotel', 'Hotel'], ['homestay', 'Homestay']].map(([v, l]) =>
       `<button type="button" data-kind="${v}" style="${v === k ? 'color:#E2A03F;text-decoration:none' : ''}">${l}</button>`).join(' · ')}</div>`;
   el.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.kind === k) return;
     sb.setKind(b.dataset.kind); location.replace('dashboard.html');
   }));
+  el.querySelector('[data-exit]').addEventListener('click', async () => {
+    try { localStorage.removeItem('ns.demo.on'); } catch { /* ignore */ }
+    location.replace('login.html?demo=0');
+  });
   el.querySelector('[data-reset]').addEventListener('click', async () => {
     if (await confirmDialog('Reset demo data', 'Start again with fresh sample bookings? Changes you made in the demo will be cleared.', { confirmLabel: 'Reset' })) {
       sb.reset(); location.reload();

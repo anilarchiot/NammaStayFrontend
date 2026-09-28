@@ -1,5 +1,5 @@
 // Public page — guests open it from the link in their confirmation email / WhatsApp.
-import { idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
+import { idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
 
 init();
 
@@ -12,6 +12,7 @@ async function init() {
     stepText.textContent = `Step ${n} of 3 — ${label}`;
     [...bars].forEach((b, i) => { b.style.background = i < n ? '#1C9A6C' : '#2A3963'; });
   };
+  if (NOT_CONNECTED) return stop('Online check-in is unavailable right now. Please check in at the front desk.');
   let token = param('t');
   if (!token && DEMO) {               // demo: open the next upcoming booking's link
     token = (await sb.rpc('demo_checkin_token')).data;

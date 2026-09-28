@@ -1,5 +1,5 @@
 // Self sign-up: 1) create account → 2) create property → 15-day free trial starts.
-import { DEMO, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
+import { DEMO, NOT_CONNECTED, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
 
 const box = $('.ns-login-main > div');
 const brand = box.querySelector('.ns-login-brand').outerHTML;
@@ -15,10 +15,15 @@ const fail = (m) => { const e = $('#err'); e.textContent = m; e.hidden = false; 
 init();
 
 async function init() {
+  if (NOT_CONNECTED) {
+    render('Start your free trial', 'Sign-up is unavailable right now. Please try again later.', '<a class="ns-btn ns-btn-lg" href="index.html">Back to home</a>');
+    return;
+  }
   if (DEMO) {
-    render('Start your free trial', 'Sign-up opens once NammaStay is connected to its database.',
+    render('Start your free trial', 'You’re in the demo. Exit the demo to create a real account.',
       `<div class="ns-demo-hint">This site is in demo mode. You can explore everything with sample data.</div>
-       <a class="ns-btn ns-btn-lg" href="login.html">Open the demo</a>`);
+       <a class="ns-btn ns-btn-lg" href="login.html">Back to the demo</a>
+       <a class="ns-btn-ghost ns-btn-lg" href="signup.html?demo=0" style="height:48px">Exit demo and sign up</a>`);
     return;
   }
   const { data: { session } } = await sb.auth.getSession();
