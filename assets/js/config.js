@@ -1,20 +1,19 @@
 /* NammaStay — connection settings.
  *
- * DEMO MODE (both values empty): the whole app runs in the browser with
- * sample data for Social Backpackers Hostel. Every screen and button works;
- * changes are saved only in that browser.
- *
- * LIVE MODE: fill in the two values from Supabase → Project Settings → API:
+ * Fill in the two values from Supabase → Project Settings → API:
  *   • Project URL          → supabaseUrl
  *   • anon / public key    → supabaseAnonKey
  * The anon key is designed to be public. Your data is protected by the
- * Row Level Security rules in supabase/migrations/002_security.sql.
+ * Row Level Security rules in the backend repo (supabase/migrations).
  * NEVER put the service_role key here.
+ *
+ * Empty keys → the app shows "Not connected yet" and nobody can sign in.
+ * The sample-data demo only opens on purpose via login.html?demo=1.
  */
 window.NAMMASTAY_CONFIG = {
   supabaseUrl: '',
   supabaseAnonKey: '',
-  siteUrl: 'https://thenammastay.in'
+  siteUrl: 'https://thenammastay.com'
 };
 
 (function () {

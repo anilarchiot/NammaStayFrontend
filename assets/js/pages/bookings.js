@@ -1,5 +1,5 @@
 import {
-  page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtDayTime, fmtWeekday, ymd, addDays,
+  W, roomsMode, page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtDayTime, fmtWeekday, ymd, addDays,
   avatar, statusPill, payPill, param, $,
 } from '../core.js';
 
@@ -20,12 +20,12 @@ page('bookings', async (ctx) => {
   const avail = series.map((s) => {
     const r = s.total ? s.occupied / s.total : 0;
     const [bg, fg] = r >= 0.95 ? ['#FCE9E9', '#B23A3A'] : r >= 0.85 ? ['#FCF0DC', '#966016'] : ['#E9F5EE', '#157A56'];
-    return { head: fmtWeekday(s.day), cell: `<div style="text-align:center;font-size:12px;font-weight:800;color:${fg};background:${bg};border-radius:6px;padding:4px 0" title="${s.total - s.occupied} beds free">${s.occupied}/${s.total}</div>` };
+    return { head: fmtWeekday(s.day), cell: `<div style="text-align:center;font-size:12px;font-weight:800;color:${fg};background:${bg};border-radius:6px;padding:4px 0" title="${s.total - s.occupied} ${W.units} free">${s.occupied}/${s.total}</div>` };
   });
 
   content(`
     <div class="ns-card" style="border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:0">
-      <div style="width:150px;font-size:12px;font-weight:700;color:#6B7280">Bed availability</div>
+      <div style="width:150px;font-size:12px;font-weight:700;color:#6B7280">${W.Unit} availability</div>
       <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
         ${avail.map((a) => `<div style="text-align:center;font-size:11px;color:#6B7280;font-weight:600">${a.head}</div>`).join('')}
         ${avail.map((a) => a.cell).join('')}
@@ -41,7 +41,7 @@ page('bookings', async (ctx) => {
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="overflow-x:auto">
         <table class="ns-table" style="min-width:820px">
-          <thead><tr><th>Guest</th><th>Booking</th><th>Room / Bed</th><th>Check-in</th><th>Check-out</th>
+          <thead><tr><th>Guest</th><th>Booking</th><th>${roomsMode() ? "Room" : "Room / Bed"}</th><th>Check-in</th><th>Check-out</th>
             <th>Amount</th><th>Payment</th><th>Status</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
