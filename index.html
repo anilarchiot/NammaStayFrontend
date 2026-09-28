@@ -254,7 +254,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a class="signin" href="login.html">Sign in</a>
+      <a class="signin" href="login.html?demo=0">Sign in</a>
       <a class="btn btn-primary" href="signup.html">Start free trial</a>
     </div>
   </div>
@@ -271,7 +271,7 @@
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          <a class="btn btn-light" href="login.html" data-demo>Try the live demo</a>
+          <a class="btn btn-light" href="login.html?demo=1" data-demo>Try the live demo</a>
         </div>
         <p class="hero-note">No card needed · One flat price per property · Pay by UPI</p>
       </div>
@@ -530,7 +530,7 @@
         <p>Start your free trial in two minutes, or click around a demo hostel first.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial</a>
-          <a class="btn btn-ghost-dark" href="login.html" data-demo>Try the live demo</a>
+          <a class="btn btn-ghost-dark" href="login.html?demo=1" data-demo>Try the live demo</a>
         </div>
       </div>
     </div>
@@ -544,7 +544,7 @@
       <a href="#features">Features</a>
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
-      <a href="login.html">Staff sign in</a>
+      <a href="login.html?demo=0">Staff sign in</a>
       <a href="#early-access">Contact</a>
       <a href="#" data-contact hidden>WhatsApp</a>
     </nav>
@@ -557,8 +557,8 @@
  * assets/js/config.js has your keys. Until then it falls back to:
  * whatsapp: your number with country code, digits only, e.g. '919840012345'
  * email:    e.g. 'hello@thenammastay.in'
- * demoUrl:  the demo link. Keep 'login.html' while the site runs in demo mode.
- *           After you connect Supabase, point this to a separate demo copy.
+ * demoUrl:  the demo link — 'login.html?demo=1' opens the sample-data demo on purpose.
+ *           (With Supabase connected, plain login.html is always the real sign-in.)
  */
 var NS_SITE = {
   // Shown until the site is connected to Supabase; after that, live prices come from the database
@@ -575,7 +575,7 @@ var NS_SITE = {
   ],
   whatsapp: '',
   email: '',
-  demoUrl: 'login.html'
+  demoUrl: 'login.html?demo=1'
 };
 /* ==================================== */
 (function () {
