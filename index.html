@@ -166,6 +166,10 @@
   footer nav a:hover{color:var(--ink)}
 
   /* pricing */
+  .price-tabs{display:flex;justify-content:center;gap:6px;margin:26px auto 0;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px;width:max-content;max-width:100%}
+  .price-tabs button{border:0;background:transparent;border-radius:999px;padding:10px 18px;font:800 14px 'Manrope',sans-serif;color:var(--muted);cursor:pointer}
+  .price-tabs button.on{background:var(--navy);color:#fff}
+  .price-card .alt{font-size:14px;color:var(--muted);font-weight:700}
   .price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,340px));justify-content:center;gap:20px;margin-top:40px}
   .price-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;display:flex;flex-direction:column;gap:10px;position:relative}
   .price-card.best{border:2px solid var(--green);box-shadow:0 20px 50px rgba(28,154,108,.14)}
@@ -250,7 +254,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a class="signin" href="login.html">Sign in</a>
+      <a class="signin" href="login.html?demo=0">Sign in</a>
       <a class="btn btn-primary" href="signup.html">Start free trial</a>
     </div>
   </div>
@@ -267,7 +271,7 @@
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          <a class="btn btn-light" href="login.html" data-demo>Try the live demo</a>
+          <a class="btn btn-light" href="login.html?demo=1" data-demo>Try the live demo</a>
         </div>
         <p class="hero-note">No card needed · One flat price per property · Pay by UPI</p>
       </div>
@@ -456,6 +460,11 @@
     <div class="wrap">
       <div class="kicker" style="text-align:center">Pricing</div>
       <h2 class="h2 center" id="pricing-h" style="text-align:center">One flat price per property</h2>
+      <div class="price-tabs" role="tablist" aria-label="Property type" id="price-tabs">
+        <button type="button" role="tab" data-kind="hostel" aria-selected="true" class="on">Hostel / PG</button>
+        <button type="button" role="tab" data-kind="homestay" aria-selected="false">Homestay</button>
+        <button type="button" role="tab" data-kind="hotel" aria-selected="false">Hotel</button>
+      </div>
       <p class="sub center" style="text-align:center">Every feature, unlimited staff and unlimited bookings. Start with 15 days free — no card needed. Pay by UPI when you’re ready.</p>
       <div class="price-grid" id="price-grid"></div>
       <ul class="price-incl">
@@ -506,7 +515,7 @@
         <details><summary>How is my guests’ ID data protected?</summary><p>Aadhaar numbers are stored masked (last 4 digits only), ID photos are kept in private storage and deleted automatically after the period you choose, and staff only see what their role allows.</p></details>
         <details><summary>Can my staff have limited access?</summary><p>Yes. There are four roles — owner, manager, front desk and accountant. For example, an accountant can see payments and reports but not guest ID documents.</p></details>
         <details><summary>Can I manage more than one property?</summary><p>Yes. One login can belong to several properties, and you switch between them from the menu. Each property keeps its own rooms, rates, team and reports.</p></details>
-        <details><summary>How much does it cost?</summary><p>One flat price per property, whatever its size — see Pricing above. Every feature and unlimited staff are included. There are no per-booking fees.</p></details>
+        <details><summary>How much does it cost?</summary><p>One flat monthly price per property, based on its type and size — see Pricing above. Every feature and unlimited staff are included. There are no per-booking or per-guest fees.</p></details>
         <details><summary>What happens after the free trial?</summary><p>Pay for a month or a year by UPI from the Billing tab in Settings and enter the transaction ID — we confirm it and your access continues. If you don’t renew, your data stays safe and visible; only new bookings pause until you do.</p></details>
         <details><summary>Can I try it before signing up?</summary><p>Yes — the live demo is loaded with sample bookings for a 9-bed hostel. Click around freely: create bookings, take payments, check guests in and out.</p></details>
       </div>
@@ -521,7 +530,7 @@
         <p>Start your free trial in two minutes, or click around a demo hostel first.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial</a>
-          <a class="btn btn-ghost-dark" href="login.html" data-demo>Try the live demo</a>
+          <a class="btn btn-ghost-dark" href="login.html?demo=1" data-demo>Try the live demo</a>
         </div>
       </div>
     </div>
@@ -535,7 +544,7 @@
       <a href="#features">Features</a>
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
-      <a href="login.html">Staff sign in</a>
+      <a href="login.html?demo=0">Staff sign in</a>
       <a href="#early-access">Contact</a>
       <a href="#" data-contact hidden>WhatsApp</a>
     </nav>
@@ -548,18 +557,25 @@
  * assets/js/config.js has your keys. Until then it falls back to:
  * whatsapp: your number with country code, digits only, e.g. '919840012345'
  * email:    e.g. 'hello@thenammastay.in'
- * demoUrl:  the demo link. Keep 'login.html' while the site runs in demo mode.
- *           After you connect Supabase, point this to a separate demo copy.
+ * demoUrl:  the demo link — 'login.html?demo=1' opens the sample-data demo on purpose.
+ *           (With Supabase connected, plain login.html is always the real sign-in.)
  */
 var NS_SITE = {
   // Shown until the site is connected to Supabase; after that, live prices come from the database
   prices: [
-    { id: 'monthly', name: 'Monthly', period_months: 1, price_paise: 165000, description: 'Billed every month' },
-    { id: 'yearly', name: 'Yearly', period_months: 12, price_paise: 1650000, description: '2 months free' }
+    { id: 'monthly', kind: 'hostel', name: 'Monthly', period_months: 1, price_paise: 165000, description: 'Billed every month' },
+    { id: 'yearly', kind: 'hostel', name: 'Yearly', period_months: 12, price_paise: 1650000, description: '2 months free' },
+    { id: 'homestay_monthly', kind: 'homestay', name: 'Monthly', period_months: 1, price_paise: 99900, description: 'Homestays up to 6 rooms', max_units: 6 },
+    { id: 'homestay_yearly', kind: 'homestay', name: 'Yearly', period_months: 12, price_paise: 999000, description: '2 months free', max_units: 6 },
+    { id: 'hotel_s_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 249900, max_units: 20 },
+    { id: 'hotel_s_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 2499000, max_units: 20 },
+    { id: 'hotel_m_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 399900, min_units: 21, max_units: 50 },
+    { id: 'hotel_m_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 3999000, min_units: 21, max_units: 50 },
+    { id: 'hotel_l_quote', kind: 'hotel', name: 'Large hotels', period_months: 1, price_paise: 0, min_units: 51, is_quote: true }
   ],
   whatsapp: '',
   email: '',
-  demoUrl: 'login.html'
+  demoUrl: 'login.html?demo=1'
 };
 /* ==================================== */
 (function () {
@@ -619,26 +635,51 @@ var NS_SITE = {
   });
 
   /* ---- Pricing: live from the database when connected ---- */
-  function drawPrices(list) {
+  var allPlans = NS_SITE.prices; var kind = 'hostel';
+  function inr(p) { return '₹' + Math.round(p / 100).toLocaleString('en-IN'); }
+  function drawPrices() {
     var grid = document.getElementById('price-grid');
-    var best = list.reduce(function (b, p) { return p.period_months > (b ? b.period_months : 0) ? p : b; }, null);
-    grid.innerHTML = list.map(function (p) {
-      var per = p.period_months === 1 ? 'month' : p.period_months === 12 ? 'year' : p.period_months + ' months';
-      var monthly = Math.round(p.price_paise / 100 / p.period_months);
-      return '<div class="price-card' + (list.length > 1 && p === best ? ' best' : '') + '">' +
-        (list.length > 1 && p === best ? '<span class="tag">Best value</span>' : '') +
-        '<h3></h3><div class="amt">₹' + (p.price_paise / 100).toLocaleString('en-IN') + ' <small>/ ' + per + '</small></div>' +
-        '<p class="desc"></p>' + (p.period_months > 1 ? '<p>≈ ₹' + monthly.toLocaleString('en-IN') + ' per month</p>' : '') +
-        '<a class="btn ' + (p === best ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a></div>';
-    }).join('');
-    grid.querySelectorAll('.price-card').forEach(function (c, i) { c.querySelector('h3').textContent = list[i].name; c.querySelector('.desc').textContent = list[i].description || ''; });
+    var list = allPlans.filter(function (p) { return (p.kind || 'hostel') === kind; });
+    var tiers = {}; var order = [];
+    list.forEach(function (p) { var k = (p.min_units || 0) + '-' + (p.max_units || ''); if (!tiers[k]) { tiers[k] = []; order.push(k); } tiers[k].push(p); });
+    var cards;
+    if (order.length <= 1) {                                   // one size: monthly vs yearly cards
+      var best = list.reduce(function (b, p) { return p.period_months > (b ? b.period_months : 0) ? p : b; }, null);
+      cards = list.map(function (p) {
+        var per = p.period_months === 1 ? 'month' : p.period_months === 12 ? 'year' : p.period_months + ' months';
+        var isBest = list.length > 1 && p === best;
+        return '<div class="price-card' + (isBest ? ' best' : '') + '">' + (isBest ? '<span class="tag">Best value</span>' : '') +
+          '<h3>' + esc(p.name) + '</h3><div class="amt">' + inr(p.price_paise) + ' <small>/ ' + per + '</small></div>' +
+          '<p>' + esc(p.description || '') + '</p>' + (p.period_months > 1 ? '<p>≈ ' + inr(p.price_paise / p.period_months) + ' per month</p>' : '') +
+          '<a class="btn ' + (isBest ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a></div>';
+      });
+    } else {                                                   // sizes: one card per size
+      cards = order.map(function (k, i) {
+        var t = tiers[k]; var m = t.filter(function (p) { return p.period_months === 1 && !p.is_quote; })[0];
+        var y = t.filter(function (p) { return p.period_months === 12; })[0]; var q = t.filter(function (p) { return p.is_quote; })[0];
+        var lo = t[0].min_units; var hi = t[0].max_units;
+        var size = hi && !lo ? 'Up to ' + hi + ' rooms' : lo && hi ? lo + '–' + hi + ' rooms' : lo ? lo + '+ rooms' : 'Any size';
+        var mid = i === 0 && order.length > 1;
+        return '<div class="price-card' + (mid ? ' best' : '') + '">' + (mid ? '<span class="tag">Most popular</span>' : '') + '<h3>' + size + '</h3>' +
+          (q ? '<div class="amt" style="font-size:32px">Custom</div><p>' + esc(q.description || 'Priced for your hotel') + '</p><a class="btn btn-light" href="#early-access">Talk to us</a>'
+             : '<div class="amt">' + inr(m.price_paise) + ' <small>/ month</small></div>' + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — 2 months free</p>' : '') +
+               '<a class="btn ' + (mid ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a>') + '</div>';
+      });
+    }
+    grid.innerHTML = cards.join('');
   }
-  drawPrices(NS_SITE.prices);
+  function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  document.getElementById('price-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-kind]'); if (!b) return; kind = b.dataset.kind;
+    document.querySelectorAll('#price-tabs button').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+    drawPrices();
+  });
+  drawPrices();
   var cfgP = window.NAMMASTAY_CONFIG || {};
   if (cfgP.supabaseUrl && cfgP.supabaseAnonKey) {
-    fetch(cfgP.supabaseUrl.replace(/\/$/, '') + '/rest/v1/plans?select=id,name,period_months,price_paise,description&is_active=eq.true&order=sort', {
+    fetch(cfgP.supabaseUrl.replace(/\/$/, '') + '/rest/v1/plans?select=id,name,period_months,price_paise,description,kind,min_units,max_units,is_quote&is_active=eq.true&order=sort', {
       headers: Object.assign({ apikey: cfgP.supabaseAnonKey }, /^eyJ/.test(cfgP.supabaseAnonKey) ? { Authorization: 'Bearer ' + cfgP.supabaseAnonKey } : {})
-    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rows) { if (rows && rows.length) drawPrices(rows); }).catch(function () {});
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rows) { if (rows && rows.length) { allPlans = rows; drawPrices(); } }).catch(function () {});
   }
 
   document.querySelectorAll('[data-demo]').forEach(function (a) { a.href = NS_SITE.demoUrl; });
