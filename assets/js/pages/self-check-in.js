@@ -1,5 +1,5 @@
 // Public page — guests open it from the link in their confirmation email / WhatsApp.
-import { newId, DEMO, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
+import { idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
 
 init();
 
@@ -12,6 +12,7 @@ async function init() {
     stepText.textContent = `Step ${n} of 3 — ${label}`;
     [...bars].forEach((b, i) => { b.style.background = i < n ? '#1C9A6C' : '#2A3963'; });
   };
+  if (NOT_CONNECTED) return stop('Online check-in is unavailable right now. Please check in at the front desk.');
   let token = param('t');
   if (!token && DEMO) {               // demo: open the next upcoming booking's link
     token = (await sb.rpc('demo_checkin_token')).data;
@@ -48,8 +49,8 @@ async function init() {
     ${field('Nationality', '<input class="ns-input" name="nationality" autocomplete="country-name" placeholder="India">')}
     ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Choose…</option>${options(ID_TYPES, '')}</select>`)}
     ${field('ID number', '<input class="ns-input" name="id_number" autocomplete="off">', 'For Aadhaar we keep only the last 4 digits.')}
-    ${field('Photo of your ID', '<input class="ns-input" name="id_file" type="file" accept="image/*,application/pdf" capture="environment" style="padding:10px;height:auto">',
-      'Foreign guests: photo page of your passport and visa.')}
+    ${idUploadFields({ front: 'Photo of your ID — front', back: 'Back side (Aadhaar / licence)' })}
+    <div class="ns-help" style="margin-top:-6px">Passport: the photo page is enough. Foreign guests: add your visa page as the second photo.</div>
     <label style="display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.5">
       <input type="checkbox" name="consent" style="width:16px;height:16px;accent-color:#1C9A6C;margin-top:2px">
       My details are accurate. I agree to the house rules, and to the hostel keeping my ID for legal guest-registration needs and deleting it afterwards.</label>
@@ -58,6 +59,7 @@ async function init() {
   reveal();
 
   const v = (n) => body.querySelector(`[name="${n}"]`);
+  wireIdPreviews(body);
   document.getElementById('go').onclick = async (e) => {
     const err = document.getElementById('err'); err.hidden = true;
     const fail = (m) => { err.textContent = m; err.hidden = false; e.target.disabled = false; step(1, 'Your details'); };
@@ -65,17 +67,12 @@ async function init() {
     if (!v('consent').checked) return fail('Please tick the box to confirm.');
     e.target.disabled = true;
     try {
-      let path = null;
-      const file = v('id_file').files[0];
-      if (file) {
-        step(2, 'Uploading your ID');
-        const small = await compressImage(file);
-        path = await uploadIdDoc(`${b.property_id}/${token}/${newId()}.${small.type === 'application/pdf' ? 'pdf' : 'jpg'}`, small);
-      }
+      if (v('id_file').files[0] || v('id_file_back').files[0]) step(2, 'Uploading your ID');
+      const ids = await uploadIdSides(body, `${b.property_id}/${token}`);
       const { error: subErr } = await sb.rpc('selfcheckin_submit', { p_token: token, p: {
         full_name: v('full_name').value.trim(), dob: v('dob').value, phone: v('phone').value, email: v('email').value,
         nationality: v('nationality').value, id_type: v('id_type').value, id_number: v('id_number').value,
-        id_doc_path: path, consent: true } });
+        id_doc_path: ids.id_doc_path || null, id_doc_back_path: ids.id_doc_back_path || null, consent: true } });
       if (subErr) return fail(subErr.message);
       step(3, 'All set');
       done('You’re checked in online', `Thanks! We’ve saved your details for ${b.code}. See you at ${b.property}.`);

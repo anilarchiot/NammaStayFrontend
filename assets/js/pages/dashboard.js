@@ -1,4 +1,4 @@
-import { page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtLong, fmtTime, fmtWeekday, avatar, pill, statusLabel } from '../core.js';
+import { W, page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtLong, fmtTime, fmtWeekday, avatar, pill, statusLabel } from '../core.js';
 
 page('dashboard', async (ctx) => {
   const d = await rpc('dashboard_summary', { p_property: ctx.property_id });
@@ -31,7 +31,7 @@ page('dashboard', async (ctx) => {
 
   content(`
     <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;">
-      ${stat('Occupancy today', occPct + '%', `${d.beds_occupied} / ${d.beds_total} beds ${occDelta ? (occDelta > 0 ? '▲ ' : '▼ ') + Math.abs(occDelta) : ''}`, '#1C9A6C')}
+      ${stat('Occupancy today', occPct + '%', `${d.beds_occupied} / ${d.beds_total} ${W.units} ${occDelta ? (occDelta > 0 ? '▲ ' : '▼ ') + Math.abs(occDelta) : ''}`, '#1C9A6C')}
       ${stat('Check-ins today', d.checkins_today, `${d.checkins_pending} pending arrival`)}
       ${stat('Check-outs today', d.checkouts_today, `${d.checkouts_late} late check-out${d.checkouts_late === 1 ? '' : 's'}`, d.checkouts_late ? '#B23A3A' : '#6B7280')}
       ${stat('Revenue today', rupees(d.revenue_today), revDelta === null ? 'No payments yesterday' : `${revDelta >= 0 ? '▲' : '▼'} ${Math.abs(revDelta)}% vs yesterday`, revDelta !== null && revDelta < 0 ? '#B23A3A' : '#1C9A6C')}
@@ -40,9 +40,9 @@ page('dashboard', async (ctx) => {
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;">
       <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="ns-h3">Occupancy — last 7 days</div><div class="ns-muted">Beds occupied / ${d.beds_total}</div></div>
+          <div class="ns-h3">Occupancy — last 7 days</div><div class="ns-muted">${W.Units} occupied / ${d.beds_total}</div></div>
         <div class="ns-bars">
-          ${d.series.map((s) => `<div class="${s.day === d.today ? 'is-today' : ''}" title="${s.occupied} of ${d.beds_total} beds">
+          ${d.series.map((s) => `<div class="${s.day === d.today ? 'is-today' : ''}" title="${s.occupied} of ${d.beds_total} ${W.units}">
               <div class="bar-fill" style="height:${Math.round((s.occupied / max) * 100)}%"></div>
               <div style="font-size:11px;color:${s.day === d.today ? '#101A3D;font-weight:700' : '#6B7280'}">${fmtWeekday(s.day).split(' ')[0]}</div></div>`).join('')}
         </div>
