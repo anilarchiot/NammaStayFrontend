@@ -12,7 +12,7 @@
  */
 window.NAMMASTAY_CONFIG = {
   supabaseUrl: 'https://skcqpfyshbxcyyamsgtj.supabase.co/rest/v1/',
-  supabaseAnonKey: 'sb_publishable_h33csXA4sEqhURK0_ALG0Q_80FI5eeq',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrY3FwZnlzaGJ4Y3l5YW1zZ3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2ODg3NTMsImV4cCI6MjEwNjI2NDc1M30.PgKY1xdxnie_F3wj55DTBr5MMvhVcdalf6wRJAgmLK0',
   siteUrl: 'https://thenammastay.com'
 };
 
