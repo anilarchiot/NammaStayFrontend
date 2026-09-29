@@ -25,6 +25,17 @@ page('checkin', async (ctx) => {
   const state = { beds: [], bed: null, method: 'upi', guest: existing };
 
   const L = (s) => `<div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9">${s}</div>`;
+  
+  // Flattened HTML for new guests to avoid nested template literal syntax errors
+  const nonExistingFields = existing ? '' : `
+    ${field('Date of birth', '<input class="ns-input" name="dob" type="date" max="' + today + '">')}
+    ${field('Nationality', '<select class="ns-input" name="nationality">' + countryOptions('India') + '</select>')}
+    ${field('Proof of identity', '<select class="ns-input" name="id_type"><option value="">Select…</option>' + options(ID_TYPES, 'aadhaar') + '</select>')}
+    ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
+    <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
+      <div class="ns-help" style="margin-top:6px">Compressed before upload. Deleted automatically after the retention period in Settings.</div></div>
+  `;
+
   content(`
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
       <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
@@ -34,13 +45,7 @@ page('checkin', async (ctx) => {
           ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
           ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
           ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
-          ${existing ? '' : `
-          ${field('Date of birth', `<input class="ns-input" name="dob" type="date" max="${today}">`)}
-          ${field('Nationality', `<select class="ns-input" name="nationality">${countryOptions('India')}</select>`)}
-          ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Select…</option>${options(ID_TYPES, 'aadhaar')}</select>`)}
-          ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
-          <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
-            <div class="ns-help" style="margin-top:6px">Compressed before upload. Deleted automatically after the retention period in Settings.</div></div>`}
+          ${nonExistingFields}
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280">
           <input type="checkbox" name="send_confirmation" checked style="width:16px;height:16px;accent-color:#1C9A6C">
