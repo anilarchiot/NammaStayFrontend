@@ -1,4 +1,4 @@
-import { W, deleteGuestDialog, deleteBookingDialog, modal, field, options, ID_TYPES, compressImage, uploadIdDoc, newId, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
+import { W, openInvoice, countryOptions, downloadCsv, ymd, deleteGuestDialog, deleteBookingDialog, modal, field, options, ID_TYPES, compressImage, uploadIdDoc, newId, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
   toast, viewIdDocs, idUploadFields, wireIdPreviews, uploadIdSides, param, uuidOk, $ } from '../core.js';
 
 page('guests', async (ctx) => {
@@ -16,10 +16,10 @@ page('guests', async (ctx) => {
     <a class="ns-btn" href="check-in.html?guest=${esc(g.id)}">+ New booking</a>`;
   if (ctx.can('owner', 'manager', 'front_desk')) {
     head.insertAdjacentHTML('afterbegin', '<button type="button" class="ns-btn-ghost" id="edit-guest">✎ Edit profile</button>');
-    if (ctx.can('owner', 'manager')) head.insertAdjacentHTML('afterbegin', '<button type="button" class="ns-btn-danger" id="delete-guest">Delete guest</button>');
+    if (ctx.can('owner', 'manager') && ctx.allow('delete_guests')) head.insertAdjacentHTML('afterbegin', '<button type="button" class="ns-btn-danger" id="delete-guest">Delete guest</button>');
   }
 
-  const canDelete = ctx.can('owner', 'manager', 'front_desk');
+  const canDelete = ctx.can('owner', 'manager', 'front_desk') && ctx.allow('delete_bookings');
   const row = (l, v) => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0"><span class="ns-muted" style="font-size:12.5px">${l}</span><b style="font-weight:700;text-align:right">${v}</b></div>`;
   content(`
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -45,13 +45,14 @@ page('guests', async (ctx) => {
     </div>
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
       <div class="ns-card" style="padding:0;overflow:hidden"><div style="padding:18px 20px" class="ns-h3">Stay history</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>${W.Unit}</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th>${canDelete ? '<th class="ns-sticky-end"><span class="sr-only">Delete</span></th>' : ''}</tr></thead>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>${W.Unit}</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th><th class="ns-sticky-end"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody>${d.stays.map((s) => `<tr data-href="booking-detail.html?id=${esc(s.id)}" tabindex="0" style="cursor:pointer"><td style="font-weight:700">${esc(s.code)}</td>
           <td style="white-space:normal;min-width:130px">${esc(s.room)} · ${esc(s.bed)}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
           <td style="font-weight:700">${rupees(s.paid_paise)}</td><td>${statusPill(s.status)}</td>
-          ${canDelete ? `<td class="ns-sticky-end" style="width:44px;text-align:right"><button type="button" class="ns-icon-del" data-del="${esc(s.id)}"
-            aria-label="Delete ${esc(s.code)} (${esc(fmtDate(s.check_in_at))} – ${esc(fmtDate(s.check_out_at))})" title="Delete this stay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></td>` : ''}</tr>`).join('')
-          || `<tr><td colspan="${canDelete ? 7 : 6}" class="ns-empty">No stays yet.</td></tr>`}</tbody></table></div></div>
+          <td class="ns-sticky-end" style="width:${canDelete ? 84 : 44}px;text-align:right;white-space:nowrap"><button type="button" class="ns-icon-edit" data-inv="${esc(s.id)}"
+            aria-label="Invoice for ${esc(s.code)}" title="Invoice / bill" style="background:none;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"></path><path d="M14 2v6h6"></path><path d="M9 13h6M9 17h6"></path></svg></button>${canDelete ? `<button type="button" class="ns-icon-del" data-del="${esc(s.id)}"
+            aria-label="Delete ${esc(s.code)} (${esc(fmtDate(s.check_in_at))} – ${esc(fmtDate(s.check_out_at))})" title="Delete this stay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button>` : ''}</td></tr>`).join('')
+          || '<tr><td colspan="7" class="ns-empty">No stays yet.</td></tr>'}</tbody></table></div></div>
       ${d.current ? `<div class="ns-card-dark" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
           <div><div style="font-weight:700">Currently checked in</div><div style="font-size:12px;color:#AEB6C9">${esc(d.current.room)} · ${esc(d.current.bed)} · until ${fmtDate(d.current.check_out_at)}</div></div>
           <a class="ns-btn" href="booking-detail.html?id=${esc(d.current.id)}">View active booking</a></div>` : ''}
@@ -67,6 +68,8 @@ page('guests', async (ctx) => {
     catch (e) { toast(e.message, { error: true }); }
   };
   document.querySelector('.ns-content').addEventListener('click', (e) => {
+    const inv = e.target.closest('[data-inv]');
+    if (inv) { e.stopPropagation(); openInvoice(inv.dataset.inv).catch((err) => toast(err.message, { error: true })); return; }
     const del = e.target.closest('[data-del]');
     if (del) {
       e.stopPropagation();
@@ -85,8 +88,9 @@ async function guestList(ctx) {
   if (titleEl) titleEl.textContent = 'Guests';
   setSubtitle(ctx.property_name);
   const head = headerActions();
-  head.innerHTML = '<div class="ns-search"><span>Search</span></div>';
-  const canDel = ctx.can('owner', 'manager');
+  const canDel = ctx.can('owner', 'manager') && ctx.allow('delete_guests');
+  head.innerHTML = '<div class="ns-search"><span>Search</span></div>' + (ctx.allow('export_data') ? '<button type="button" class="ns-btn-ghost" id="export-guests">Export CSV</button>' : '');
+  document.getElementById('export-guests')?.addEventListener('click', (e) => exportGuests(ctx, e.target));
   const recent = await q(sb.from('guests').select('id, full_name, phone, nationality, created_at')
     .eq('property_id', ctx.property_id).order('created_at', { ascending: false }).limit(25));
   const render = (rows, title) => content(`<div class="ns-card" style="padding:0;overflow:hidden">
@@ -113,7 +117,6 @@ async function guestList(ctx) {
 }
 
 function editGuest(ctx, g) {
-  const nat = ['India', 'Germany', 'France', 'United Kingdom', 'United States', 'Spain', 'Israel', 'Netherlands', 'Australia', 'Italy', 'Japan'];
   modal({
     title: 'Edit guest profile', width: 600,
     body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -121,7 +124,7 @@ function editGuest(ctx, g) {
         ${field('Phone', `<input class="ns-input" name="phone" type="tel" value="${esc(g.phone || '')}" placeholder="+91 98400 12233">`)}
         ${field('Email', `<input class="ns-input" name="email" type="email" value="${esc(g.email || '')}">`)}
         ${field('Date of birth', `<input class="ns-input" name="dob" type="date" value="${esc(g.dob || '')}">`)}
-        ${field('Nationality', `<input class="ns-input" name="nationality" list="edit-nat" value="${esc(g.nationality || '')}"><datalist id="edit-nat">${nat.map((n) => `<option>${n}</option>`).join('')}</datalist>`)}
+        ${field('Nationality', `<select class="ns-input" name="nationality">${countryOptions(g.nationality || '')}</select>`)}
         ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">None</option>${options(ID_TYPES, g.id_type || '')}</select>`)}
         ${field('ID number', `<input class="ns-input" name="id_number" autocomplete="off" value="${esc(g.id_number || '')}">`, 'Aadhaar: only the last 4 digits are kept.')}
         <div style="grid-column:1/-1">${idUploadFields({ front: g.id_doc_path ? 'ID front — replace (optional)' : 'ID front (optional)',
@@ -143,4 +146,38 @@ function editGuest(ctx, g) {
     } }],
   });
   wireIdPreviews(document.querySelector('.ns-modal'));
+}
+
+// ------------------------------------------------------------ export all guests (owner / manager)
+async function fetchAll(build) {                     // pages of 1,000 rows
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const rows = await q(build().range(from, from + 999));
+    out.push(...rows); if (rows.length < 1000) return out;
+  }
+}
+async function exportGuests(ctx, btn) {
+  if (!await confirmDialog('Export guests', 'The file contains guests’ personal details (names, phones, emails, ID numbers). Keep it private and delete it when you’re done.', { confirmLabel: 'Download CSV' })) return;
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Preparing…';
+  try {
+    const [guests, bookings] = await Promise.all([
+      fetchAll(() => sb.from('guests').select('id, full_name, phone, email, nationality, dob, id_type, id_number, notes, created_at').eq('property_id', ctx.property_id).order('created_at')),
+      fetchAll(() => sb.from('bookings').select('guest_id, status, nights, paid_paise, check_in_at').eq('property_id', ctx.property_id).order('check_in_at')),
+    ]);
+    const st = {};
+    for (const b of bookings) {
+      const x = st[b.guest_id] || (st[b.guest_id] = { stays: 0, nights: 0, paid: 0, last: null, upcoming: 0 });
+      x.paid += b.paid_paise || 0;
+      if (['checked_in', 'checked_out'].includes(b.status)) { x.stays += 1; x.nights += b.nights || 0; if (!x.last || b.check_in_at > x.last) x.last = b.check_in_at; }
+      if (['pending', 'confirmed'].includes(b.status)) x.upcoming += 1;
+    }
+    const d = (iso) => (iso ? ymd(iso) : '');
+    const ID = { aadhaar: 'Aadhaar', passport: 'Passport', driving_licence: 'Driving licence', voter_id: 'Voter ID', other: 'Other' };
+    const rows = [['Name', 'Phone', 'Email', 'Nationality', 'Date of birth', 'ID type', 'ID number', 'Stays', 'Nights', 'Upcoming bookings', 'Total paid (₹)', 'Last stay', 'Added on', 'Notes'],
+      ...guests.map((g) => { const x = st[g.id] || { stays: 0, nights: 0, paid: 0, last: null, upcoming: 0 };
+        return [g.full_name, g.phone, g.email, g.nationality, g.dob, ID[g.id_type] || g.id_type || '', g.id_number, x.stays, x.nights, x.upcoming,
+          (x.paid / 100).toFixed(2), d(x.last), d(g.created_at), g.notes]; })];
+    downloadCsv(`guests_${ctx.property_name.replace(/\W+/g, '-').toLowerCase()}_${ymd()}.csv`, rows);
+    toast(`${guests.length} guest${guests.length === 1 ? '' : 's'} exported.`);
+  } catch (err) { toast(err.message, { error: true }); } finally { btn.disabled = false; btn.textContent = label; }
 }

@@ -265,6 +265,13 @@ function seedBilling() {
                 utr: '412398765432', submitted_at: D(-0.1) }],
   };
 }
+function offerPct(guestId) {
+  const o = DB.properties[0].offers; if (!o || !o.enabled || !guestId) return 0;
+  const prev = DB.bookings.filter((x) => x.guest_id === guestId && ['checked_in', 'checked_out'].includes(x.status)).length;
+  return (o.tiers || []).reduce((m, t) => (t.from_stay <= prev + 1 && t.pct > m ? Math.min(t.pct, 50) : m), 0);
+}
+const roomGst = (mode, fixed, perNight) => (mode === 'none' ? 0 : mode === 'fixed' ? fixed : perNight <= 100000 ? 0 : perNight <= 750000 ? 5 : 18);
+function fyOf(d) { const y = Number(d.slice(0, 4)); const m = Number(d.slice(5, 7)); const s = m >= 4 ? y : y - 1; return `${s}-${String(s + 1).slice(2)}`; }
 function allProps() {
   const m = DB.billing.mine; const now = Date.now();
   const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: 'Hostel Owner', owner_email: 'owner@demo.nammastay',
@@ -291,6 +298,14 @@ function load() {
   try { DB = JSON.parse(localStorage.getItem(KEY)); } catch { DB = null; }
   DB = shift(DB && DB.bookings ? DB : seed());
   if (!DB.leads) DB.leads = seedLeads();
+  const P0 = DB.properties[0];
+  if (P0.gst_mode === undefined) Object.assign(P0, { gst_mode: 'none', gstin: null, legal_name: null, gst_rate: 5, extras_gst_rate: 5, invoice_prefix: 'INV',
+    offers: { enabled: false, tiers: [{ from_stay: 2, pct: 5 }, { from_stay: 5, pct: 10 }] } });
+  if (!DB.extras) DB.extras = [['Breakfast', 'food', 15000, 'plate'], ['Tea / coffee', 'food', 3000, 'cup'], ['Laundry', 'laundry', 8000, 'kg'],
+    ['Towel', 'rental', 5000, 'each'], ['Locker', 'rental', 5000, 'day'], ['Airport pickup', 'transport', 80000, 'trip']]
+    .map(([name, category, price_paise, unit], i) => ({ id: uuid(), property_id: P, name, category, price_paise, unit, is_active: true, sort: i + 1, created_at: new Date().toISOString() }));
+  if (!DB.charges) DB.charges = [];
+  DB.bookings.forEach((b) => { if (b.charges_paise == null) b.charges_paise = 0; });
   DB.beds.forEach((b) => { if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 }); });
   if (!DB.billing) DB.billing = seedBilling();
   if (!DB.billing.plans.some((p) => p.kind)) DB.billing.plans = DEFAULT_PLANS.map((x) => ({ ...x }));
@@ -347,7 +362,7 @@ function checkDob(dob) {
 
 // ---------------------------------------------------------------- the database functions
 const RPC = {
-  my_memberships: () => [{ property_id: P, property_name: DB.properties[0].name, role: 'owner', display_name: DB.members[0].display_name }],
+  my_memberships: () => [{ property_id: P, property_name: DB.properties[0].name, role: DB.viewAs || 'owner', display_name: DB.members[0].display_name }],
   touch_presence: () => null,
   mark_notifications_read: () => { DB.notifications.forEach((n) => { n.read_at = n.read_at || new Date().toISOString(); }); return null; },
 
@@ -482,8 +497,10 @@ const RPC = {
     const adults = Math.max(1, Number(p.visitors) || 1); const children = Math.max(0, Number(p.children) || 0);
     if (adults + children > (bed.max_guests || 1)) fail(`${bed.label} fits up to ${bed.max_guests || 1} guest${(bed.max_guests || 1) === 1 ? '' : 's'}.`);
     const extra = Math.max(0, adults - (bed.base_guests || 1)) * (bed.extra_guest_paise || 0);
+    const pct = offerPct(g.id); const stay = n * (bed.rate_paise + extra); const disc = Math.round(stay * pct / 100);
     const b = { id: uuid(), property_id: P, code: 'BK-' + DB.seq.bk++, guest_id: g.id, bed_id: bed.id, visitors: adults, children, extra_paise: extra,
-      check_in_at: a, check_out_at: z, nights: n, rate_paise: bed.rate_paise, total_paise: n * (bed.rate_paise + extra), paid_paise: 0, status,
+      discount_pct: pct, discount_paise: disc, charges_paise: 0,
+      check_in_at: a, check_out_at: z, nights: n, rate_paise: bed.rate_paise, total_paise: stay - disc, paid_paise: 0, status,
       source: p.source || 'walk_in', note: p.note || null, send_confirmation: !!p.send_confirmation, self_checkin_token: uuid(), self_checkin_at: null,
       self_checkin_count: 0, arrived_at: status === 'checked_in' ? new Date().toISOString() : null, departed_at: null, cancelled_at: null,
       created_by: ME, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
@@ -507,9 +524,10 @@ const RPC = {
     const adults = 'visitors' in p ? Math.max(1, Number(p.visitors) || 1) : b.visitors; const children = 'children' in p ? Math.max(0, Number(p.children) || 0) : (b.children || 0);
     if (('visitors' in p || 'children' in p) && adults + children > (bed.max_guests || 1)) fail(`${bed.label} fits up to ${bed.max_guests || 1} guests.`);
     const extra = Math.max(0, adults - (bed.base_guests || 1)) * (bed.extra_guest_paise || 0);
-    if (n * (b.rate_paise + extra) < b.paid_paise) fail('New total is less than what’s already paid. Record a refund first.');
+    const stayN = n * (b.rate_paise + extra); const discN = Math.round(stayN * (b.discount_pct || 0) / 100);
+    if (stayN - discN + (b.charges_paise || 0) < b.paid_paise) fail('New total is less than what’s already paid. Record a refund first.');
     const changed = T(a) !== T(b.check_in_at) || T(z) !== T(b.check_out_at);
-    Object.assign(b, { check_in_at: a, check_out_at: z, nights: n, visitors: adults, children, extra_paise: extra, total_paise: n * (b.rate_paise + extra), updated_at: new Date().toISOString() });
+    Object.assign(b, { check_in_at: a, check_out_at: z, nights: n, visitors: adults, children, extra_paise: extra, discount_paise: discN, total_paise: stayN - discN + (b.charges_paise || 0), updated_at: new Date().toISOString() });
     if ('note' in p) b.note = p.note ? p.note.trim() : null;
     if (changed) audit(b, 'changed', { check_in_at: a, check_out_at: z, total_paise: b.total_paise });
     return { id: b.id, total_paise: b.total_paise, nights: n };
@@ -880,6 +898,68 @@ const RPC = {
   claim_property_invites: () => 0,
   admin_property_invites: ({ p_property }) => (DB.billing.invites || []).filter((x) => x.property_id === p_property),
   property_suspension: () => ({ suspended: !!DB.billing.mine.is_suspended, reason: DB.billing.mine.suspended_reason || null, since: DB.billing.mine.suspended_at || null }),
+  add_charge: ({ p_booking, p }) => {
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    if (['cancelled', 'no_show'].includes(b.status)) fail('This booking is cancelled — extras can’t be added.');
+    const qty = Number(p.qty || 1); if (!(qty > 0 && qty <= 999)) fail('Enter a quantity between 0.5 and 999.');
+    let name; let category; let price; let item = null;
+    if (p.item_id) { item = DB.extras.find((x) => x.id === p.item_id) || fail('That item isn’t in your price list any more.'); name = item.name; category = item.category; price = p.unit_price_paise ?? item.price_paise; }
+    else { name = String(p.name || '').trim(); if (!name) fail('Enter what the extra is for.'); category = p.category || 'other'; price = p.unit_price_paise; if (!(price >= 0)) fail('Enter the price.'); }
+    const amount = Math.round(qty * price);
+    const c = { id: uuid(), property_id: P, booking_id: b.id, item_id: item?.id || null, name, category, qty, unit_price_paise: price, amount_paise: amount,
+      note: p.note || null, charged_on: ymd(), created_by: ME, created_at: new Date().toISOString() };
+    DB.charges.push(c); b.charges_paise = (b.charges_paise || 0) + amount; b.total_paise += amount;
+    audit(b, 'extra_added', { name, qty, amount_paise: amount });
+    return { id: c.id, amount_paise: amount };
+  },
+  remove_charge: ({ p_charge }) => {
+    const c = DB.charges.find((x) => x.id === p_charge) || fail('Extra not found.');
+    const b = DB.bookings.find((x) => x.id === c.booking_id);
+    if (b.total_paise - c.amount_paise < b.paid_paise) fail('The guest has already paid for this. Record a refund instead of removing it.');
+    DB.charges = DB.charges.filter((x) => x.id !== c.id); b.charges_paise -= c.amount_paise; b.total_paise -= c.amount_paise;
+    audit(b, 'extra_removed', { name: c.name, amount_paise: c.amount_paise });
+    return null;
+  },
+  set_role_permissions: ({ p }) => {
+    if ((DB.viewAs || 'owner') !== 'owner') fail('Only the owner can change permissions.');
+    DB.properties[0].role_permissions = p || {}; return DB.properties[0].role_permissions;
+  },
+  set_booking_discount: ({ p_booking, p_pct }) => {
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    if (!(p_pct >= 0 && p_pct <= 50)) fail('Discount must be between 0 and 50%.');
+    const stay = b.nights * (b.rate_paise + (b.extra_paise || 0)); const disc = Math.round(stay * p_pct / 100);
+    if (stay - disc + (b.charges_paise || 0) < b.paid_paise) fail('The new total would be less than what’s already paid. Record a refund first.');
+    Object.assign(b, { discount_pct: p_pct, discount_paise: disc, total_paise: stay - disc + (b.charges_paise || 0) });
+    audit(b, 'discount', { pct: p_pct, amount_paise: disc }); return null;
+  },
+  issue_invoice: ({ p_booking, p_buyer }) => {
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    const p = DB.properties[0]; const g = guestOf(DB, b); const bed = bedOf(b.bed_id); const room = roomOf(bed.room_id);
+    if (p_buyer?.gstin && !/^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/.test(String(p_buyer.gstin).toUpperCase())) fail('Check the company GSTIN (15 characters).');
+    const mode = p.gst_mode || 'none'; const gst = mode !== 'none' && !!p.gstin;
+    const perNight = b.rate_paise + (b.extra_paise || 0) - Math.floor((b.discount_paise || 0) / Math.max(b.nights, 1));
+    const rRoom = roomGst(mode, Number(p.gst_rate ?? 5), perNight); const rX = mode === 'none' ? 0 : Number(p.extras_gst_rate ?? 5);
+    const raw = [[`Accommodation — ${room.name} · ${bed.label}`, '996311', b.nights, b.rate_paise, b.nights * b.rate_paise, rRoom],
+      ['Extra guest charge', '996311', b.nights, b.extra_paise || 0, b.nights * (b.extra_paise || 0), rRoom],
+      [`Regular-guest offer (${Number(b.discount_pct || 0)}%)`, '996311', 1, -(b.discount_paise || 0), -(b.discount_paise || 0), rRoom]].filter((x) => x[4] !== 0)
+      .concat((DB.charges || []).filter((c) => c.booking_id === b.id).map((c) => [c.name + (c.note ? ' — ' + c.note : ''), c.category === 'food' ? '996331' : '', c.qty, c.unit_price_paise, c.amount_paise, rX]));
+    let amt = 0; let taxable = 0; let tax = 0;
+    const lines = raw.map(([desc, sac, qty, rate, a, r]) => { const t = Math.round(a * 100 / (100 + r)); amt += a; taxable += t; tax += a - t;
+      return { desc, sac, qty, rate_paise: rate, amount_paise: a, gst_rate: r, taxable_paise: t, tax_paise: a - t }; });
+    DB.invoices = DB.invoices || []; DB.invCounters = DB.invCounters || {};
+    const last = DB.invoices.filter((x) => x.booking_id === b.id).pop();
+    const buyer = { name: g.full_name, phone: g.phone, email: g.email, company: p_buyer?.name || null, gstin: p_buyer?.gstin ? String(p_buyer.gstin).toUpperCase() : null };
+    if (last && last.doc.amount_paise === amt && JSON.stringify(last.doc.lines) === JSON.stringify(lines) && last.doc.paid_paise === b.paid_paise
+      && (last.doc.buyer.company || null) === buyer.company && (last.doc.buyer.gstin || null) === buyer.gstin) return last.doc;
+    const fy = fyOf(ymd()); DB.invCounters[fy] = (DB.invCounters[fy] || 0) + 1;
+    const number = `${p.invoice_prefix || 'INV'}/${fy}/${String(DB.invCounters[fy]).padStart(4, '0')}`;
+    const doc = { number, issued_at: new Date().toISOString(), fy, title: gst ? 'Tax invoice' : 'Bill / receipt', gst,
+      seller: { name: p.name, legal_name: p.legal_name || p.name, gstin: p.gstin || null, address: [p.address, p.city].filter(Boolean).join(', '), phone: p.phone, email: p.email },
+      buyer, stay: { code: b.code, room: room.name, bed: bed.label, check_in_at: b.check_in_at, check_out_at: b.check_out_at, nights: b.nights, adults: b.visitors, children: b.children || 0 },
+      lines, amount_paise: amt, taxable_paise: taxable, cgst_paise: Math.floor(tax / 2), sgst_paise: tax - Math.floor(tax / 2), paid_paise: b.paid_paise, balance_paise: amt - b.paid_paise,
+      payments: DB.payments.filter((x) => x.booking_id === b.id).map((x) => ({ code: x.code, kind: x.kind, method: x.method, amount_paise: x.amount_paise, received_at: x.received_at, reference: x.reference })) };
+    DB.invoices.push({ booking_id: b.id, number, doc }); return doc;
+  },
   demo_checkin_token: () => {
     const b = DB.bookings.filter((x) => ['pending', 'confirmed'].includes(x.status) && T(x.check_in_at) > Date.now() && !x.self_checkin_at)
       .sort((x, y) => T(x.check_in_at) - T(y.check_in_at))[0];
@@ -888,7 +968,7 @@ const RPC = {
 };
 
 // ---------------------------------------------------------------- table access (the few direct reads/writes pages make)
-const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications' };
+const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications', bed_blocks: 'blocks', bookings: 'bookings', extra_items: 'extras', booking_charges: 'charges' };
 function table(name) {
   const st = { filters: [], order: [], limit: null, op: 'select', payload: null, head: false, returning: false };
   const run = async (single) => {
@@ -918,6 +998,7 @@ function table(name) {
         data = hit.slice();
         if (st.order.length) data.sort((x, y) => { for (const [k, asc] of st.order) { const c = (x[k] > y[k] ? 1 : x[k] < y[k] ? -1 : 0) * (asc ? 1 : -1); if (c) return c; } return 0; });
         if (st.limit) data = data.slice(0, st.limit);
+        if (st.range) data = data.slice(st.range[0], st.range[1] + 1);
       }
       if (st.op !== 'select') save();
       if (st.head) return { data: null, count: hit.length, error: null };
@@ -934,6 +1015,7 @@ function table(name) {
     lte(k, v) { st.filters.push((r) => r[k] <= v); return api; },
     delete() { st.op = 'delete'; return api; },
     limit(n) { st.limit = n; return api; },
+    range(a, b) { st.range = [a, b]; return api; },
     insert(p) { st.op = 'insert'; st.payload = p; return api; },
     update(p) { st.op = 'update'; st.payload = p; return api; },
     single() { return run(true); },
@@ -968,6 +1050,8 @@ export function createDemoClient() {
     reset: resetDemo,
     kind: demoKind,
     setKind: setDemoKind,
+    viewAs: () => (load(), DB.viewAs || 'owner'),
+    setViewAs: (r) => { load(); DB.viewAs = r === 'owner' ? null : r; save(); },
     auth: {
       getSession: async () => ok({ session: session() }),
       signInWithPassword: async ({ email, password }) => {

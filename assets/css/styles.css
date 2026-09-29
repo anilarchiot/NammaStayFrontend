@@ -373,3 +373,105 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;
   .unit-row > [data-remove]{grid-column:1/-1;justify-self:end}
   .ns-modal [style*="grid-template-columns:1fr 100px 90px 90px"]{grid-template-columns:1fr 72px 60px 64px !important;gap:6px !important}
 }
+
+/* ---------- Check-in list ---------- */
+.ci-new{display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:16px;background:linear-gradient(135deg,#1C9A6C,#157A56);color:#fff;text-decoration:none;box-shadow:0 10px 24px rgba(28,154,108,.22)}
+.ci-new:hover,.ci-new:focus-visible{filter:brightness(1.05)}
+.ci-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:14px 20px;border-top:1px solid #F3EFE1}
+.ci-main{min-width:0}
+.ci-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ci-acts{display:flex;gap:8px}
+@media (max-width:760px){
+  .ci-row{grid-template-columns:1fr;gap:8px}
+  .ci-tags{justify-content:flex-start}
+  .ci-acts > *{flex:1}
+}
+
+/* ---------- invoices & receipts ---------- */
+.inv-preview{border:1px solid #E7DFC7;border-radius:12px;background:#fff;max-height:58vh;overflow:auto}
+.inv{padding:22px;font-size:12.5px;line-height:1.55;color:#101A3D;background:#fff}
+.inv-head{display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid #E7DFC7}
+.inv-prop{font-size:17px;font-weight:800}
+.inv-title{font-size:13px;font-weight:800;color:#1C9A6C;text-transform:uppercase;letter-spacing:.05em}
+.inv-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:12px 0}
+.inv-lbl{font-size:10.5px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.06em}
+.inv-table{width:100%;border-collapse:collapse;margin-top:4px}
+.inv-table th{background:#F5F1E3;font-size:11px;text-align:left;padding:7px 6px}
+.inv-table td{padding:7px 6px;border-bottom:1px solid #F3EFE1;vertical-align:top}
+.inv-totals{margin-left:auto;max-width:300px;margin-top:10px}
+.inv-totals > div{display:flex;justify-content:space-between;padding:3px 0}
+.inv-grand{font-weight:800;border-top:1px solid #E7DFC7;margin-top:4px;padding-top:6px !important}
+.inv-bal{font-weight:800;color:#B23A3A}
+.inv-pay{display:flex;justify-content:space-between;gap:8px;color:#4B5563;font-size:11.5px}
+.inv-rcpt{padding:18px 0;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.inv-amt{font-size:30px;font-weight:800;margin:6px 0}
+.inv-foot{margin-top:16px;font-size:11px;color:#6B7280}
+.inv-company summary{cursor:pointer;font-weight:700;font-size:13px}
+@media (max-width:560px){ .inv-parties{grid-template-columns:1fr} .inv-head{flex-direction:column} .inv-head > div:last-child{text-align:left !important} }
+#ns-print{display:none}
+@media print{
+  body.ns-printing > *:not(#ns-print){display:none !important}
+  body.ns-printing #ns-print{display:block}
+  body.ns-printing{background:#fff !important}
+  #ns-print .inv{padding:0}
+}
+.ns-lang{cursor:pointer}
+@media (max-width:560px){ .inv{padding:14px;font-size:11.5px} .inv-table th:nth-child(2),.inv-table td:nth-child(2){display:none} .inv-table td,.inv-table th{padding:6px 4px} }
+
+/* ---------- demo options (sidebar) ---------- */
+.ns-demo-badge{padding:0 !important;margin:0 !important;background:transparent !important;border:0 !important}
+.ns-demo-menu{margin:0 12px 8px;border-radius:10px;background:#15244A;border:1px solid #2A3963;color:#FBF3DE;font-size:12px}
+.ns-demo-menu > summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;cursor:pointer}
+.ns-demo-menu > summary::-webkit-details-marker{display:none}
+.ns-demo-menu > summary b{color:#E2A03F}
+.ns-demo-menu > summary span{color:#AEB6C9;font-weight:700}
+.ns-demo-menu[open] > summary span{color:#FBF3DE}
+.ns-demo-panel{display:flex;flex-direction:column;gap:8px;padding:0 10px 10px}
+.ns-demo-panel label{display:flex;flex-direction:column;gap:3px;color:#AEB6C9;font-weight:700;font-size:11px}
+.ns-demo-panel select{height:32px;border-radius:8px;border:1px solid #2A3963;background:#0E1B3D;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 6px}
+.ns-demo-acts{display:flex;gap:6px}
+.ns-demo-acts button{flex:1;text-decoration:none !important;height:30px;border-radius:8px;border:1px solid #2A3963;background:transparent;color:#FBF3DE;font:700 11.5px Manrope,sans-serif;cursor:pointer}
+.ns-demo-acts button:hover{background:#1D2F63}
+.ns-demo-note{color:#6C7BA8;font-size:10.5px}
+
+/* ---------- Calendar: faces & friendly bars ---------- */
+.cal-head{align-items:stretch !important;padding-bottom:6px}
+.cal-day{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 2px 6px;border-radius:12px;color:#6B7280}
+.cal-day.is-weekend{background:#FBF6E9}
+.cal-day.is-today{background:#0E1B3D;color:#FBF3DE;box-shadow:0 6px 16px rgba(14,27,61,.22)}
+.cal-wd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.cal-dn{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;line-height:1.1;color:#101A3D}
+.cal-day.is-today .cal-dn{color:#fff}
+.cal-mo{font-size:10.5px;font-weight:700;opacity:.8}
+.cal-occ{width:70%;height:5px;border-radius:3px;background:#EFE8D2;overflow:hidden;margin-top:5px}
+.cal-day.is-today .cal-occ{background:#2A3963}
+.cal-occ span{display:block;height:100%;border-radius:3px}
+.cal-occn{font-size:10px;font-weight:700;opacity:.85}
+.cal-cell.is-weekend{background:#FBF6E9}
+.cal-cell.is-today{background:#EEF7F2}
+.cal-bed{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+.cal-bed-ico{width:26px;height:26px;border-radius:8px;background:#F5F1E3;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.bar.cb{grid-row:1;position:relative;z-index:1;height:36px;border-radius:999px;padding:0 10px 0 4px;gap:6px;text-decoration:none;
+  box-shadow:0 2px 6px rgba(14,27,61,.12);transition:transform .12s ease, box-shadow .12s ease;border:0;font-family:inherit;cursor:pointer;text-align:left}
+.bar.cb:hover,.bar.cb:focus-visible{transform:translateY(-1px);box-shadow:0 6px 14px rgba(14,27,61,.2)}
+.bar.cb.cut-l{border-top-left-radius:6px;border-bottom-left-radius:6px}
+.bar.cb.cut-r{border-top-right-radius:6px;border-bottom-right-radius:6px}
+.cb .gface{flex-shrink:0;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+.cb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:800}
+.cb-n{font-size:10.5px;font-weight:800;opacity:.75;flex-shrink:0}
+.cb-tag{margin-left:auto;flex-shrink:0;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.28);display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800}
+.bar.cb .cb-live{color:#7BE0B6;font-size:12px;animation:cbPulse 1.8s ease-in-out infinite}
+@keyframes cbPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.bar.cb.cb-in{background:linear-gradient(135deg,#1C9A6C,#157A56);color:#fff}
+.bar.cb.cb-conf{background:linear-gradient(135deg,#2D5FA6,#244C86);color:#fff}
+.bar.cb.cb-due{background:linear-gradient(135deg,#F0B45A,#E2A03F);color:#3D2A07}
+.bar.cb-due .cb-tag{background:rgba(61,42,7,.14)}
+.bar.cb.cb-pend{background:#FFFDF6;color:#966016;box-shadow:inset 0 0 0 2px #E2A03F}
+.bar.cb-pend .gface{box-shadow:0 0 0 2px #FFFDF6}
+.bar.cb.cb-out{background:#DCE1EC;color:#4B5563}
+.bar.cb.cb-maint{background:repeating-linear-gradient(135deg,#E7DFC7,#E7DFC7 8px,#F3EFE1 8px,#F3EFE1 16px);color:#7A7154;padding-left:10px}
+.cb-ico{font-size:13px}
+.cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:#6B7280;align-items:center}
+.cal-legend .lg.cb-in{background:linear-gradient(135deg,#1C9A6C,#157A56)}.cal-legend .lg.cb-conf{background:#2D5FA6}.cal-legend .lg.cb-due{background:#E2A03F}.cal-legend .lg.cb-pend{background:#FFFDF6;box-shadow:inset 0 0 0 2px #E2A03F}.cal-legend .lg.cb-out{background:#DCE1EC}.cal-legend .lg.cb-maint{background:repeating-linear-gradient(135deg,#E7DFC7,#E7DFC7 4px,#F3EFE1 4px,#F3EFE1 8px)}
+.cal-legend .lg{display:inline-block;width:22px;height:12px;border-radius:999px;vertical-align:-1px;margin-right:4px}
+@media (prefers-reduced-motion: reduce){ .cb-live{animation:none} .bar.cb{transition:none} }
