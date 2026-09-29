@@ -11,8 +11,8 @@
  * The sample-data demo only opens on purpose via login.html?demo=1.
  */
 window.NAMMASTAY_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://skcqpfyshbxcyyamsgtj.supabase.co/rest/v1/',
+  supabaseAnonKey: 'sb_publishable_h33csXA4sEqhURK0_ALG0Q_80FI5eeq',
   siteUrl: 'https://thenammastay.com'
 };
 
