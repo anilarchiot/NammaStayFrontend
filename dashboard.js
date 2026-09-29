@@ -49,7 +49,7 @@ page('dashboard', async (ctx) => {
         <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #F0EBDB;padding-top:16px">
           <div class="ns-h3">Quick actions</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-            ${ctx.can('owner', 'manager', 'front_desk') ? '<a href="check-in.html?new=1" class="ns-btn-ghost" style="height:auto;padding:14px;justify-content:flex-start">+ New booking</a>' : ''}
+            ${ctx.can('owner', 'manager', 'front_desk') ? '<a href="check-in.html" class="ns-btn-ghost" style="height:auto;padding:14px;justify-content:flex-start">+ New booking</a>' : ''}
             <a href="bookings.html?status=confirmed" class="ns-btn-ghost" style="height:auto;padding:14px;justify-content:flex-start">Check-in guest</a>
             <a href="payments.html?record=1" class="ns-btn-ghost" style="height:auto;padding:14px;justify-content:flex-start">Record payment</a>
           </div>

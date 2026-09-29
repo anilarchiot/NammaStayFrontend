@@ -5,7 +5,7 @@ page('payments', async (ctx) => {
   const t = ymd();
   const state = { method: '', from: t.slice(0, 8) + '01', to: t, cursor: null };
   const head = headerActions();
-  head.innerHTML = `${ctx.allow('export_data') ? '<button type="button" class="ns-btn-ghost" id="csv">Export CSV</button>' : ''}${ctx.allow('record_payments') ? '<button type="button" class="ns-btn" id="record">+ Record payment</button>' : ''}`;
+  head.innerHTML = `<button type="button" class="ns-btn-ghost" id="csv">Export CSV</button><button type="button" class="ns-btn" id="record">+ Record payment</button>`;
 
   content(`<div id="cards" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -58,7 +58,7 @@ page('payments', async (ctx) => {
   $('#more').onclick = () => list(false);
   $('#rows').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-href]'); if (tr) location.href = tr.dataset.href; });
 
-  if ($('#csv')) $('#csv').onclick = async (e) => {
+  $('#csv').onclick = async (e) => {
     e.target.disabled = true;
     try {
       const out = [['Transaction', 'Date', 'Guest', 'Booking', 'Type', 'Method', 'Reference', 'Amount (₹)']];
@@ -92,7 +92,7 @@ page('payments', async (ctx) => {
         : '<div class="ns-muted">No bookings with a balance due match that.</div>';
     }, 350));
   }
-  if ($('#record')) $('#record').onclick = recordDialog;
+  $('#record').onclick = recordDialog;
   if (param('record')) recordDialog();
 
   await refresh();

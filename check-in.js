@@ -4,10 +4,6 @@ import { newId, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, upload
 } from '../core.js';
 
 page('checkin', async (ctx) => {
-  // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
-  if (!param('new') && !uuidOk(param('guest')) && !uuidOk(param('bed')) && !param('in')) return arrivalsView(ctx);
-  const back = document.querySelector('.ns-main > [style*="height:76px"] a[href="bookings.html"]');
-  if (back) { back.href = 'check-in.html'; back.textContent = '← Check-in list'; }
   const guestId = uuidOk(param('guest')) ? param('guest') : null;
   const existing = guestId ? await q(sb.from('guests').select('id, full_name, phone, email, nationality').eq('id', guestId).single()) : null;
   const today = ymd();
@@ -30,7 +26,7 @@ page('checkin', async (ctx) => {
           ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email || '')}" ${existing ? 'disabled' : ''}>`)}
           ${existing ? '' : `
           ${field('Date of birth', `<input class="ns-input" name="dob" type="date" max="${today}">`)}
-          ${field('Nationality', `<select class="ns-input" name="nationality">${countryOptions('India')}</select>`)}
+          ${field('Nationality', '<input class="ns-input" name="nationality" list="nat" placeholder="India"><datalist id="nat"><option>India</option><option>Germany</option><option>France</option><option>United Kingdom</option><option>United States</option><option>Spain</option><option>Israel</option><option>Netherlands</option><option>Australia</option></datalist>')}
           ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Select…</option>${options(ID_TYPES, 'aadhaar')}</select>`)}
           ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
           <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
@@ -62,7 +58,7 @@ page('checkin', async (ctx) => {
         <div style="height:1px;background:#22305A"></div>
         <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700;color:#FBF3DE"><span>Total</span><span id="s-total">₹0</span></div>
         <div style="height:1px;background:#22305A"></div>
-        <div class="ns-field" data-paysec><label style="color:#AEB6C9">Paid now (₹)</label>
+        <div class="ns-field"><label style="color:#AEB6C9">Paid now (₹)</label>
           <input class="ns-input" name="paid_now" inputmode="decimal" placeholder="0" style="background:#15244A;border-color:#2A3963;color:#FBF3DE"></div>
         <div class="ns-field"><label style="color:#AEB6C9">Payment method</label>
           <div class="ns-seg" id="method">${METHOD_OPTIONS.slice(0, 3).map(([v, l]) => `<button type="button" data-m="${v}" class="${v === 'upi' ? 'is-on' : ''}">${l}</button>`).join('')}</div></div>
@@ -213,82 +209,3 @@ page('checkin', async (ctx) => {
 
   await loadBeds();
 });
-
-// ------------------------------------------------------------ arrivals list (default view)
-async function arrivalsView(ctx) {
-  const title = document.querySelector('.ns-main > [style*="height:76px"] [style*="font-size:21px"]'); if (title) title.textContent = 'Check-in';
-  document.querySelector('.ns-main > [style*="height:76px"] a[href="bookings.html"]')?.remove();
-  const today = ymd();
-  let q = '';
-  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn" href="check-in.html?new=1">+ New registration</a>';
-  headerSearch('Search guest or booking…', (v) => { q = v.trim().toLowerCase(); render(); });
-  let d = null;
-
-  async function load() {
-    d = await rpc('calendar_range', { p_property: ctx.property_id, p_from: addDays(today, -2), p_days: 10 });
-    render();
-  }
-  const bedOf = (b) => d.beds.find((x) => x.id === b.bed_id) || { room: '', label: '' };
-  const match = (b) => !q || [b.guest, b.code, bedOf(b).label, bedOf(b).room].some((x) => String(x || '').toLowerCase().includes(q));
-
-  function row(b, kind) {
-    const bed = bedOf(b); const inDay = ymd(b.check_in_at);
-    const late = kind === 'arriving' && inDay < today;
-    const due = b.balance_paise > 0 ? `<span class="ns-pill amber">${rupees(b.balance_paise)} due</span>` : '<span class="ns-pill green">Paid</span>';
-    return `<div class="ci-row">
-      <div class="ci-main">
-        <div style="font-weight:800;font-size:14.5px">${esc(b.guest)} ${late ? '<span class="ns-pill red">Late — was due ' + esc(fmtDay(b.check_in_at)) + '</span>' : ''}</div>
-        <div class="ns-muted" style="font-size:12.5px">${esc(bed.room)} · ${esc(bed.label)} · ${esc(fmtDayTime(b.check_in_at))} → ${esc(fmtDay(b.check_out_at))}</div>
-      </div>
-      <div class="ci-tags">${statusPill(b.status)} ${due}</div>
-      <div class="ci-acts">
-        ${kind === 'arriving' ? `<button type="button" class="ns-btn" data-checkin="${esc(b.id)}" style="height:36px">Check in</button>` : ''}
-        ${kind === 'in' ? `<button type="button" class="ns-btn-ghost" data-wa="${esc(b.id)}" style="height:36px;color:#157A56">WhatsApp</button>` : ''}
-        <a class="ns-btn-ghost" href="booking-detail.html?id=${esc(b.id)}" style="height:36px">Open</a>
-      </div></div>`;
-  }
-  function section(titleTxt, list, kind, empty) {
-    return `<div class="ns-card" style="padding:0;overflow:hidden">
-      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="ns-h3">${titleTxt} <span class="ns-muted" style="font-weight:600">(${list.length})</span></div></div>
-      ${list.length ? list.map((b) => row(b, kind)).join('') : `<div class="ns-empty" style="padding:22px">${empty}</div>`}</div>`;
-  }
-  function render() {
-    if (!d) return;
-    const bs = d.bookings.filter(match).sort((a, b) => (a.check_in_at > b.check_in_at ? 1 : -1));
-    const now = new Date().toISOString();
-    const arriving = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) <= today && b.check_out_at > now);
-    const inToday = bs.filter((b) => b.status === 'checked_in' && ymd(b.check_in_at) === today);
-    const staying = d.bookings.filter((b) => b.status === 'checked_in').length;
-    const upcoming = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) > today && ymd(b.check_in_at) <= addDays(today, 7));
-    setSubtitle(`${fmtDay(today + 'T12:00:00+05:30')} · ${arriving.length} to arrive · ${staying} staying now`);
-    content(`
-      <a href="check-in.html?new=1" class="ci-new">
-        <span style="font-size:26px;line-height:1">＋</span>
-        <span><b style="font-size:16px">New registration</b><br><span style="font-size:13px;opacity:.85">Walk-in or new booking — guest details, ${W.unit}, dates and payment</span></span>
-        <span style="margin-left:auto;font-size:20px">→</span></a>
-      ${section('Arriving today', arriving, 'arriving', 'No more arrivals today. 🎉')}
-      ${section('Checked in today', inToday, 'in', 'Nobody has checked in yet today.')}
-      ${section('Next 7 days', upcoming, 'upcoming', 'No arrivals in the next 7 days.')}`,
-    'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
-  }
-
-  document.querySelector('.ns-content').addEventListener('click', async (e) => {
-    const ci = e.target.closest('[data-checkin]');
-    if (ci) {
-      const b = d.bookings.find((x) => x.id === ci.dataset.checkin); const bed = bedOf(b);
-      const msg = `${b.guest} → ${bed.room} · ${bed.label}.` + (b.balance_paise > 0 ? ` ${rupees(b.balance_paise)} is still due — you can take it now on the booking screen.` : '');
-      if (!await confirmDialog(`Check in ${b.guest}?`, msg, { confirmLabel: 'Check in' })) return;
-      ci.disabled = true;
-      try {
-        await rpc('booking_action', { p_booking: b.id, p_action: 'check_in' });
-        toast(`${b.guest} checked in.`);
-        await load();
-        if (b.balance_paise > 0) setTimeout(() => { location.href = `booking-detail.html?id=${b.id}`; }, 700);
-      } catch (err) { toast(err.message, { error: true }); ci.disabled = false; }
-      return;
-    }
-    const wa = e.target.closest('[data-wa]');
-    if (wa) sendBookingWhatsApp(wa.dataset.wa).catch((err) => toast(err.message, { error: true }));
-  });
-  await load();
-}
