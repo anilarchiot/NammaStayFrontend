@@ -3,6 +3,12 @@ import { newId, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, upload
   ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content,
 } from '../core.js';
 
+// Helper function for country options
+function countryOptions(selected = 'India') {
+  const countries = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'UAE', 'Singapore', 'Other'];
+  return countries.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+}
+
 page('checkin', async (ctx) => {
   // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
   if (!param('new') && !uuidOk(param('guest')) && !uuidOk(param('bed')) && !param('in')) return arrivalsView(ctx);
@@ -25,9 +31,9 @@ page('checkin', async (ctx) => {
         <div class="ns-h3">Guest details</div>
         <div id="returning" hidden></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name || '')}" ${existing ? 'disabled' : ''}>`)}
-          ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone || '')}" ${existing ? 'disabled' : ''}>`)}
-          ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email || '')}" ${existing ? 'disabled' : ''}>`)}
+          ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
+          ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
+          ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
           ${existing ? '' : `
           ${field('Date of birth', `<input class="ns-input" name="dob" type="date" max="${today}">`)}
           ${field('Nationality', `<select class="ns-input" name="nationality">${countryOptions('India')}</select>`)}
@@ -157,8 +163,8 @@ page('checkin', async (ctx) => {
       const gst = found[0];
       box.hidden = false;
       box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:#E9F5EE;font-size:13px">
-          <span>Returning guest: <b>${esc(gst.full_name)}</b>${gst.last_check_in ? ' · last stay ' + new Date(gst.last_check_in).toLocaleDateString('en-IN') : ''}</span>
-          <a class="ns-btn-ghost" style="height:32px" href="check-in.html?guest=${esc(gst.id)}">Use this guest</a></div>`;
+        <span>Returning guest: <b>${esc(gst.full_name)}</b>${gst.last_check_in ? ' · last stay ' + new Date(gst.last_check_in).toLocaleDateString('en-IN') : ''}</span>
+        <a class="ns-btn-ghost" style="height:32px" href="check-in.html?guest=${esc(gst.id)}">Use this guest</a></div>`;
     }, 400));
   }
 
