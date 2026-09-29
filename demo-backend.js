@@ -888,7 +888,7 @@ const RPC = {
 };
 
 // ---------------------------------------------------------------- table access (the few direct reads/writes pages make)
-const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications', bed_blocks: 'blocks', bookings: 'bookings', extra_items: 'extras', booking_charges: 'charges' };
+const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications' };
 function table(name) {
   const st = { filters: [], order: [], limit: null, op: 'select', payload: null, head: false, returning: false };
   const run = async (single) => {
@@ -918,7 +918,6 @@ function table(name) {
         data = hit.slice();
         if (st.order.length) data.sort((x, y) => { for (const [k, asc] of st.order) { const c = (x[k] > y[k] ? 1 : x[k] < y[k] ? -1 : 0) * (asc ? 1 : -1); if (c) return c; } return 0; });
         if (st.limit) data = data.slice(0, st.limit);
-        if (st.range) data = data.slice(st.range[0], st.range[1] + 1);
       }
       if (st.op !== 'select') save();
       if (st.head) return { data: null, count: hit.length, error: null };
@@ -935,7 +934,6 @@ function table(name) {
     lte(k, v) { st.filters.push((r) => r[k] <= v); return api; },
     delete() { st.op = 'delete'; return api; },
     limit(n) { st.limit = n; return api; },
-    range(a, b) { st.range = [a, b]; return api; },
     insert(p) { st.op = 'insert'; st.payload = p; return api; },
     update(p) { st.op = 'update'; st.payload = p; return api; },
     single() { return run(true); },

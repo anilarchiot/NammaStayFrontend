@@ -223,7 +223,7 @@ function applyChrome(ctx) {
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
   $$('.ns-mobile-nav a[href="rooms.html"], .ns-drawer a[href="rooms.html"]').forEach((a) => { const sp = a.querySelector('span') || a; sp.textContent = W.setup; });
   if (!['owner', 'manager', 'front_desk'].includes(ctx.role)) {
-    $$('a[href^="check-in.html"]').forEach((a) => { a.style.display = 'none'; });
+    $$('a[href="check-in.html"]').forEach((a) => { a.style.display = 'none'; });
   }
   if (ctx.isAdmin) addLeadsLink();
   if (DEMO) demoBadge();
@@ -842,7 +842,7 @@ export function debounce(fn, ms = 300) {
 export function downloadCsv(filename, rows) {
   const csv = rows.map((r) => r.map((v) => {
     const s = String(v ?? '');
-    const risky = /^[=@\t\r]/.test(s) || (/^[+-]/.test(s) && !/^[+-][\d\s().-]*$/.test(s));   // block formulas; keep phone numbers & amounts
+    const risky = /^[=+@]|^-(?!\d)/.test(s);                      // block spreadsheet formulas
     return /[",\n]/.test(s) || risky ? `"${(risky ? "'" : '') + s.replace(/"/g, '""')}"` : s;
   }).join(',')).join('\n');
   const a = document.createElement('a');

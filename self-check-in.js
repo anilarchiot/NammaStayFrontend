@@ -29,10 +29,6 @@ async function init() {
   const stop = (msg) => { body.innerHTML = `<div style="padding:30px 10px;text-align:center;font-size:14px;line-height:1.6">${esc(msg)}</div>`; footer.innerHTML = ''; reveal(); };
 
   if (!uuidOk(token)) return stop('Please open the check-in link sent to you by the hostel.');
-  const top = document.querySelector('.ns-phone > div'); if (top && !top.querySelector('.ns-lang')) {
-    const w = top.firstElementChild; const sel = langPicker('margin-left:auto;height:30px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12px Manrope,sans-serif;padding:0 6px');
-    if (w) w.appendChild(sel);
-  }
   const { data: b, error } = await sb.rpc('selfcheckin_get', { p_token: token });
   if (error) return stop(error.message);
   const brand = [...header.querySelectorAll('div')].find((d) => !d.children.length && /HOSTEL/.test(d.textContent));
@@ -50,7 +46,7 @@ async function init() {
     ${field('Date of birth', `<input class="ns-input" name="dob" type="date" max="${ymd()}" autocomplete="bday">`)}
     ${field('Phone', '<input class="ns-input" name="phone" type="tel" autocomplete="tel" placeholder="+91 98400 12233">')}
     ${field('Email', '<input class="ns-input" name="email" type="email" autocomplete="email">')}
-    ${field('Nationality', `<select class="ns-input" name="nationality" autocomplete="country-name">${countryOptions('', { placeholder: 'Choose your country…' })}</select>`)}
+    ${field('Nationality', '<input class="ns-input" name="nationality" autocomplete="country-name" placeholder="India">')}
     ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Choose…</option>${options(ID_TYPES, '')}</select>`)}
     ${field('ID number', '<input class="ns-input" name="id_number" autocomplete="off">', 'For Aadhaar we keep only the last 4 digits.')}
     ${idUploadFields({ front: 'Photo of your ID — front', back: 'Back side (Aadhaar / licence)' })}
