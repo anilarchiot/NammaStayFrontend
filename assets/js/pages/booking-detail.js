@@ -9,6 +9,9 @@ const ACTIVITY = {
   status: (d) => `Status: ${titleCase(d.from)} → ${titleCase(d.to)}`,
   changed: (d) => `Stay changed — ${fmtDayTime(d.check_in_at)} to ${fmtDayTime(d.check_out_at)}${d.bed_changed ? ', bed moved' : ''} · total ${rupees(d.total_paise)}`,
   payment: (d) => `Payment received — ${rupees(d.amount_paise)} via ${String(d.method).toUpperCase()} (${d.code})`,
+  extra_added: (d) => `Extra added: ${d.name}${Number(d.qty) !== 1 ? ` × ${Number(d.qty)}` : ''} (${rupees(d.amount_paise)})`,
+  extra_removed: (d) => `Extra removed: ${d.name} (${rupees(d.amount_paise)})`,
+  discount: (d) => (Number(d.pct) ? `Discount set to ${Number(d.pct)}% (−${rupees(d.amount_paise)})` : 'Discount removed'),
   refund: (d) => `Refund — ${rupees(d.amount_paise)} via ${String(d.method).toUpperCase()} (${d.code})`,
   self_checkin: () => 'Guest completed online check-in',
 };
@@ -17,6 +20,7 @@ page(null, async (ctx) => {
   const id = param('id');
   if (!uuidOk(id)) throw new Error('Open a booking from the Bookings list.');
   const d = await rpc('booking_detail', { p_booking: id });
+  const charges = await q(sb.from('booking_charges').select('*').eq('booking_id', id).order('created_at')).catch(() => []);
   const b = d.booking;
   const g = d.guest;
   const staff = ctx.can('owner', 'manager', 'front_desk');
@@ -61,13 +65,16 @@ page(null, async (ctx) => {
         <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">${roomsMode() ? 'Room' : 'Room'} charge (${b.nights} night${b.nights > 1 ? 's' : ''} × ${rupees(b.rate_paise)})</span><b style="font-weight:600">${rupees(b.rate_paise * b.nights)}</b></div>
         ${b.extra_paise ? `<div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">Extra adult (${b.nights} × ${rupees(b.extra_paise)})</span><b style="font-weight:600">${rupees(b.extra_paise * b.nights)}</b></div>` : ''}
         ${d.payments.map((p) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;gap:8px">
-            <span class="ns-muted" style="font-size:12.5px">${p.kind === 'refund' ? 'Refund' : 'Paid'} ${fmtDayTime(p.received_at)} ${methodPill(p.method)} ${p.reference ? '<span style="font-size:11px">' + esc(p.reference) + '</span>' : ''}</span>
+            <span class="ns-muted" style="font-size:12.5px">${p.kind === 'refund' ? 'Refund' : 'Paid'} ${fmtDayTime(p.received_at)} ${methodPill(p.method)} ${p.reference ? '<span style="font-size:11px">' + esc(p.reference) + '</span>' : ''}
+              <button type="button" class="ns-btn-ghost" data-receipt="${esc(p.code)}" style="height:24px;font-size:11px;padding:0 8px">Receipt</button></span>
             <b style="font-weight:600;color:${p.kind === 'refund' ? '#B23A3A' : '#157A56'}">${p.kind === 'refund' ? '−' : ''}${rupees(p.amount_paise)}</b></div>`).join('')}
         <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:8px;border-top:1px solid #F0EBDB">
           <b>Balance due</b><b style="color:${b.balance_paise > 0 ? '#B23A3A' : '#157A56'}">${rupees(b.balance_paise)}</b></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-          ${b.balance_paise > 0 && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn" id="pay">Record payment</button>' : ''}
-          ${ctx.can('owner', 'manager') && b.paid_paise > 0 ? '<button type="button" class="ns-btn-ghost" id="refund">Refund</button>' : ''}
+          ${b.balance_paise > 0 && ctx.allow('record_payments') && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn" id="pay">Record payment</button>' : ''}
+          ${ctx.can('owner', 'manager') && ctx.allow('refunds') && b.paid_paise > 0 ? '<button type="button" class="ns-btn-ghost" id="refund">Refund</button>' : ''}
+          <button type="button" class="ns-btn-ghost" id="invoice">🧾 Invoice</button>
+          ${ctx.can('owner', 'manager') && !b.discount_paise && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn-ghost" id="disc" style="font-size:12px">Discount</button>' : ''}
         </div>
       </div>
 
@@ -150,6 +157,63 @@ page(null, async (ctx) => {
     onDone: () => setTimeout(() => { location.href = 'bookings.html'; }, 600),
   }));
   $('#pay')?.addEventListener('click', () => paymentDialog('payment'));
+  $('#add-extra')?.addEventListener('click', () => addExtraDialog());
+  $('#invoice')?.addEventListener('click', () => openInvoice(b.id).catch((e) => toast(e.message, { error: true })));
+  dlg.querySelectorAll('[data-receipt]').forEach((btn) => btn.addEventListener('click', async () => {
+    const pay = d.payments.find((x) => x.code === btn.dataset.receipt);
+    const prop = await q(sb.from('properties').select('*').eq('id', d.property.id).limit(1)).then((r) => r[0] || d.property).catch(() => d.property);
+    openReceipt(receiptDoc({ property: prop, guest: g, payment: pay,
+      booking: { code: b.code, room: `${d.bed.room} · ${d.bed.label}`, check_in_at: b.check_in_at, check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, balance_paise: b.balance_paise } }));
+  }));
+  $('#disc')?.addEventListener('click', () => modal({
+    title: 'Discount on this booking', width: 440,
+    body: `${field('Discount on the stay (%)', `<input class="ns-input" name="pct" type="number" min="0" max="50" step="0.5" value="${Number(b.discount_pct) || ''}" placeholder="e.g. 10">`, 'Applies to the room charge (not extras). 0 removes it. Maximum 50%.')}`,
+    actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: async (el) => {
+      const pct = Number(el.querySelector('[name=pct]').value || 0);
+      if (!(pct >= 0 && pct <= 50)) throw new Error('Enter 0 to 50.');
+      await rpc('set_booking_discount', { p_booking: b.id, p_pct: pct }); toast(pct ? `${pct}% discount applied.` : 'Discount removed.'); location.reload();
+    } }],
+  }));
+  dlg.querySelectorAll('[data-rm-charge]').forEach((btn) => btn.addEventListener('click', async () => {
+    const c = charges.find((x) => x.id === btn.dataset.rmCharge);
+    if (!await confirmDialog('Remove extra', `Remove ${c.name} (${rupees(c.amount_paise)}) from this bill?`, { confirmLabel: 'Remove', danger: true })) return;
+    try { await rpc('remove_charge', { p_charge: c.id }); toast('Extra removed.'); location.reload(); } catch (e) { toast(e.message, { error: true }); }
+  }));
+  async function addExtraDialog() {
+    const items = await q(sb.from('extra_items').select('*').eq('property_id', b.property_id).eq('is_active', true).order('sort').order('name')).catch(() => []);
+    let pick = null;
+    const m = modal({
+      title: `Add extra · ${g.full_name}`, width: 560,
+      body: `${items.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap" id="ex-items">${items.map((it) => `<button type="button" class="ns-chip" data-item="${esc(it.id)}">${esc(it.name)} · ${rupees(it.price_paise)}${it.unit && it.unit !== 'each' ? ' / ' + esc(it.unit) : ''}</button>`).join('')}
+          <button type="button" class="ns-chip" data-item="">Something else…</button></div>`
+          : `<div class="ns-demo-hint">No price list yet — type the item below. ${ctx.can('owner', 'manager') ? 'Set up your extras in <a href="settings.html?tab=rooms" style="font-weight:800">Settings → Room types & pricing</a>.' : ''}</div>`}
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px">
+          ${field('Item', '<input class="ns-input" name="name" maxlength="80" placeholder="e.g. Breakfast">')}
+          ${field('Price (₹)', '<input class="ns-input" name="price" inputmode="decimal" placeholder="0">')}
+          ${field('Quantity', '<input class="ns-input" name="qty" type="number" min="0.5" max="999" step="0.5" value="1">')}</div>
+        ${field('Note (optional)', '<input class="ns-input" name="note" maxlength="200" placeholder="e.g. 2 plates, Tuesday">')}
+        <div id="ex-total" style="font-size:14px;font-weight:800;text-align:right"></div>`,
+      actions: [{ label: 'Cancel' }, { label: 'Add to bill', kind: 'primary', onClick: async (el) => {
+        const v = (n) => el.querySelector(`[name=${n}]`).value.trim();
+        const qty = Number(v('qty')); const price = toPaise(v('price'));
+        if (!v('name')) throw new Error('Choose an item or type what it’s for.');
+        if (!(qty > 0)) throw new Error('Enter a quantity.');
+        if (!(price >= 0)) throw new Error('Enter the price.');
+        await rpc('add_charge', { p_booking: b.id, p: pick && pick.name === v('name')
+          ? { item_id: pick.id, qty, unit_price_paise: price, note: v('note') }
+          : { name: v('name'), unit_price_paise: price, qty, note: v('note'), category: 'other' } });
+        toast(`${v('name')} added to the bill.`); location.reload();
+      } }],
+    });
+    const f = (n) => m.el.querySelector(`[name=${n}]`);
+    const total = () => { const t = Math.round((Number(f('qty').value) || 0) * (toPaise(f('price').value || '0') || 0)); m.el.querySelector('#ex-total').textContent = t ? `Adds ${rupees(t)} to the bill` : ''; };
+    m.el.querySelectorAll('[data-item]').forEach((c) => c.addEventListener('click', () => {
+      m.el.querySelectorAll('[data-item]').forEach((x) => x.classList.toggle('is-on', x === c));
+      pick = items.find((x) => x.id === c.dataset.item) || null;
+      f('name').value = pick ? pick.name : ''; f('price').value = pick ? pick.price_paise / 100 : ''; (pick ? f('qty') : f('name')).focus(); total();
+    }));
+    ['qty', 'price'].forEach((n) => f(n).addEventListener('input', total));
+  }
   $('#refund')?.addEventListener('click', () => paymentDialog('refund'));
 
   function paymentDialog(kind) {

@@ -14,7 +14,7 @@ function roomNumbers(start, n) {
 }
 
 page('rooms', async (ctx) => {
-  const manage = ctx.can('owner', 'manager');
+  const manage = ctx.can('owner', 'manager') && ctx.allow('manage_rooms');
   const head = headerActions();
   head.innerHTML = manage ? '<button type="button" class="ns-btn" id="add-room">+ Add room type</button>' : '';
   const R = roomsMode();
@@ -56,7 +56,10 @@ page('rooms', async (ctx) => {
 
     document.getElementById('first-room')?.addEventListener('click', () => document.getElementById('add-room').click());
     $$('[data-edit]').forEach((btn) => btn.onclick = () => editRoom(rooms.find((r) => r.id === btn.dataset.edit)));
-    $$('[data-bed]').forEach((btn) => btn.onclick = () => blockBed(beds.find((b) => b.id === btn.dataset.bed)));
+    $$('[data-bed]').forEach((btn) => btn.onclick = () => {
+      const b = beds.find((x) => x.id === btn.dataset.bed);
+      if (state(b) === 'maintenance') blockList(b); else blockBed(b);
+    });
   }
 
   async function editRoom(r) {
@@ -98,6 +101,22 @@ page('rooms', async (ctx) => {
         toast('Saved.'); draw();
       } }],
     });
+  }
+
+  async function blockList(b) {
+    if (!ctx.can('owner', 'manager', 'front_desk')) return;
+    const list = await q(sb.from('bed_blocks').select('*').eq('bed_id', b.id).gte('ends_at', new Date().toISOString()).order('starts_at'));
+    modal({
+      title: `Maintenance · ${b.label}`, width: 480,
+      body: list.length ? `<div style="display:flex;flex-direction:column;gap:10px">${list.map((k) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid #F0EBDB;border-radius:10px">
+          <div><b>🔧 ${esc(k.reason || 'Maintenance')}</b><div class="ns-muted" style="font-size:12.5px">${fmtDayTime(k.starts_at)} → ${fmtDayTime(k.ends_at)}</div></div>
+          <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-unblock="${esc(k.id)}">Remove</button></div>`).join('')}</div>`
+        : '<div class="ns-muted">No current or upcoming maintenance.</div>',
+      actions: [{ label: 'Close' }, { label: '+ Add another block', kind: 'primary', onClick: () => { setTimeout(() => blockBed(b), 50); } }],
+    }).el.querySelectorAll('[data-unblock]').forEach((btn) => btn.addEventListener('click', async () => {
+      await q(sb.from('bed_blocks').delete().eq('id', btn.dataset.unblock));
+      toast(`${b.label} is available again.`); document.querySelector('.ns-modal .ns-x')?.click(); draw();
+    }));
   }
 
   function blockBed(b) {

@@ -77,6 +77,7 @@ page('settings', async (ctx) => {
         catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
         finally { e.target.disabled = false; }
       };
+      moreCards(ctx, p);
       $('#reset-demo')?.addEventListener('click', async () => {
         if (await confirmDialog('Reset demo data', 'Start again with fresh sample bookings? Changes you made in the demo will be cleared.', { confirmLabel: 'Reset' })) { sb.reset(); location.reload(); }
       });
@@ -175,6 +176,151 @@ page('settings', async (ctx) => {
           }
           toast(n ? `Saved ${n} change${n > 1 ? 's' : ''}.` : 'Nothing changed.'); if (n) show('rooms');
         } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      await extrasCard(ctx);
+      if (!ctx.allow('manage_rooms')) {
+        $$('#save-rates, #x-save, #x-add, #x-suggest, [data-x-del]').forEach((b) => b.remove());
+        $$('.ns-content input, .ns-content select').forEach((i) => { i.disabled = true; });
+        document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', '<div class="ns-demo-hint">View only — your role can’t change rooms, beds or prices.</div>');
+      }
+    },
+
+    // ------------------------------------------------------------ Billing (subscription)
+    async billing() {
+      const b = await rpc('billing_info', { p_property: ctx.property_id });
+      const a = b.access; const [label, color] = STATE[a.state] || [a.state, 'grey'];
+      const plans = b.plans; const payable = plans.filter((x) => !x.is_quote);
+      let chosen = payable.find((x) => x.id === a.plan_id) || payable[payable.length - 1] || null;
+      const KIND = { hostel: 'hostels & PGs', hotel: 'hotels', homestay: 'homestays' };
+      const tierNote = `Prices for ${KIND[b.kind] || 'your property'} · you have ${b.units} ${b.units === 1 ? W.unit : W.units}`;
+      const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for NammaStay for ' + ctx.property_name)}`
+        : b.pay_to?.support_email ? `mailto:${b.pay_to.support_email}?subject=${encodeURIComponent('NammaStay quote — ' + ctx.property_name)}` : null;
+      const owner = ctx.can('owner'); const upi = b.pay_to?.upi_id;
+      const until = a.state === 'trial' ? `Trial ends ${fmtDate(a.trial_ends_at)}` : a.state === 'active' ? `Paid until ${fmtDate(a.paid_until)}`
+        : a.state === 'complimentary' ? 'No payment needed' : `Ended ${fmtDate(a.ends_at)}`;
+      const HIST = { pending: ['Waiting for confirmation', 'amber'], approved: ['Confirmed', 'green'], rejected: ['Not confirmed', 'red'] };
+      content(`
+        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px;align-self:start">
+            <div class="ns-h3">Your NammaStay plan</div>
+            <div>${pill(label, color)}</div>
+            <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800">${a.days_left != null ? `${a.days_left} day${a.days_left === 1 ? '' : 's'} left` : esc(label)}</div>
+            <div class="ns-muted" style="font-size:13.5px">${esc(until)}</div>
+            ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using NammaStay meanwhile.</div>' : ''}
+            ${a.state === 'expired' ? '<div class="ns-error">New bookings are paused. Your data is safe — renew below to continue.</div>' : ''}
+            <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property — all features, unlimited staff and bookings.
+              ${b.pay_to?.support_whatsapp || b.pay_to?.support_email ? `<br>Questions? ${b.pay_to.support_whatsapp ? `<a href="https://wa.me/${esc(b.pay_to.support_whatsapp.replace(/\D/g, ''))}" target="_blank" rel="noopener" style="font-weight:700">WhatsApp us</a>` : ''} ${b.pay_to.support_email ? `<a href="mailto:${esc(b.pay_to.support_email)}" style="font-weight:700">${esc(b.pay_to.support_email)}</a>` : ''}` : ''}</div>
+          </div>
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
+            ${a.state === 'complimentary' ? '<div class="ns-h3">Your property has complimentary access — nothing to pay.</div>' : `
+            <div><div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div><div class="ns-muted" style="margin-top:4px">${esc(tierNote)}</div></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="plans">
+              ${plans.map((x) => x.is_quote ? `<div class="ns-plan" style="cursor:default">
+                <b style="font-size:15px">${esc(x.name)}</b><span class="price" style="font-size:22px">Custom</span>
+                <span class="ns-muted">${esc(x.description || '')}</span>
+                ${contact ? `<a class="ns-btn-ghost" style="height:34px;font-size:12px" href="${esc(contact)}" target="_blank" rel="noopener">Contact us for a quote</a>` : ''}</div>`
+                : `<button type="button" class="ns-plan${x.id === chosen?.id ? ' is-on' : ''}" data-plan="${esc(x.id)}">
+                <b style="font-size:15px">${esc(x.name)}</b>
+                <span class="price">${rupees(x.price_paise)} <small>/ ${x.period_months === 1 ? 'month' : x.period_months === 12 ? 'year' : x.period_months + ' months'}</small></span>
+                <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
+            </div>
+            ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
+              <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
+              <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                <div style="font-size:13.5px;line-height:1.6"><b>1.</b> Pay <b id="amt"></b> to <b>${esc(upi)}</b> (${esc(b.pay_to.payee_name)}) — scan the QR or <a id="upi-open" style="font-weight:700">open your UPI app</a>.</div>
+                <div style="font-size:13.5px"><b>2.</b> Enter the 12-digit UPI transaction ID (UTR) below.</div>
+                <input class="ns-input" id="utr" placeholder="e.g. 412345678901" autocomplete="off" inputmode="numeric" maxlength="35">
+                <button type="button" class="ns-btn" id="submit-pay">I’ve paid — submit for confirmation</button>
+              </div>
+            </div>`}`}
+          </div>
+        </div>
+        ${b.history.length ? `<div class="ns-card" style="padding:0;overflow:hidden"><div class="ns-h3" style="padding:18px 20px">Payment history</div>
+          <div style="overflow-x:auto"><table class="ns-table" style="min-width:600px"><thead><tr><th>Submitted</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Covers</th></tr></thead><tbody>
+          ${b.history.map((h) => `<tr><td>${fmtDayTime(h.submitted_at)}</td><td>${esc((plans.find((x) => x.id === h.plan_id) || { name: h.plan_id }).name)}</td>
+            <td style="font-weight:700">${rupees(h.amount_paise)}</td><td class="ns-muted">${esc(h.utr)}</td><td>${pill(...HIST[h.status])}${h.review_note ? `<div class="ns-muted">${esc(h.review_note)}</div>` : ''}</td>
+            <td class="ns-muted">${h.period_end ? `${fmtDate(h.period_start)} – ${fmtDate(h.period_end)}` : '—'}</td></tr>`).join('')}
+          </tbody></table></div></div>` : ''}`);
+
+      const draw = async () => {
+        if (!$('#qr') || !chosen) return;
+        $('#amt').textContent = rupees(chosen.price_paise);
+        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: chosen.price_paise, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
+        $('#upi-open').href = link;
+        const url = await qrDataUrl(link);
+        if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
+      };
+      $$('[data-plan]').forEach((p) => p.onclick = () => {
+        chosen = payable.find((x) => x.id === p.dataset.plan);
+        $$('[data-plan]').forEach((x) => x.classList.toggle('is-on', x === p)); draw();
+      });
+      $('#submit-pay')?.addEventListener('click', async (e) => {
+        const utr = $('#utr').value.replace(/\s/g, '');
+        if (!/^[0-9A-Za-z]{6,35}$/.test(utr)) return toast('Enter the UPI transaction ID (UTR) from your payment app.', { error: true });
+        e.target.disabled = true;
+        try { await rpc('submit_subscription_payment', { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr }); toast('Thanks! We’ll confirm your payment shortly.'); show('billing'); }
+        catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
+      });
+      draw();
+    },
+
+    // ------------------------------------------------------------ My account (password, email, devices)
+    async account() {
+      const email = ctx.user.email;
+      content(`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="pw-card">
+            <div class="ns-h3">Change password</div>
+            <div class="ns-muted">Signed in as <b>${esc(email)}</b></div>
+            ${field('Current password', '<input class="ns-input" type="password" name="cur" autocomplete="current-password">')}
+            ${field('New password', '<input class="ns-input" type="password" name="new1" autocomplete="new-password" minlength="10">', 'At least 10 characters. Don’t reuse a password from another site.')}
+            ${field('Type the new password again', '<input class="ns-input" type="password" name="new2" autocomplete="new-password">')}
+            <button type="button" class="ns-btn" id="save-pw" style="align-self:flex-start">Change password</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="ns-h3">Change email</div>
+              ${field('New email', '<input class="ns-input" type="email" name="new-email" autocomplete="email">', 'We send a confirmation link to the new address. Your email changes after you click it.')}
+              <button type="button" class="ns-btn-ghost" id="save-email2" style="align-self:flex-start">Change email</button>
+            </div>
+            <div class="ns-card" style="display:flex;flex-direction:column;gap:10px">
+              <div class="ns-h3">Devices</div>
+              <div class="ns-muted">Signed in on a phone or computer you no longer use? Sign out everywhere.</div>
+              <button type="button" class="ns-btn-ghost" id="signout-all2" style="align-self:flex-start">Sign out on all devices</button>
+            </div>
+          </div>
+        </div>`);
+      $('#save-pw').onclick = async (e) => {
+        const v = (n) => $(`#pw-card [name=${n}]`).value;
+        if (!v('cur')) return toast('Enter your current password.', { error: true });
+        if (v('new1').length < 10) return toast('The new password needs at least 10 characters.', { error: true });
+        if (v('new1') !== v('new2')) return toast('The two new passwords don’t match.', { error: true });
+        if (v('new1') === v('cur')) return toast('Choose a password different from the current one.', { error: true });
+        e.target.disabled = true;
+        try {
+          const chk = await sb.auth.signInWithPassword({ email, password: v('cur') });   // confirm it's really you
+          if (chk.error) throw new Error('Your current password is not correct.');
+          const { error } = await sb.auth.updateUser({ password: v('new1') });
+          if (error) throw new Error(error.message);
+          $$('#pw-card input').forEach((i) => { i.value = ''; });
+          toast('Password changed. Use the new one next time you sign in.');
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#save-email2').onclick = async (e) => {
+        const ne = $('[name=new-email]').value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ne)) return toast('Enter a valid email address.', { error: true });
+        e.target.disabled = true;
+        try {
+          const { error } = await sb.auth.updateUser({ email: ne });
+          if (error) throw new Error(error.message);
+          toast(`Check ${ne} for a confirmation link. Your email changes after you click it.`, { ms: 7000 });
+        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+      };
+      $('#signout-all2').onclick = async () => {
+        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere, including this device.', { confirmLabel: 'Sign out everywhere' })) return;
+        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
+        location.replace('login.html');
       };
     },
 
@@ -366,3 +512,146 @@ page('settings', async (ctx) => {
 
   await show(new URLSearchParams(location.search).get('tab') || 'property');
 });
+
+// ------------------------------------------------------------ Extras & services price list
+const EXTRA_CATS = [['food', 'Food & drinks'], ['laundry', 'Laundry'], ['rental', 'Rentals'], ['transport', 'Transport'], ['tour', 'Tours & activities'], ['other', 'Other']];
+const SUGGESTED = [
+  ['Breakfast', 'food', 150, 'plate'], ['Lunch', 'food', 200, 'plate'], ['Dinner', 'food', 200, 'plate'], ['Tea / coffee', 'food', 30, 'cup'],
+  ['Laundry', 'laundry', 80, 'kg'], ['Towel', 'rental', 50, 'each'], ['Locker', 'rental', 50, 'day'], ['Bike / scooter', 'rental', 400, 'day'],
+  ['Airport pickup', 'transport', 800, 'trip'], ['City tour', 'tour', 600, 'person'],
+];
+async function extrasCard(ctx) {
+  let items = await q(sb.from('extra_items').select('*').eq('property_id', ctx.property_id).order('sort').order('name')).catch(() => null);
+  const host = document.querySelector('.ns-content');
+  if (items === null) {                                             // database not updated yet (016_extras.sql)
+    host.insertAdjacentHTML('beforeend', '<div class="ns-card ns-muted">Extras & services need the database update <b>016_extras.sql</b>.</div>');
+    return;
+  }
+  const removed = new Set();
+  const rowHtml = (it) => `<tr data-extra="${esc(it.id || '')}">
+      <td><input class="ns-input" name="x-name" maxlength="80" value="${esc(it.name || '')}" placeholder="e.g. Breakfast" style="height:36px;min-width:140px" aria-label="Item name"></td>
+      <td><select class="ns-input" name="x-cat" style="height:36px" aria-label="Category">${options(EXTRA_CATS, it.category || 'other')}</select></td>
+      <td><input class="ns-input" name="x-price" inputmode="decimal" value="${it.price_paise != null ? it.price_paise / 100 : ''}" style="height:36px;width:100px" aria-label="Price (₹)"></td>
+      <td><input class="ns-input" name="x-unit" maxlength="30" value="${esc(it.unit || 'each')}" style="height:36px;width:90px" aria-label="Per"></td>
+      <td><input type="checkbox" name="x-active" ${it.is_active !== false ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1C9A6C" aria-label="Offered"></td>
+      <td><button type="button" class="ns-icon-del" data-x-del aria-label="Delete item" title="Delete">✕</button></td></tr>`;
+  host.insertAdjacentHTML('beforeend', `<div class="ns-card" style="padding:0;overflow:hidden" id="extras-card">
+      <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div><div class="ns-h3">Extras & services</div><div class="ns-muted">Food, laundry, rentals, pickups, tours — add them to a guest’s bill from the booking screen.</div></div>
+        ${items.length ? '' : '<button type="button" class="ns-btn-ghost" id="x-suggest">Add suggested items</button>'}</div>
+      <div style="overflow-x:auto"><table class="ns-table" style="min-width:640px"><thead><tr><th>Item</th><th>Category</th><th>Price (₹)</th><th>Per</th><th>Offered</th><th></th></tr></thead>
+        <tbody id="x-rows">${items.map(rowHtml).join('')}</tbody></table></div>
+      ${items.length ? '' : '<div class="ns-empty" id="x-empty" style="padding:14px">No extras yet.</div>'}
+      <div style="padding:16px 20px;border-top:1px solid #F3EFE1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <button type="button" class="ns-btn-ghost" id="x-add">+ Add item</button><button type="button" class="ns-btn" id="x-save">Save extras</button></div>
+    </div>`);
+  const tbody = $('#x-rows');
+  const add = (it) => { $('#x-empty')?.remove(); tbody.insertAdjacentHTML('beforeend', rowHtml(it)); };
+  $('#x-add').onclick = () => { add({ unit: 'each' }); tbody.lastElementChild.querySelector('[name=x-name]').focus(); };
+  $('#x-suggest')?.addEventListener('click', (e) => { SUGGESTED.forEach(([name, category, rupee, unit]) => add({ name, category, price_paise: rupee * 100, unit })); e.target.remove(); toast('Suggested items added — change the prices, then Save extras.'); });
+  tbody.addEventListener('click', (e) => { const b = e.target.closest('[data-x-del]'); if (!b) return; const tr = b.closest('tr'); if (tr.dataset.extra) removed.add(tr.dataset.extra); tr.remove(); });
+  $('#x-save').onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      const rows = [...tbody.querySelectorAll('tr')].map((tr, i) => ({ id: tr.dataset.extra || null, sort: i + 1,
+        name: tr.querySelector('[name=x-name]').value.trim(), category: tr.querySelector('[name=x-cat]').value,
+        price_paise: toPaise(tr.querySelector('[name=x-price]').value), unit: tr.querySelector('[name=x-unit]').value.trim() || 'each',
+        is_active: tr.querySelector('[name=x-active]').checked }));
+      const bad = rows.find((r) => !r.name || !(r.price_paise >= 0)); if (bad) throw new Error('Every item needs a name and a price.');
+      for (const id of removed) await q(sb.from('extra_items').delete().eq('id', id));
+      for (const r of rows) {
+        const { id, ...row } = r;
+        if (id) await q(sb.from('extra_items').update(row).eq('id', id));
+        else await q(sb.from('extra_items').insert({ ...row, property_id: ctx.property_id }));
+      }
+      toast('Extras saved.'); location.replace('settings.html?tab=rooms');
+    } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+  };
+}
+
+// ------------------------------------------------------------ what each role can do (owner edits)
+function permsCard(ctx) {
+  const owner = ctx.role === 'owner';
+  const ROLES = [['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']];
+  const cur = (role, perm) => { const v = ctx.rolePermissions?.[role]?.[perm]; return typeof v === 'boolean' ? v : permDefault(role, perm); };
+  document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `<div class="ns-card" style="padding:0;overflow:hidden;margin-top:20px" id="perms-card">
+    <div style="padding:18px 20px"><div class="ns-h3">What each role can do</div>
+      <div class="ns-muted">${owner ? 'Tick what each role may do. The owner can always do everything.' : 'Only the owner can change these.'} 🔒 = not possible for that role.</div></div>
+    <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Feature</th>${ROLES.map(([, l]) => `<th style="text-align:center">${l}</th>`).join('')}</tr></thead><tbody>
+    ${PERMS.map(([k, label, help]) => `<tr><td><b style="font-size:13px">${esc(label)}</b>${help ? `<div class="ns-muted" style="font-size:11.5px">${esc(help)}</div>` : ''}</td>
+      ${ROLES.map(([r]) => (PERM_LOCKED[r] || []).includes(k)
+        ? '<td style="text-align:center" title="Not possible for this role">🔒</td>'
+        : `<td style="text-align:center"><input type="checkbox" data-prole="${r}" data-perm="${k}" ${cur(r, k) ? 'checked' : ''} ${owner ? '' : 'disabled'}
+            style="width:18px;height:18px;accent-color:#1C9A6C" aria-label="${esc(label)} — ${r}"></td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    ${owner ? `<div style="padding:16px 20px;border-top:1px solid #F3EFE1;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <button type="button" class="ns-btn-ghost" id="perms-reset">Reset to defaults</button><button type="button" class="ns-btn" id="perms-save">Save permissions</button></div>` : ''}
+  </div>`);
+  if (!owner) return;
+  $('#perms-reset').onclick = () => { $$('#perms-card [data-perm]').forEach((c) => { c.checked = permDefault(c.dataset.prole, c.dataset.perm); }); toast('Defaults restored — Save to apply.'); };
+  $('#perms-save').onclick = async (e) => {
+    const p = {}; $$('#perms-card [data-perm]').forEach((c) => { (p[c.dataset.prole] ||= {})[c.dataset.perm] = c.checked; });
+    e.target.disabled = true;
+    try { await rpc('set_role_permissions', { p_property: ctx.property_id, p }); toast('Permissions saved. Staff see the change next time they open a page.'); ctx.rolePermissions = p; }
+    catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+  };
+}
+
+// ------------------------------------------------------------ invoices & GST · regular-guest offers
+function moreCards(ctx, p) {
+  const offers = p.offers || { enabled: false, tiers: [{ from_stay: 2, pct: 5 }, { from_stay: 5, pct: 10 }] };
+  const tiers = [...(offers.tiers || []), { from_stay: '', pct: '' }, { from_stay: '', pct: '' }].slice(0, 3);
+  document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:20px">
+    <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="gst-card">
+      <div class="ns-h3">🧾 Invoices & GST</div>
+      ${field('GST', `<select class="ns-input" name="gst_mode">${options([['none', 'Not registered — simple bill / receipt'], ['auto', 'Automatic by room rate (nil ≤ ₹1,000 · 5% ≤ ₹7,500 · 18% above)'], ['fixed', 'Fixed rate for rooms']], p.gst_mode || 'none')}</select>`)}
+      <div id="gst-more" style="display:flex;flex-direction:column;gap:12px">
+        ${field('GSTIN', `<input class="ns-input" name="gstin" maxlength="15" value="${esc(p.gstin || '')}" placeholder="33ABCDE1234F1Z5" style="text-transform:uppercase">`)}
+        ${field('Legal / business name', `<input class="ns-input" name="legal_name" maxlength="120" value="${esc(p.legal_name || '')}" placeholder="As on your GST certificate">`)}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div id="gst-fixed">${field('Room GST %', `<input class="ns-input" name="gst_rate" type="number" min="0" max="28" step="0.5" value="${Number(p.gst_rate ?? 5)}">`)}</div>
+          ${field('Food & extras GST %', `<input class="ns-input" name="extras_gst_rate" type="number" min="0" max="28" step="0.5" value="${Number(p.extras_gst_rate ?? 5)}">`)}</div>
+      </div>
+      ${field('Invoice number prefix', `<input class="ns-input" name="invoice_prefix" maxlength="10" value="${esc(p.invoice_prefix || 'INV')}" style="text-transform:uppercase">`, 'Invoices are numbered like INV/2026-27/0001, restarting each April.')}
+      <div class="ns-help">Prices include GST. Rates change — please confirm yours with your CA.</div>
+      <button type="button" class="ns-btn" id="save-gst" style="align-self:flex-start">Save invoice settings</button>
+    </div>
+    <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="offer-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="ns-h3">🎁 Regular-guest offers</div>
+        <label style="display:flex;gap:6px;align-items:center;font-weight:800;font-size:13px"><input type="checkbox" name="on" ${offers.enabled ? 'checked' : ''} style="width:18px;height:18px;accent-color:#1C9A6C"> On</label></div>
+      <div class="ns-muted" style="font-size:12.5px">Returning guests get a discount on the room charge automatically when staff book them. Owner or manager can change it on any booking.</div>
+      ${tiers.map((t) => `<div style="display:grid;grid-template-columns:auto 80px auto 80px auto;gap:8px;align-items:center;font-size:13px" data-tier>
+        <span>From stay no.</span><input class="ns-input" name="from" type="number" min="2" max="50" value="${t.from_stay}" style="height:36px">
+        <span>get</span><input class="ns-input" name="pct" type="number" min="1" max="50" step="0.5" value="${t.pct}" style="height:36px"><span>% off</span></div>`).join('')}
+      <div class="ns-help">Example: “from stay no. 2 get 5% off” = every returning guest; “from 5 get 10%” = loyal guests. Leave a row empty to skip it.</div>
+      <button type="button" class="ns-btn" id="save-offers" style="align-self:flex-start">Save offers</button>
+    </div>
+  </div>`);
+  const gm = () => { const m = $('#gst-card [name=gst_mode]').value; $('#gst-more').hidden = m === 'none'; $('#gst-fixed').hidden = m !== 'fixed'; };
+  $('#gst-card [name=gst_mode]').addEventListener('change', gm); gm();
+  const save = async (btn, patch, okMsg) => {
+    btn.disabled = true;
+    try { await q(sb.from('properties').update(patch).eq('id', ctx.property_id)); toast(okMsg); return true; }
+    catch (err) {
+      toast(/gstin/.test(err.message) ? 'That GSTIN doesn’t look right — it has 15 characters, e.g. 33ABCDE1234F1Z5.'
+        : /invoice_prefix/.test(err.message) ? 'Prefix: capital letters, numbers and dashes only (max 10).' : err.message, { error: true });
+      return false;
+    } finally { btn.disabled = false; }
+  };
+  $('#save-gst').onclick = (e) => {
+    const v = (n) => $(`#gst-card [name=${n}]`).value.trim();
+    const mode = v('gst_mode');
+    if (mode !== 'none' && !/^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/.test(v('gstin').toUpperCase())) return toast('Enter your GSTIN (15 characters) to show GST on invoices.', { error: true });
+    save(e.target, { gst_mode: mode, gstin: v('gstin').toUpperCase() || null, legal_name: v('legal_name') || null,
+      gst_rate: Number(v('gst_rate') || 5), extras_gst_rate: Number(v('extras_gst_rate') || 5), invoice_prefix: (v('invoice_prefix') || 'INV').toUpperCase() }, 'Invoice settings saved.');
+  };
+  $('#save-offers').onclick = (e) => {
+    const t = $$('#offer-card [data-tier]').map((r) => ({ from_stay: parseInt(r.querySelector('[name=from]').value, 10), pct: Number(r.querySelector('[name=pct]').value) }))
+      .filter((x) => x.from_stay >= 2 && x.pct > 0 && x.pct <= 50).sort((a, b) => a.from_stay - b.from_stay);
+    const on = $('#offer-card [name=on]').checked;
+    if (on && !t.length) return toast('Add at least one offer (from stay no. 2 or more, 1–50% off).', { error: true });
+    save(e.target, { offers: { enabled: on, tiers: t } }, on ? 'Offers are on — they apply to new bookings.' : 'Offers saved (off).');
+  };
+  if (!ctx.can('owner', 'manager')) $$('#gst-card button, #offer-card button').forEach((b) => b.remove());
+}
