@@ -346,6 +346,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator{margin-left:4px;
 .ci-tags{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
 .ci-acts{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .ci-acts .ns-btn,.ci-acts .ns-btn-ghost{min-width:78px;margin:0;white-space:nowrap}
+.ci-acts [data-wa]{background:var(--green);border-color:var(--green);color:#FFFFFF !important}
+.ci-acts [data-wa]:hover,.ci-acts [data-wa]:focus-visible{background:#157A56;border-color:#157A56;color:#FFFFFF !important}
 .ns-card > .ns-empty{display:flex;align-items:center;justify-content:center;min-height:72px;text-align:center}
 @media (max-width:760px){
   .ci-row{grid-template-columns:1fr;gap:8px;padding:16px}
