@@ -190,13 +190,31 @@ async function boot(key) {
   localStorage.setItem('ns.property', m.property_id);
   const kindRow = await sb.from('properties').select('kind').eq('id', m.property_id).limit(1).then((r) => (r.data && r.data[0]) || {}, () => ({}));
   setKind(kindRow.kind);
-  const ctx = {
-    kind: W.kind, words: W,
-    user: session.user, memberships: mems,
-    property_id: m.property_id, property_name: m.property_name, role: m.role,
-    name: m.display_name || session.user.email,
-    can: (...roles) => roles.includes(m.role),
+  const DEFAULT_PERMISSIONS = {
+    front_desk: [
+      'view_payments',
+      'record_payments',
+      'cancel_bookings',
+      'delete_bookings',
+      'add_extras',
+    ],
+    accountant: [
+      'view_reports',
+      'view_payments',
+      'export_data',
+    ],
   };
+const ctx = {
+  kind: W.kind, words: W,
+  user: session.user, memberships: mems,
+  property_id: m.property_id, property_name: m.property_name, role: m.role,
+  name: m.display_name || session.user.email,
+  can: (...roles) => roles.includes(m.role),
+  allow: (permission) => {
+    if (m.role === 'owner' || m.role === 'manager') return true;
+    return DEFAULT_PERMISSIONS[m.role]?.includes(permission) ?? false;
+  },
+};
   ctx.isAdmin = await rpc('is_platform_admin').catch(() => false);   // NammaStay platform admin (leads)
   applyChrome(ctx);
   const allowed = PAGE_ROLES[key];
