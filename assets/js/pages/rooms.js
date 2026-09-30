@@ -14,7 +14,7 @@ function roomNumbers(start, n) {
 }
 
 page('rooms', async (ctx) => {
-  const manage = ctx.can('owner', 'manager') && ctx.allow('manage_rooms');
+  const manage = ctx.can('owner', 'manager');
   const head = headerActions();
   head.innerHTML = manage ? '<button type="button" class="ns-btn" id="add-room">+ Add room type</button>' : '';
   const R = roomsMode();
