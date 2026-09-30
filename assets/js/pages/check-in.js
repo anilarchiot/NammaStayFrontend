@@ -42,9 +42,9 @@ page('checkin', async (ctx) => {
         <div class="ns-h3">Guest details</div>
         <div id="returning" hidden></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
-          ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
-          ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email \vert{}\vert{} '')}" ${existing ? 'disabled' : ''}>`)}
+            ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name || '')}" ${existing ? 'disabled' : ''}>`)}
+            ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone || '')}" ${existing ? 'disabled' : ''}>`)}
+            ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email || '')}" ${existing ? 'disabled' : ''}>`)}
           ${nonExistingFields}
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280">
