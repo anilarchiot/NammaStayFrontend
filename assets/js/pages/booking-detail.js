@@ -311,4 +311,27 @@ page(null, async (ctx) => {
     });
   }
 
+  function receiptDoc({ property, guest, payment, booking }) {
+    const paymentLabel = payment.kind === 'refund' ? 'Refund receipt' : 'Payment receipt';
+    const amount = payment.kind === 'refund' ? `−${rupees(payment.amount_paise)}` : rupees(payment.amount_paise);
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${esc(payment.code)} · ${esc(property.name)}</title>
+<style>body{font-family:Arial,sans-serif;color:#101a3d;margin:0;padding:32px}main{max-width:680px;margin:auto}.head,.row{display:flex;justify-content:space-between;gap:24px}.head{border-bottom:2px solid #1c9a6c;padding-bottom:18px;margin-bottom:24px}h1{font-size:22px;margin:0 0 6px}.muted{color:#6b7280;font-size:13px}.card{border:1px solid #e2dac4;border-radius:12px;padding:18px;margin:18px 0}.row{padding:8px 0;border-bottom:1px solid #f0ebdb}.row:last-child{border:0}.amount{font-size:22px;font-weight:700;color:#157a56}.foot{margin-top:28px;text-align:center;font-size:12px;color:#6b7280}@media print{body{padding:0}}</style></head>
+<body><main><div class="head"><div><h1>${esc(property.legal_name || property.name)}</h1><div class="muted">${esc(property.address || '')}</div></div><div style="text-align:right"><b>${paymentLabel}</b><div class="muted">${esc(payment.code)}</div></div></div>
+<div class="card"><div class="row"><span>Guest</span><b>${esc(guest.full_name)}</b></div><div class="row"><span>Booking</span><b>${esc(booking.code)}</b></div><div class="row"><span>Room</span><b>${esc(booking.room)}</b></div><div class="row"><span>Stay</span><b>${esc(fmtDayTime(booking.check_in_at))} – ${esc(fmtDayTime(booking.check_out_at))}</b></div></div>
+<div class="card"><div class="row"><span>Received on</span><b>${esc(fmtDayTime(payment.received_at))}</b></div><div class="row"><span>Method</span><b>${esc(String(payment.method || '').toUpperCase())}</b></div>${payment.reference ? `<div class="row"><span>Reference</span><b>${esc(payment.reference)}</b></div>` : ''}<div class="row"><span>Amount</span><span class="amount">${amount}</span></div></div>
+<div class="card"><div class="row"><span>Booking total</span><b>${rupees(booking.total_paise)}</b></div><div class="row"><span>Total paid</span><b>${rupees(booking.paid_paise)}</b></div><div class="row"><span>Balance due</span><b>${rupees(booking.balance_paise)}</b></div></div>
+<div class="foot">Computer-generated receipt · No signature required</div></main></body></html>`;
+  }
+
+  function openReceipt(html) {
+    const receipt = window.open('', '_blank', 'width=760,height=900');
+    if (!receipt) throw new Error('Allow pop-ups to open the receipt.');
+    receipt.document.open();
+    receipt.document.write(html);
+    receipt.document.close();
+    receipt.focus();
+    receipt.setTimeout(() => receipt.print(), 250);
+  }
+
 });
