@@ -284,4 +284,31 @@ page(null, async (ctx) => {
       amt.addEventListener('input', draw); method.addEventListener('change', draw); draw();
     }
   }
+  async function openInvoice(bookingId) {
+    const settings = await q(sb.from('properties')
+      .select('gstin,gst_rate,gst_mode')
+      .eq('id', b.property_id)
+      .limit(1)).then((rows) => rows[0] || null);
+    const gstReady = Boolean(settings?.gstin && Number(settings.gst_rate) > 0 && settings.gst_mode !== 'none');
+
+    modal({
+      title: `Create invoice · ${b.code}`,
+      width: 440,
+      body: `${field('Invoice type', `<select class="ns-input" name="invoice_type"><option value="basic">Basic invoice</option>${gstReady ? '<option value="gst">GST invoice</option>' : ''}</select>`, gstReady ? 'Choose GST when a tax invoice is required.' : 'Configure GSTIN and GST rate in Settings to enable GST invoices.')}`,
+      actions: [{ label: 'Cancel' }, {
+        label: 'Create invoice',
+        kind: 'primary',
+        onClick: async (el) => {
+          const invoice = await rpc('create_invoice', {
+            p_property: b.property_id,
+            p_booking: bookingId,
+            p_invoice_type: el.querySelector('[name=invoice_type]').value,
+            p_details: {},
+          });
+          toast(`${invoice.invoice_number} created · ${rupees(invoice.total_paise)}`);
+        },
+      }],
+    });
+  }
+
 });
