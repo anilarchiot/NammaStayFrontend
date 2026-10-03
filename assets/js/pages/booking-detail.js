@@ -1,36 +1,7 @@
 import {
-  W,
-  roomsMode,
-  guestsText,
-  sendBookingWhatsApp,
-  deleteBookingDialog,
-  page,
-  rpc,
-  q,
-  sb,
-  $,
-  esc,
-  rupees,
-  toPaise,
-  fmtDayTime,
-  toInputDT,
-  fromInputDT,
-  avatar,
-  statusPill,
-  methodPill,
-  modal,
-  confirmDialog,
-  toast,
-  field,
-  options,
-  METHOD_OPTIONS,
-  upiLink,
-  qrDataUrl,
-  viewIdDocs,
-  param,
-  uuidOk,
-  SITE_URL,
-  titleCase,
+  openInvoice, openReceipt, receiptDoc, q, sb, fmtDate, W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
+  modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, viewIdDocs, param, uuidOk,
+  SITE_URL, titleCase,
 } from '../core.js';
 
 const ACTIVITY = {
@@ -93,6 +64,14 @@ page(null, async (ctx) => {
       <div style="border:1px solid #F0EBDB;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">${roomsMode() ? 'Room' : 'Room'} charge (${b.nights} night${b.nights > 1 ? 's' : ''} × ${rupees(b.rate_paise)})</span><b style="font-weight:600">${rupees(b.rate_paise * b.nights)}</b></div>
         ${b.extra_paise ? `<div style="display:flex;justify-content:space-between;font-size:12.5px"><span class="ns-muted" style="font-size:12.5px">Extra adult (${b.nights} × ${rupees(b.extra_paise)})</span><b style="font-weight:600">${rupees(b.extra_paise * b.nights)}</b></div>` : ''}
+        ${b.discount_paise > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;gap:8px"><span style="font-size:12.5px;color:#157A56">🎁 Regular-guest offer (${Number(b.discount_pct)}%)
+            ${ctx.can('owner', 'manager') ? '<button type="button" class="ns-btn-ghost" id="disc" style="height:24px;font-size:11px;padding:0 8px;margin-left:4px">Change</button>' : ''}</span><b style="font-weight:600;color:#157A56">−${rupees(b.discount_paise)}</b></div>` : ''}
+        ${charges.map((c) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;gap:8px">
+            <span class="ns-muted" style="font-size:12.5px">🧾 ${esc(c.name)}${Number(c.qty) !== 1 ? ` × ${Number(c.qty)}` : ''}${c.note ? ` · ${esc(c.note)}` : ''} <span style="font-size:11px">${esc(fmtDate(c.charged_on + 'T12:00:00+05:30'))}</span></span>
+            <span style="display:flex;align-items:center;gap:6px"><b style="font-weight:600">${rupees(c.amount_paise)}</b>
+              ${staff && ctx.allow('add_extras') ? `<button type="button" class="ns-icon-del" style="width:26px;height:26px" data-rm-charge="${esc(c.id)}" aria-label="Remove ${esc(c.name)}" title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg></button>` : ''}</span></div>`).join('')}
+        ${staff && ctx.allow('add_extras') && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn-ghost" id="add-extra" style="height:32px;font-size:12px;align-self:flex-start">+ Add extra (food, laundry…)</button>' : ''}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:6px;border-top:1px dashed #F0EBDB"><b>Total</b><b>${rupees(b.total_paise)}</b></div>
         ${d.payments.map((p) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;gap:8px">
             <span class="ns-muted" style="font-size:12.5px">${p.kind === 'refund' ? 'Refund' : 'Paid'} ${fmtDayTime(p.received_at)} ${methodPill(p.method)} ${p.reference ? '<span style="font-size:11px">' + esc(p.reference) + '</span>' : ''}
               <button type="button" class="ns-btn-ghost" data-receipt="${esc(p.code)}" style="height:24px;font-size:11px;padding:0 8px">Receipt</button></span>
@@ -126,8 +105,8 @@ page(null, async (ctx) => {
 
     <div class="ns-dialog-foot" style="padding:16px 26px;border-top:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${staff && ['pending', 'confirmed'].includes(b.status) ? '<button type="button" class="ns-btn-danger" data-act="cancel">Cancel booking</button>' : ''}
-        ${staff ? '<button type="button" class="ns-btn-danger" id="del-booking" title="Remove a booking entered by mistake">Delete booking</button>' : ''}
+        ${staff && ctx.allow('cancel_bookings') && ['pending', 'confirmed'].includes(b.status) ? '<button type="button" class="ns-btn-danger" data-act="cancel">Cancel booking</button>' : ''}
+        ${staff && ctx.allow('delete_bookings') ? '<button type="button" class="ns-btn-danger" id="del-booking" title="Remove a booking entered by mistake">Delete booking</button>' : ''}
         ${staff && ['pending', 'confirmed'].includes(b.status) && new Date(b.check_in_at) < new Date() ? '<button type="button" class="ns-btn-ghost" data-act="no_show">Mark no-show</button>' : ''}
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -284,54 +263,4 @@ page(null, async (ctx) => {
       amt.addEventListener('input', draw); method.addEventListener('change', draw); draw();
     }
   }
-  async function openInvoice(bookingId) {
-    const settings = await q(sb.from('properties')
-      .select('gstin,gst_rate,gst_mode')
-      .eq('id', b.property_id)
-      .limit(1)).then((rows) => rows[0] || null);
-    const gstReady = Boolean(settings?.gstin && Number(settings.gst_rate) > 0 && settings.gst_mode !== 'none');
-
-    modal({
-      title: `Create invoice · ${b.code}`,
-      width: 440,
-      body: `${field('Invoice type', `<select class="ns-input" name="invoice_type"><option value="basic">Basic invoice</option>${gstReady ? '<option value="gst">GST invoice</option>' : ''}</select>`, gstReady ? 'Choose GST when a tax invoice is required.' : 'Configure GSTIN and GST rate in Settings to enable GST invoices.')}`,
-      actions: [{ label: 'Cancel' }, {
-        label: 'Create invoice',
-        kind: 'primary',
-        onClick: async (el) => {
-          const invoice = await rpc('create_invoice', {
-            p_property: b.property_id,
-            p_booking: bookingId,
-            p_invoice_type: el.querySelector('[name=invoice_type]').value,
-            p_details: {},
-          });
-          toast(`${invoice.invoice_number} created · ${rupees(invoice.total_paise)}`);
-        },
-      }],
-    });
-  }
-
-  function receiptDoc({ property, guest, payment, booking }) {
-    const paymentLabel = payment.kind === 'refund' ? 'Refund receipt' : 'Payment receipt';
-    const amount = payment.kind === 'refund' ? `−${rupees(payment.amount_paise)}` : rupees(payment.amount_paise);
-    return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${esc(payment.code)} · ${esc(property.name)}</title>
-<style>body{font-family:Arial,sans-serif;color:#101a3d;margin:0;padding:32px}main{max-width:680px;margin:auto}.head,.row{display:flex;justify-content:space-between;gap:24px}.head{border-bottom:2px solid #1c9a6c;padding-bottom:18px;margin-bottom:24px}h1{font-size:22px;margin:0 0 6px}.muted{color:#6b7280;font-size:13px}.card{border:1px solid #e2dac4;border-radius:12px;padding:18px;margin:18px 0}.row{padding:8px 0;border-bottom:1px solid #f0ebdb}.row:last-child{border:0}.amount{font-size:22px;font-weight:700;color:#157a56}.foot{margin-top:28px;text-align:center;font-size:12px;color:#6b7280}@media print{body{padding:0}}</style></head>
-<body><main><div class="head"><div><h1>${esc(property.legal_name || property.name)}</h1><div class="muted">${esc(property.address || '')}</div></div><div style="text-align:right"><b>${paymentLabel}</b><div class="muted">${esc(payment.code)}</div></div></div>
-<div class="card"><div class="row"><span>Guest</span><b>${esc(guest.full_name)}</b></div><div class="row"><span>Booking</span><b>${esc(booking.code)}</b></div><div class="row"><span>Room</span><b>${esc(booking.room)}</b></div><div class="row"><span>Stay</span><b>${esc(fmtDayTime(booking.check_in_at))} – ${esc(fmtDayTime(booking.check_out_at))}</b></div></div>
-<div class="card"><div class="row"><span>Received on</span><b>${esc(fmtDayTime(payment.received_at))}</b></div><div class="row"><span>Method</span><b>${esc(String(payment.method || '').toUpperCase())}</b></div>${payment.reference ? `<div class="row"><span>Reference</span><b>${esc(payment.reference)}</b></div>` : ''}<div class="row"><span>Amount</span><span class="amount">${amount}</span></div></div>
-<div class="card"><div class="row"><span>Booking total</span><b>${rupees(booking.total_paise)}</b></div><div class="row"><span>Total paid</span><b>${rupees(booking.paid_paise)}</b></div><div class="row"><span>Balance due</span><b>${rupees(booking.balance_paise)}</b></div></div>
-<div class="foot">Computer-generated receipt · No signature required</div></main></body></html>`;
-  }
-
-  function openReceipt(html) {
-    const receipt = window.open('', '_blank', 'width=760,height=900');
-    if (!receipt) throw new Error('Allow pop-ups to open the receipt.');
-    receipt.document.open();
-    receipt.document.write(html);
-    receipt.document.close();
-    receipt.focus();
-    receipt.setTimeout(() => receipt.print(), 250);
-  }
-
 });

@@ -1,4 +1,4 @@
-import { W, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { W, SITE_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
 const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
@@ -125,6 +125,7 @@ page('settings', async (ctx) => {
         } }],
       });
       $('#invite')?.addEventListener('click', () => memberDialog(null));
+      permsCard(ctx);
       $('#signout-all')?.addEventListener('click', async () => {
         if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere — this computer, your phone and any other device. Staff accounts are not affected.', { confirmLabel: 'Sign out everywhere' })) return;
         await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
@@ -183,145 +184,6 @@ page('settings', async (ctx) => {
         $$('.ns-content input, .ns-content select').forEach((i) => { i.disabled = true; });
         document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', '<div class="ns-demo-hint">View only — your role can’t change rooms, beds or prices.</div>');
       }
-    },
-
-    // ------------------------------------------------------------ Billing (subscription)
-    async billing() {
-      const b = await rpc('billing_info', { p_property: ctx.property_id });
-      const a = b.access; const [label, color] = STATE[a.state] || [a.state, 'grey'];
-      const plans = b.plans; const payable = plans.filter((x) => !x.is_quote);
-      let chosen = payable.find((x) => x.id === a.plan_id) || payable[payable.length - 1] || null;
-      const KIND = { hostel: 'hostels & PGs', hotel: 'hotels', homestay: 'homestays' };
-      const tierNote = `Prices for ${KIND[b.kind] || 'your property'} · you have ${b.units} ${b.units === 1 ? W.unit : W.units}`;
-      const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for NammaStay for ' + ctx.property_name)}`
-        : b.pay_to?.support_email ? `mailto:${b.pay_to.support_email}?subject=${encodeURIComponent('NammaStay quote — ' + ctx.property_name)}` : null;
-      const owner = ctx.can('owner'); const upi = b.pay_to?.upi_id;
-      const until = a.state === 'trial' ? `Trial ends ${fmtDate(a.trial_ends_at)}` : a.state === 'active' ? `Paid until ${fmtDate(a.paid_until)}`
-        : a.state === 'complimentary' ? 'No payment needed' : `Ended ${fmtDate(a.ends_at)}`;
-      const HIST = { pending: ['Waiting for confirmation', 'amber'], approved: ['Confirmed', 'green'], rejected: ['Not confirmed', 'red'] };
-      content(`
-        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
-          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px;align-self:start">
-            <div class="ns-h3">Your NammaStay plan</div>
-            <div>${pill(label, color)}</div>
-            <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800">${a.days_left != null ? `${a.days_left} day${a.days_left === 1 ? '' : 's'} left` : esc(label)}</div>
-            <div class="ns-muted" style="font-size:13.5px">${esc(until)}</div>
-            ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using NammaStay meanwhile.</div>' : ''}
-            ${a.state === 'expired' ? '<div class="ns-error">New bookings are paused. Your data is safe — renew below to continue.</div>' : ''}
-            <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property — all features, unlimited staff and bookings.
-              ${b.pay_to?.support_whatsapp || b.pay_to?.support_email ? `<br>Questions? ${b.pay_to.support_whatsapp ? `<a href="https://wa.me/${esc(b.pay_to.support_whatsapp.replace(/\D/g, ''))}" target="_blank" rel="noopener" style="font-weight:700">WhatsApp us</a>` : ''} ${b.pay_to.support_email ? `<a href="mailto:${esc(b.pay_to.support_email)}" style="font-weight:700">${esc(b.pay_to.support_email)}</a>` : ''}` : ''}</div>
-          </div>
-          <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
-            ${a.state === 'complimentary' ? '<div class="ns-h3">Your property has complimentary access — nothing to pay.</div>' : `
-            <div><div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div><div class="ns-muted" style="margin-top:4px">${esc(tierNote)}</div></div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="plans">
-              ${plans.map((x) => x.is_quote ? `<div class="ns-plan" style="cursor:default">
-                <b style="font-size:15px">${esc(x.name)}</b><span class="price" style="font-size:22px">Custom</span>
-                <span class="ns-muted">${esc(x.description || '')}</span>
-                ${contact ? `<a class="ns-btn-ghost" style="height:34px;font-size:12px" href="${esc(contact)}" target="_blank" rel="noopener">Contact us for a quote</a>` : ''}</div>`
-                : `<button type="button" class="ns-plan${x.id === chosen?.id ? ' is-on' : ''}" data-plan="${esc(x.id)}">
-                <b style="font-size:15px">${esc(x.name)}</b>
-                <span class="price">${rupees(x.price_paise)} <small>/ ${x.period_months === 1 ? 'month' : x.period_months === 12 ? 'year' : x.period_months + ' months'}</small></span>
-                <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
-            </div>
-            ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
-              <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
-              <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
-                <div style="font-size:13.5px;line-height:1.6"><b>1.</b> Pay <b id="amt"></b> to <b>${esc(upi)}</b> (${esc(b.pay_to.payee_name)}) — scan the QR or <a id="upi-open" style="font-weight:700">open your UPI app</a>.</div>
-                <div style="font-size:13.5px"><b>2.</b> Enter the 12-digit UPI transaction ID (UTR) below.</div>
-                <input class="ns-input" id="utr" placeholder="e.g. 412345678901" autocomplete="off" inputmode="numeric" maxlength="35">
-                <button type="button" class="ns-btn" id="submit-pay">I’ve paid — submit for confirmation</button>
-              </div>
-            </div>`}`}
-          </div>
-        </div>
-        ${b.history.length ? `<div class="ns-card" style="padding:0;overflow:hidden"><div class="ns-h3" style="padding:18px 20px">Payment history</div>
-          <div style="overflow-x:auto"><table class="ns-table" style="min-width:600px"><thead><tr><th>Submitted</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Covers</th></tr></thead><tbody>
-          ${b.history.map((h) => `<tr><td>${fmtDayTime(h.submitted_at)}</td><td>${esc((plans.find((x) => x.id === h.plan_id) || { name: h.plan_id }).name)}</td>
-            <td style="font-weight:700">${rupees(h.amount_paise)}</td><td class="ns-muted">${esc(h.utr)}</td><td>${pill(...HIST[h.status])}${h.review_note ? `<div class="ns-muted">${esc(h.review_note)}</div>` : ''}</td>
-            <td class="ns-muted">${h.period_end ? `${fmtDate(h.period_start)} – ${fmtDate(h.period_end)}` : '—'}</td></tr>`).join('')}
-          </tbody></table></div></div>` : ''}`);
-
-      const draw = async () => {
-        if (!$('#qr') || !chosen) return;
-        $('#amt').textContent = rupees(chosen.price_paise);
-        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: chosen.price_paise, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
-        $('#upi-open').href = link;
-        const url = await qrDataUrl(link);
-        if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
-      };
-      $$('[data-plan]').forEach((p) => p.onclick = () => {
-        chosen = payable.find((x) => x.id === p.dataset.plan);
-        $$('[data-plan]').forEach((x) => x.classList.toggle('is-on', x === p)); draw();
-      });
-      $('#submit-pay')?.addEventListener('click', async (e) => {
-        const utr = $('#utr').value.replace(/\s/g, '');
-        if (!/^[0-9A-Za-z]{6,35}$/.test(utr)) return toast('Enter the UPI transaction ID (UTR) from your payment app.', { error: true });
-        e.target.disabled = true;
-        try { await rpc('submit_subscription_payment', { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr }); toast('Thanks! We’ll confirm your payment shortly.'); show('billing'); }
-        catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
-      });
-      draw();
-    },
-
-    // ------------------------------------------------------------ My account (password, email, devices)
-    async account() {
-      const email = ctx.user.email;
-      content(`
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-          <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="pw-card">
-            <div class="ns-h3">Change password</div>
-            <div class="ns-muted">Signed in as <b>${esc(email)}</b></div>
-            ${field('Current password', '<input class="ns-input" type="password" name="cur" autocomplete="current-password">')}
-            ${field('New password', '<input class="ns-input" type="password" name="new1" autocomplete="new-password" minlength="10">', 'At least 10 characters. Don’t reuse a password from another site.')}
-            ${field('Type the new password again', '<input class="ns-input" type="password" name="new2" autocomplete="new-password">')}
-            <button type="button" class="ns-btn" id="save-pw" style="align-self:flex-start">Change password</button>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:20px">
-            <div class="ns-card" style="display:flex;flex-direction:column;gap:12px">
-              <div class="ns-h3">Change email</div>
-              ${field('New email', '<input class="ns-input" type="email" name="new-email" autocomplete="email">', 'We send a confirmation link to the new address. Your email changes after you click it.')}
-              <button type="button" class="ns-btn-ghost" id="save-email2" style="align-self:flex-start">Change email</button>
-            </div>
-            <div class="ns-card" style="display:flex;flex-direction:column;gap:10px">
-              <div class="ns-h3">Devices</div>
-              <div class="ns-muted">Signed in on a phone or computer you no longer use? Sign out everywhere.</div>
-              <button type="button" class="ns-btn-ghost" id="signout-all2" style="align-self:flex-start">Sign out on all devices</button>
-            </div>
-          </div>
-        </div>`);
-      $('#save-pw').onclick = async (e) => {
-        const v = (n) => $(`#pw-card [name=${n}]`).value;
-        if (!v('cur')) return toast('Enter your current password.', { error: true });
-        if (v('new1').length < 10) return toast('The new password needs at least 10 characters.', { error: true });
-        if (v('new1') !== v('new2')) return toast('The two new passwords don’t match.', { error: true });
-        if (v('new1') === v('cur')) return toast('Choose a password different from the current one.', { error: true });
-        e.target.disabled = true;
-        try {
-          const chk = await sb.auth.signInWithPassword({ email, password: v('cur') });   // confirm it's really you
-          if (chk.error) throw new Error('Your current password is not correct.');
-          const { error } = await sb.auth.updateUser({ password: v('new1') });
-          if (error) throw new Error(error.message);
-          $$('#pw-card input').forEach((i) => { i.value = ''; });
-          toast('Password changed. Use the new one next time you sign in.');
-        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
-      };
-      $('#save-email2').onclick = async (e) => {
-        const ne = $('[name=new-email]').value.trim();
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ne)) return toast('Enter a valid email address.', { error: true });
-        e.target.disabled = true;
-        try {
-          const { error } = await sb.auth.updateUser({ email: ne });
-          if (error) throw new Error(error.message);
-          toast(`Check ${ne} for a confirmation link. Your email changes after you click it.`, { ms: 7000 });
-        } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
-      };
-      $('#signout-all2').onclick = async () => {
-        if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere, including this device.', { confirmLabel: 'Sign out everywhere' })) return;
-        await sb.auth.signOut({ scope: 'global' }).catch(() => sb.auth.signOut());
-        location.replace('login.html');
-      };
     },
 
     // ------------------------------------------------------------ Billing (subscription)

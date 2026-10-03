@@ -1,4 +1,4 @@
-import { W, roomsMode, page, param, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
+import { W, roomsMode, fmtDayTime, page, param, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
 
 const STATE = {
   occupied: ['Occupied', '#FCE9E9', '#B23A3A'], reserved: ['Reserved', '#FCF0DC', '#966016'],
@@ -14,7 +14,7 @@ function roomNumbers(start, n) {
 }
 
 page('rooms', async (ctx) => {
-  const manage = ctx.can('owner', 'manager');
+  const manage = ctx.can('owner', 'manager') && ctx.allow('manage_rooms');
   const head = headerActions();
   head.innerHTML = manage ? '<button type="button" class="ns-btn" id="add-room">+ Add room type</button>' : '';
   const R = roomsMode();

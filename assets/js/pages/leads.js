@@ -24,7 +24,7 @@ page(null, async (ctx) => {
 
   async function chips() {
     const c = await rpc('lead_counts');
-    setSubtitle(`${c.all || 0} total · ${c.last_7_days || 0} in the last 7 days · from thenammastay.in`);
+    setSubtitle(`${c.all || 0} total · ${c.last_7_days || 0} in the last 7 days · from thenammastay.com`);
     $('#chips').innerHTML = [['', 'All', c.all], ...STATUS.map(([v, l]) => [v, l, c[v]])].map(([v, l, n]) =>
       `<button type="button" class="ns-chip${v === state.status ? ' is-on' : ''}" data-s="${v}">${l} (${n || 0})</button>`).join('');
     $$('#chips [data-s]').forEach((b) => b.onclick = () => { state.status = b.dataset.s; chips(); load(true); });
