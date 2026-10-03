@@ -1,50 +1,7 @@
-import {
-  newId,
-  W,
-  roomsMode,
-  guestsText,
-  idUploadFields,
-  wireIdPreviews,
-  uploadIdSides,
-  page,
-  rpc,
-  q,
-  sb,
-  $,
-  esc,
-  rupees,
-  toPaise,
-  ymd,
-  addDays,
-  daysBetween,
-  fromInputDT,
-  field,
-  options,
-  ID_TYPES,
-  SOURCES,
-  METHOD_OPTIONS,
-  toast,
-  compressImage,
-  uploadIdDoc,
-  param,
-  uuidOk,
-  debounce,
-  content,
-  statusPill,
-  fmtDayTime,
-  fmtDay,
-  headerActions,
-  headerSearch,
-  setSubtitle,
-  confirmDialog,
-  sendBookingWhatsApp,
+import { guestFace, newId, countryOptions, statusPill, fmtDayTime, fmtDay, headerActions, headerSearch, setSubtitle, confirmDialog, sendBookingWhatsApp, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, uploadIdSides,
+  page, rpc, q, sb, $, esc, rupees, toPaise, ymd, addDays, daysBetween, fromInputDT, field, options,
+  ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content,
 } from '../core.js';
-
-// Helper function for country options
-function countryOptions(selected = 'India') {
-  const countries = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'UAE', 'Singapore', 'Other'];
-  return countries.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
-}
 
 page('checkin', async (ctx) => {
   // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
@@ -62,27 +19,23 @@ page('checkin', async (ctx) => {
   const state = { beds: [], bed: null, method: 'upi', guest: existing };
 
   const L = (s) => `<div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9">${s}</div>`;
-  
-  // Flattened HTML for new guests to avoid nested template literal syntax errors
-  const nonExistingFields = existing ? '' : `
-    ${field('Date of birth', '<input class="ns-input" name="dob" type="date" max="' + today + '">')}
-    ${field('Nationality', '<select class="ns-input" name="nationality">' + countryOptions('India') + '</select>')}
-    ${field('Proof of identity', '<select class="ns-input" name="id_type"><option value="">Select…</option>' + options(ID_TYPES, 'aadhaar') + '</select>')}
-    ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
-    <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
-      <div class="ns-help" style="margin-top:6px">Compressed before upload. Deleted automatically after the retention period in Settings.</div></div>
-  `;
-
   content(`
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
       <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
         <div class="ns-h3">Guest details</div>
         <div id="returning" hidden></div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-            ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="${esc(existing?.full_name || '')}" ${existing ? 'disabled' : ''}>`)}
-            ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="${esc(existing?.phone || '')}" ${existing ? 'disabled' : ''}>`)}
-            ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="${esc(existing?.email || '')}" ${existing ? 'disabled' : ''}>`)}
-          ${nonExistingFields}
+          ${field('Full name *', `<input class="ns-input" name="full_name" autocomplete="off" placeholder="e.g. Rahul Kannan" value="">`)}
+          ${field('Phone number', `<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233" value="">`)}
+          <div class="gs-wrap" id="gs-wrap" style="grid-column:1/-1"><div class="gs-list" id="gs-list" hidden role="listbox" aria-label="Matching guests"></div></div>
+          ${field('Email address', `<input class="ns-input" name="email" type="email" autocomplete="off" placeholder="guest@email.com" value="">`)}
+          ${field('Date of birth', `<input class="ns-input" name="dob" type="date" max="${today}">`)}
+          ${field('Nationality', `<select class="ns-input" name="nationality">${countryOptions('India')}</select>`)}
+          ${field('Proof of identity', `<select class="ns-input" name="id_type"><option value="">Select…</option>${options(ID_TYPES, 'aadhaar')}</select>`)}
+          ${field('ID document number', '<input class="ns-input" name="id_number" autocomplete="off" placeholder="e.g. XXXX XXXX 4821">', 'Aadhaar: only the last 4 digits are stored.')}
+          <div style="grid-column:1/3">${idUploadFields({ front: 'ID photo — front (optional)', back: 'ID photo — back (optional)' })}
+            <div class="ns-help" style="margin-top:6px" id="id-help">Compressed before upload. Deleted automatically after the retention period in Settings.</div></div>
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280">
           <input type="checkbox" name="send_confirmation" checked style="width:16px;height:16px;accent-color:#1C9A6C">
@@ -124,6 +77,11 @@ page('checkin', async (ctx) => {
 
   const f = (n) => document.querySelector(`[name="${n}"]`);
   wireIdPreviews(document.querySelector('.ns-content'));
+  if (!ctx.allow('record_payments')) {                     // this role can't take payments
+    const sec = document.querySelector('[data-paysec]'); let el = sec;
+    while (el && el.nextElementSibling && !el.nextElementSibling.matches('#err, .ns-error, button')) { el = el.nextElementSibling; el.style.display = 'none'; }
+    if (sec) sec.style.display = 'none';
+  }
   const nights = () => {
     const a = f('check_in_at').value.slice(0, 10); const b = f('check_out_at').value.slice(0, 10);
     return a && b ? Math.max(1, daysBetween(a, b)) : 1;
@@ -194,26 +152,63 @@ page('checkin', async (ctx) => {
     $('#ref-wrap').hidden = state.method !== 'upi';
   });
 
-  // Returning guest? Look them up by phone.
-  if (!existing) {
-    f('phone').addEventListener('input', debounce(async () => {
-      const v = f('phone').value.replace(/\D/g, '');
-      const box = $('#returning');
-      if (v.length < 8) { box.hidden = true; return; }
-      const found = await rpc('search_guests', { p_property: ctx.property_id, p_q: v }).catch(() => []);
-      if (!found.length) { box.hidden = true; return; }
-      const gst = found[0];
-      box.hidden = false;
-      box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:#E9F5EE;font-size:13px">
-        <span>Returning guest: <b>${esc(gst.full_name)}</b>${gst.last_check_in ? ' · last stay ' + new Date(gst.last_check_in).toLocaleDateString('en-IN') : ''}</span>
-        <a class="ns-btn-ghost" style="height:32px" href="check-in.html?guest=${esc(gst.id)}">Use this guest</a></div>`;
-    }, 400));
+  // ---- existing guest: live suggestions while typing name or phone, autofill on tap
+  const offers = await q(sb.from('properties').select('offers').eq('id', ctx.property_id).limit(1)).then((r) => r[0]?.offers || null).catch(() => null);
+  const GF = ['full_name', 'phone', 'email', 'dob', 'nationality', 'id_type', 'id_number'];
+  const list = $('#gs-list'); let lastQ = '';
+  const hideList = () => { list.hidden = true; list.innerHTML = ''; };
+  async function suggest(src) {
+    if (state.guest) return;
+    const v = src.value.trim(); const digits = v.replace(/\D/g, '');
+    const qv = src.name === 'phone' ? (digits.length >= 6 ? digits : '') : (v.length >= 3 ? v : '');
+    if (!qv) { hideList(); return; }
+    if (qv === lastQ && !list.hidden) return; lastQ = qv;
+    const found = await rpc('search_guests', { p_property: ctx.property_id, p_q: qv }).catch(() => []);
+    if (!found.length || state.guest) { hideList(); return; }
+    list.innerHTML = `<div class="gs-head">Existing guests — tap to fill in</div>` + found.slice(0, 6).map((g) => `<button type="button" class="gs-item" data-gid="${esc(g.id)}" role="option">
+        ${guestFace(g.full_name, 34)}<span class="gs-main"><b>${esc(g.full_name)}</b><span>${esc([g.phone, g.nationality].filter(Boolean).join(' · '))}</span></span>
+        <span class="gs-last">${g.last_check_in ? 'Last stay<br>' + esc(new Date(g.last_check_in).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep')) : 'No stays yet'}</span></button>`).join('');
+    list.hidden = false;
   }
+  async function selectGuest(id) {
+    hideList();
+    const g = await q(sb.from('guests').select('*').eq('id', id).single());
+    const prof = await rpc('guest_profile', { p_guest: id }).catch(() => null);
+    state.guest = g;
+    f('full_name').value = g.full_name || ''; f('phone').value = g.phone || ''; f('email').value = g.email || '';
+    f('dob').value = g.dob || ''; f('nationality').innerHTML = countryOptions(g.nationality || ''); f('id_type').value = g.id_type || '';
+    f('id_number').value = g.id_number || '';
+    GF.forEach((n) => { f(n).readOnly = true; f(n).classList.add('is-filled'); if (f(n).tagName === 'SELECT') f(n).disabled = true; });
+    const stays = prof ? prof.stays.filter((x) => ['checked_in', 'checked_out'].includes(x.status)).length : 0;
+    let pct = 0;
+    if (offers?.enabled) (offers.tiers || []).forEach((t) => { if (t.from_stay <= stays + 1 && t.pct > pct) pct = Math.min(t.pct, 50); });
+    const hasId = g.id_doc_path || g.id_doc_back_path;
+    $('#id-help').textContent = hasId ? 'ID photo already on file — upload only if you want to replace it.' : 'No ID photo on file yet — add one now and it is saved to their profile.';
+    const box = $('#returning'); box.hidden = false;
+    box.innerHTML = `<div class="gs-picked">${guestFace(g.full_name, 40)}
+      <div style="flex:1;min-width:0"><div style="font-weight:800">Existing guest · ${esc(g.full_name)}</div>
+        <div class="ns-muted" style="font-size:12.5px">${stays ? `${stays} previous stay${stays > 1 ? 's' : ''}` : 'No completed stays yet'} · details filled from their profile${pct ? ` · <b style="color:#157A56">🎁 ${pct}% regular-guest offer applies</b>` : ''}</div></div>
+      <a class="ns-btn-ghost" style="height:32px;font-size:12px" href="guest-profile.html?id=${esc(g.id)}&edit=1" target="_blank" rel="noopener">Edit profile</a>
+      <button type="button" class="ns-btn-ghost" id="gs-clear" style="height:32px;font-size:12px">Not them? Clear</button></div>`;
+    $('#gs-clear').onclick = clearGuest;
+  }
+  function clearGuest() {
+    state.guest = null; $('#returning').hidden = true; $('#returning').innerHTML = '';
+    GF.forEach((n) => { f(n).readOnly = false; f(n).disabled = false; f(n).classList.remove('is-filled'); if (f(n).tagName !== 'SELECT') f(n).value = ''; });
+    f('nationality').innerHTML = countryOptions('India'); f('id_type').value = 'aadhaar';
+    $('#id-help').textContent = 'Compressed before upload. Deleted automatically after the retention period in Settings.';
+    f('full_name').focus();
+  }
+  ['full_name', 'phone'].forEach((n) => f(n).addEventListener('input', debounce(() => suggest(f(n)), 300)));
+  list.addEventListener('click', (e) => { const b = e.target.closest('[data-gid]'); if (b) selectGuest(b.dataset.gid); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#gs-wrap, [name=full_name], [name=phone]')) hideList(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideList(); });
+  if (existing) await selectGuest(existing.id);
 
   async function submit(status, btn) {
     const err = $('#err'); err.hidden = true;
     const fail = (m) => { err.textContent = m; err.hidden = false; err.scrollIntoView({ block: 'center' }); };
-    if (!existing && !f('full_name').value.trim()) return fail('Enter the guest’s full name.');
+    if (!state.guest && !f('full_name').value.trim()) return fail('Enter the guest’s full name.');
     const rows = rowsData();
     if (!rows[0].unit) return fail(`Choose a ${W.unit}.`);
     if (rows.some((r) => !r.unit)) return fail(`Choose a ${W.unit} in every row, or remove the empty one.`);
@@ -228,8 +223,13 @@ page('checkin', async (ctx) => {
     btn.disabled = true;
     const made = [];
     try {
-      const ids = existing ? {} : await uploadIdSides(document.querySelector('.ns-content'), `${ctx.property_id}/staff`);
-      let guestId = existing?.id || null;
+      const ids = await uploadIdSides(document.querySelector('.ns-content'), `${ctx.property_id}/staff`);
+      let guestId = state.guest?.id || null;
+      if (guestId && (ids.id_doc_path || ids.id_doc_back_path)) {                 // new ID photo for an existing guest
+        const r = await rpc('update_guest', { p_guest: guestId, p: ids }).catch(() => null);
+        const old = [r?.old_id_doc_path, r?.old_id_doc_back_path].filter(Boolean);
+        if (old.length) await sb.storage.from('guest-ids').remove(old).catch(() => {});
+      }
       for (const [i, r] of rows.entries()) {
         const res = await rpc('create_booking', { p: {
           property_id: ctx.property_id,

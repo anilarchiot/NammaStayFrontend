@@ -1,4 +1,4 @@
-import { DEMO, NOT_CONNECTED, markBrowserSession, esc, sb, $, modal, toast, reveal, SITE_URL, param } from '../core.js';
+import { langPicker, DEMO, NOT_CONNECTED, markBrowserSession, esc, sb, $, modal, toast, reveal, SITE_URL, param } from '../core.js';
 
 init();
 
@@ -16,7 +16,14 @@ async function init() {
     setup.parentElement.innerHTML = 'New property? <a href="signup.html" style="font-weight:700">Start a 15-day free trial</a><br>'
       + '<span style="font-size:12.5px">Staff: ask your property owner to invite you.</span>';
   }
-  if (NOT_CONNECTED) {                       // keys missing: nobody can sign in
+  { // language switch, top-right of the sign-in panel
+  const host = document.querySelector('.ns-login-main') || document.body;
+  const w = document.createElement('div'); w.style.cssText = 'position:absolute;top:16px;right:16px;z-index:5';
+  w.appendChild(langPicker('height:34px;border-radius:8px;border:1px solid #E2DAC4;background:#FFFDF6;font:600 12.5px Manrope,sans-serif;padding:0 8px'));
+  if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+  host.appendChild(w);
+}
+if (NOT_CONNECTED) {                       // keys missing: nobody can sign in
     const box = document.createElement('div');
     box.className = 'ns-error'; box.setAttribute('role', 'alert');
     box.innerHTML = 'Sign-in is unavailable right now — this site isn’t connected to its database. Please try again later.'

@@ -1,6 +1,6 @@
 // Calendar — every bed, every night. Drag across a bed's row (or tap the first
 // and last night on a phone) to create a booking for those dates.
-import { W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
+import { guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, $, $$ } from '../core.js';
 
 const DAYS = 9;
@@ -15,7 +15,7 @@ page('calendar', async (ctx) => {
   head.innerHTML = `<button type="button" class="ns-btn-ghost" id="prev" aria-label="Previous week">‹ Prev</button>
     <button type="button" class="ns-btn-ghost" id="today">Today</button>
     <button type="button" class="ns-btn-ghost" id="next" aria-label="Next week">Next ›</button>
-    ${staff ? '<a href="check-in.html" class="ns-btn">+ New booking</a>' : ''}`;
+    ${staff ? '<a href="check-in.html?new=1" class="ns-btn">+ New booking</a>' : ''}`;
   $('#prev').onclick = () => { from = addDays(from, -7); draw(); };
   $('#next').onclick = () => { from = addDays(from, 7); draw(); };
   $('#today').onclick = () => { from = addDays(ymd(), -2); draw(); };
@@ -47,6 +47,10 @@ page('calendar', async (ctx) => {
     d.beds.forEach((b) => taken.set(b.id, new Set()));
     d.bookings.filter((b) => LIVE.includes(b.status)).forEach((b) => nights(b.check_in_at, b.check_out_at).forEach((n) => taken.get(b.bed_id)?.add(n)));
     d.blocks.forEach((k) => nights(k.starts_at, k.ends_at).forEach((n) => taken.get(k.bed_id)?.add(n)));
+    const occByDay = {}; const totalUnits = d.beds.length;
+    d.bookings.filter((b) => ['pending', 'confirmed', 'checked_in', 'checked_out'].includes(b.status)).forEach((b) => {
+      const seen = new Set(); nights(b.check_in_at, b.check_out_at).forEach((n) => { if (!seen.has(n)) { seen.add(n); occByDay[n] = (occByDay[n] || 0) + 1; } });
+    });
 
     let room = null;
     const rows = d.beds.map((bed) => {
@@ -54,15 +58,22 @@ page('calendar', async (ctx) => {
       if (bed.room !== room) { room = bed.room; html += `<div style="font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;padding:14px 0 4px">${esc(room)}</div>`; }
       const bars = [
         ...d.blocks.filter((k) => k.bed_id === bed.id).map((k) => { const p = span(k.starts_at, k.ends_at);
-          return `<div class="bar" style="grid-row:1;grid-column:${p.s}/${p.e};background:repeating-linear-gradient(135deg,#DAD2B6,#DAD2B6 8px,#EDE7D3 8px,#EDE7D3 16px);color:#7A7154;position:relative;z-index:1" title="${esc(k.reason)}">${esc(k.reason)}</div>`; }),
+          return `<button type="button" class="bar cb cb-maint${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e}" title="Maintenance: ${esc(k.reason)} — tap to change or remove"><span class="cb-ico">🔧</span><span class="cb-name">${esc(k.reason)}</span></button>`; }),
         ...d.bookings.filter((b) => b.bed_id === bed.id).map((b) => { const p = span(b.check_in_at, b.check_out_at);
-          const bg = p.cutL || b.status === 'checked_out' ? '#9CA9C4' : (b.status === 'pending' || b.balance_paise > 0) ? '#E2A03F' : '#1C9A6C';
-          const r = `${p.cutL ? 0 : 8}px ${p.cutR ? 0 : 8}px ${p.cutR ? 0 : 8}px ${p.cutL ? 0 : 8}px`;
-          return `<a class="bar" data-id="${esc(b.id)}" href="booking-detail.html?id=${esc(b.id)}" style="grid-row:1;grid-column:${p.s}/${p.e};background:${bg};border-radius:${r};color:#fff;position:relative;z-index:1" title="${esc(b.guest)}">${esc(b.guest)}</a>`; }),
+          const cls = b.status === 'checked_out' ? 'cb-out' : b.status === 'checked_in' ? 'cb-in' : b.status === 'pending' ? 'cb-pend' : b.balance_paise > 0 ? 'cb-due' : 'cb-conf';
+          const span_ = p.e - p.s; const parts = String(b.guest || '').trim().split(/\s+/);
+          const short = span_ <= 1 ? parts[0] : parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
+          const nights = Math.max(1, Math.round((new Date(ymd(b.check_out_at)) - new Date(ymd(b.check_in_at))) / 864e5));
+          const tag = b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
+            : b.balance_paise > 0 ? `<span class="cb-tag" title="${rupees(b.balance_paise)} due">₹</span>` : b.status !== 'pending' ? '<span class="cb-tag" title="Paid">✓</span>' : '';
+          const label = { 'cb-in': 'In house', 'cb-conf': 'Confirmed · paid', 'cb-due': 'Balance due', 'cb-pend': 'Pending', 'cb-out': 'Checked out' }[cls];
+          return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}" href="booking-detail.html?id=${esc(b.id)}" style="grid-column:${p.s}/${p.e}"
+            title="${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}">
+            ${guestFace(b.guest, 24)}<span class="cb-name">${esc(short)}</span>${span_ > 1 ? `<span class="cb-n">${nights}n</span>` : ''}${tag}</a>`; }),
       ].join('');
       return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
-          <div style="font-size:12.5px;font-weight:700">${esc(bed.label)}</div>
-          <div class="row cal-row" style="position:relative">${days.map((x, i) => `<div class="cal-cell${x === today ? ' is-today' : ''}${staff && x >= earliest && !taken.get(bed.id).has(x) ? ' is-free' : ''}"
+          <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
+          <div class="row cal-row" style="position:relative">${days.map((x, i) => `<div class="cal-cell${x === today ? ' is-today' : ''}${[0, 6].includes(new Date(x + 'T12:00:00Z').getUTCDay()) ? ' is-weekend' : ''}${staff && x >= earliest && !taken.get(bed.id).has(x) ? ' is-free' : ''}"
             data-bed="${esc(bed.id)}" data-i="${i}" style="grid-row:1;grid-column:${i + 1}"></div>`).join('')}${bars}</div></div>`;
     }).join('');
 
@@ -71,15 +82,22 @@ page('calendar', async (ctx) => {
         ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP()}</div>` : ''}
         <div style="min-width:760px">
           <div style="display:grid;grid-template-columns:140px 1fr"><div></div>
-            <div class="row" style="height:auto">${days.map((x) => `<div style="text-align:center;font-size:11.5px;font-weight:${x === today ? 800 : 600};color:${x === today ? '#157A56' : '#6B7280'}">${fmtWeekday(x)}</div>`).join('')}</div></div>
+            <div class="row cal-head" style="height:auto">${days.map((x) => {
+              const dt = new Date(x + 'T12:00:00Z'); const occ = occByDay[x] || 0; const pct = totalUnits ? Math.round((occ / totalUnits) * 100) : 0;
+              const wk = [0, 6].includes(dt.getUTCDay());
+              return `<div class="cal-day${x === today ? ' is-today' : ''}${wk ? ' is-weekend' : ''}">
+                <div class="cal-wd">${x === today ? 'Today' : dt.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' })}</div>
+                <div class="cal-dn">${dt.getUTCDate()}</div>
+                <div class="cal-mo">${dt.toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' }).replace('Sept', 'Sep')}</div>
+                <div class="cal-occ" title="${occ} of ${totalUnits} ${W.units} booked"><span style="width:${pct}%;background:${pct >= 90 ? '#B23A3A' : pct >= 60 ? '#1C9A6C' : '#E2A03F'}"></span></div>
+                <div class="cal-occn">${occ}/${totalUnits}</div></div>`; }).join('')}</div></div>
           ${rows || '<div class="ns-empty">No ${W.units} set up yet. Add them in ${W.setup}.</div>'}
         </div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:#6B7280">
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#1C9A6C"></span> Confirmed / paid</span>
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#E2A03F"></span> Pending / balance due</span>
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#9CA9C4"></span> Continues / checked out</span>
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#DAD2B6"></span> Maintenance</span>
-          ${staff ? '<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#CDEBDC;border:1px solid #1C9A6C"></span> Your selection</span>' : ''}
+        <div class="cal-legend">
+          <span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
+          <span><i class="lg cb-due"></i> Balance due</span><span><i class="lg cb-pend"></i> Pending</span>
+          <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span>
+          ${staff ? '<span><i class="lg" style="background:#CDEBDC;border:1px solid #1C9A6C"></i> Your selection</span>' : ''}
         </div>
       </div>`);
   }
@@ -113,8 +131,96 @@ page('calendar', async (ctx) => {
     openBookingDialog(data.beds.find((b) => b.id === sel.bed), days[lo], addDays(days[hi], 1));
   }
 
+  // ------------------------------------------------------------ move a booking: drag (mouse) or "Move…" then tap (phone)
+  let mv = null;            // { b, grab, startIdx, n, x0, y0, active, ghost, target }
+  let moveMode = null;      // tap-to-place: { b }
+  let justMoved = false;
+  const dayIdx = (day) => Math.round((new Date(day + 'T12:00:00Z') - new Date(days[0] + 'T12:00:00Z')) / 864e5);
+  const stayNights = (b) => Math.max(1, Math.round((new Date(ymd(b.check_out_at) + 'T12:00:00Z') - new Date(ymd(b.check_in_at) + 'T12:00:00Z')) / 864e5));
+  function ownNights(b) { const out = new Set(); for (let i = 0; i < stayNights(b); i++) out.add(addDays(ymd(b.check_in_at), i)); return out; }
+  function moveProblem(b, bedId, startIdx) {
+    const origIdx = dayIdx(ymd(b.check_in_at)); const n = stayNights(b); const start = addDays(days[0], startIdx);
+    if (b.status === 'checked_out') return 'Checked-out stays can’t be moved.';
+    if (b.status === 'checked_in' && startIdx !== origIdx) return `${b.guest} is checked in — you can only move them to another ${W.unit} on the same dates.`;
+    if (startIdx !== origIdx && start < earliest) return 'A stay can’t be moved into the past.';
+    const own = bedId === b.bed_id ? ownNights(b) : new Set();
+    for (let i = 0; i < n; i++) { const d = addDays(start, i); if (taken.get(bedId)?.has(d) && !own.has(d)) return 'Part of those nights is already booked or blocked.'; }
+    return null;
+  }
+  function paintMove(bedId, startIdx, bad) {
+    $$('.cal-cell.is-sel, .cal-cell.is-bad').forEach((c) => c.classList.remove('is-sel', 'is-bad'));
+    if (!bedId) return;
+    const n = stayNights(mv?.b || moveMode?.b);
+    cellsOf(bedId).forEach((c) => { const i = +c.dataset.i; if (i >= startIdx && i < startIdx + n) c.classList.add(bad ? 'is-bad' : 'is-sel'); });
+  }
+  function confirmMove(b, bedId, startIdx) {
+    const n = stayNights(b); const bed = data.beds.find((x) => x.id === bedId); const oldBed = data.beds.find((x) => x.id === b.bed_id);
+    const newIn = addDays(days[0], startIdx);
+    if (bedId === b.bed_id && newIn === ymd(b.check_in_at)) return;
+    const inT = toInputDT(b.check_in_at).slice(11); const outT = toInputDT(b.check_out_at).slice(11);
+    const checkIn = fromInputDT(`${newIn}T${inT}`); const checkOut = fromInputDT(`${addDays(newIn, n)}T${outT}`);
+    const fmt = (iso) => fmtDay(iso);
+    modal({
+      title: `Move ${b.guest}?`, width: 480,
+      body: `<div class="mv-grid">
+          <div class="mv-box"><div class="mv-lbl">From</div><b>${esc(oldBed.room)} · ${esc(oldBed.label)}</b><div>${fmt(b.check_in_at)} → ${fmt(b.check_out_at)}</div></div>
+          <div class="mv-arrow">→</div>
+          <div class="mv-box is-new"><div class="mv-lbl">To</div><b>${esc(bed.room)} · ${esc(bed.label)}</b><div>${fmt(checkIn)} → ${fmt(checkOut)}</div></div></div>
+        <div class="ns-muted" style="font-size:12.5px">${n} night${n > 1 ? 's' : ''}, same check-in and check-out times.${bedId !== b.bed_id ? ` The price follows ${esc(bed.label)}’s rate.` : ''}</div>`,
+      actions: [{ label: 'Cancel', onClick: () => { paintMove(null); } },
+        { label: 'Move booking', kind: 'primary', onClick: async () => {
+          await rpc('update_booking', { p_booking: b.id, p: { check_in_at: checkIn, check_out_at: checkOut, bed_id: bedId } });
+          toast(`${b.guest} moved to ${bed.label}, ${fmt(checkIn)}.`); moveMode = null; hint(TIP()); draw();
+        } }],
+    }).el.querySelector('.ns-x').addEventListener('click', () => paintMove(null));
+  }
+  function startMoveMode(b) {
+    moveMode = { b };
+    hint(`<b>Moving ${esc(b.guest)}</b> — tap the new <b>first night</b> on any ${W.unit}${b.status === 'checked_in' ? ` (checked in: pick a ${W.unit}, dates stay the same)` : ''}.
+      <button type="button" class="ns-btn-ghost" id="mv-cancel" style="height:28px;font-size:12px;margin-left:6px">Cancel</button>`);
+    $('#mv-cancel').onclick = (ev) => { ev.stopPropagation(); moveMode = null; paintMove(null); hint(TIP()); };
+  }
+
   if (staff) {
     const host = $('.ns-content');
+    host.addEventListener('dragstart', (e) => { if (e.target.closest?.('a.bar')) e.preventDefault(); });
+    host.addEventListener('pointerdown', (e) => {                       // mouse: drag a booking bar to move it
+      const bar = e.target.closest('a.bar[data-id]');
+      if (!bar || e.pointerType === 'touch' || e.button !== 0) return;
+      const b = data.bookings.find((x) => x.id === bar.dataset.id); if (!b || b.status === 'checked_out') return;
+      const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
+      const startIdx = dayIdx(ymd(b.check_in_at));
+      mv = { b, bar, startIdx, grab: c ? +c.dataset.i - startIdx : 0, x0: e.clientX, y0: e.clientY, active: false, target: null };
+      e.preventDefault();
+    });
+    host.addEventListener('pointermove', (e) => {
+      if (!mv) return;
+      if (!mv.active) {
+        if (Math.hypot(e.clientX - mv.x0, e.clientY - mv.y0) < 6) return;
+        mv.active = true; document.body.classList.add('cal-moving');
+        const r = mv.bar.getBoundingClientRect();
+        mv.ghost = mv.bar.cloneNode(true); mv.ghost.classList.add('cb-ghost'); mv.ghost.style.width = `${Math.min(r.width, 260)}px`;
+        mv.dx = Math.min(e.clientX - r.left, 40); mv.dy = e.clientY - r.top;
+        document.body.appendChild(mv.ghost); mv.bar.classList.add('cb-dragging');
+      }
+      mv.ghost.style.left = `${e.clientX - mv.dx}px`; mv.ghost.style.top = `${e.clientY - mv.dy}px`;
+      const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
+      if (!c) { mv.target = null; paintMove(null); return; }
+      const bedId = c.dataset.bed;
+      const startIdx = mv.b.status === 'checked_in' ? mv.startIdx : +c.dataset.i - mv.grab;
+      const bad = moveProblem(mv.b, bedId, startIdx);
+      mv.target = { bedId, startIdx, bad }; paintMove(bedId, startIdx, bad);
+    });
+    window.addEventListener('pointerup', () => {
+      if (!mv) return;
+      const m = mv; mv = null;
+      if (!m.active) return;                                             // a plain click: let it open the panel
+      justMoved = true; setTimeout(() => { justMoved = false; }, 80);
+      m.ghost?.remove(); m.bar.classList.remove('cb-dragging'); document.body.classList.remove('cal-moving');
+      if (!m.target) { paintMove(null); return; }
+      if (m.target.bad) { toast(m.target.bad, { error: true }); paintMove(null); return; }
+      confirmMove(m.b, m.target.bedId, m.target.startIdx);
+    });
     host.addEventListener('pointerdown', (e) => {                       // mouse / pen: drag
       const c = e.target.closest('.cal-cell.is-free');
       if (!c || e.pointerType === 'touch' || e.button !== 0) return;
@@ -134,10 +240,23 @@ page('calendar', async (ctx) => {
     });
     host.addEventListener('click', (e) => {                              // tap a booking bar → quick panel
       const bar = e.target.closest('a.bar[data-id]');
-      if (bar) { e.preventDefault(); bookingPanel(bar.dataset.id); return; }
+      if (bar) { e.preventDefault(); if (!justMoved && !moveMode) bookingPanel(bar.dataset.id); return; }
+      const blk = e.target.closest('[data-block]');
+      if (blk && staff) { e.preventDefault(); blockPanel(blk.dataset.block); return; }
     });
     host.addEventListener('click', (e) => {                              // touch: tap first night, then last night
-      if (justDragged || e.defaultPrevented) return;
+      if (justDragged || justMoved) return;
+      if (moveMode) {                                                    // "Move…": tap the new first night
+        const c0 = e.target.closest('.cal-cell') || document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
+        if (!c0) return;
+        e.preventDefault();
+        const b = moveMode.b; const startIdx = b.status === 'checked_in' ? dayIdx(ymd(b.check_in_at)) : +c0.dataset.i;
+        const bad = moveProblem(b, c0.dataset.bed, startIdx);
+        mv = null; paintMove(c0.dataset.bed, startIdx, bad);
+        if (bad) { toast(bad, { error: true }); return; }
+        confirmMove(b, c0.dataset.bed, startIdx); return;
+      }
+      if (e.defaultPrevented) return;
       const c = e.target.closest('.cal-cell'); if (!c) return;
       const i = +c.dataset.i;
       if (sel && !sel.done && c.dataset.bed === sel.bed && i >= sel.a) { sel.b = i; sel.done = true; paint(); finish(); return; }
@@ -150,11 +269,45 @@ page('calendar', async (ctx) => {
     });
   }
 
+  // ------------------------------------------------------------ tap a maintenance block: change / remove
+  const REASONS = ['Repair', 'Deep cleaning', 'Pest control', 'Painting', 'Owner / staff use'];
+  function blockPanel(id) {
+    const k = data.blocks.find((x) => x.id === id); if (!k) return;
+    const bed = data.beds.find((x) => x.id === k.bed_id);
+    modal({
+      title: `Maintenance · ${bed.room} · ${bed.label}`, width: 460,
+      body: `<div style="display:flex;flex-direction:column;gap:12px">
+          ${field('Reason', `<input class="ns-input" name="reason" maxlength="120" value="${esc(k.reason || '')}">`)}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            ${field('From', `<input class="ns-input" type="datetime-local" name="from" value="${toInputDT(k.starts_at)}">`)}
+            ${field('Until', `<input class="ns-input" type="datetime-local" name="to" value="${toInputDT(k.ends_at)}">`)}</div>
+          <div class="ns-help">Guests can’t be booked into this ${W.unit} while it’s blocked.</div></div>`,
+      actions: [
+        { label: 'Remove maintenance', kind: 'danger', onClick: async () => {
+          if (!await confirmDialog('Remove maintenance', `${bed.label} will be available to book again for those dates.`, { confirmLabel: 'Remove', danger: true })) return false;
+          await q(sb.from('bed_blocks').delete().eq('id', k.id));
+          toast(`${bed.label} is available again.`); draw();
+        } },
+        { label: 'Save changes', kind: 'primary', onClick: async (el) => {
+          const v = (n) => el.querySelector(`[name=${n}]`).value;
+          const from = fromInputDT(v('from')); const to = fromInputDT(v('to')); const reason = v('reason').trim() || 'Maintenance';
+          if (!from || !to || new Date(to) <= new Date(from)) throw new Error('“Until” must be after “From”.');
+          await q(sb.from('bed_blocks').delete().eq('id', k.id));
+          try { await rpc('set_bed_block', { p_bed: k.bed_id, p_from: from, p_to: to, p_reason: reason }); }
+          catch (err) {                                            // put the old block back if the new dates don't fit
+            await rpc('set_bed_block', { p_bed: k.bed_id, p_from: k.starts_at, p_to: k.ends_at, p_reason: k.reason }).catch(() => {});
+            throw err;
+          }
+          toast('Maintenance updated.'); draw();
+        } }],
+    });
+  }
+
   // ------------------------------------------------------------ tap a booking: quick panel
   function bookingPanel(id) {
     const b = data.bookings.find((x) => x.id === id); if (!b) return;
     const bed = data.beds.find((x) => x.id === b.bed_id);
-    const canDelete = staff;
+    const canDelete = staff && ctx.allow('delete_bookings');
     const m = modal({
       title: b.guest, width: 440,
       body: `<div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
@@ -164,6 +317,7 @@ page('calendar', async (ctx) => {
           <div><span class="ns-muted" style="font-size:13px">Payment</span><br><b>${b.balance_paise > 0 ? `${rupees(b.balance_paise)} due` : 'Fully paid'}</b>${b.paid_paise ? ` · ${rupees(b.paid_paise)} received` : ''}</div>
         </div>`,
       actions: [
+        ...(['pending', 'confirmed', 'checked_in'].includes(b.status) ? [{ label: 'Move…', onClick: () => { setTimeout(() => startMoveMode(b), 30); } }] : []),
         ...(canDelete ? [{ label: 'Delete booking', kind: 'danger', onClick: () => {
           deleteBookingDialog({ ctx, id: b.id, guest: b.guest, room: bed.room, bed: bed.label, checkIn: b.check_in_at, checkOut: b.check_out_at,
             status: b.status, paidPaise: b.paid_paise, onDone: () => draw() });
@@ -178,12 +332,19 @@ page('calendar', async (ctx) => {
   function openBookingDialog(bed, inDay, outDay) {
     let rate = null; let guestId = null;
     const m = modal({
-      title: `New booking · ${bed.room} · ${bed.label}`, width: 560,
-      body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      title: `${bed.room} · ${bed.label}`, width: 560,
+      body: `<div class="ns-seg light" role="tablist" id="qb-mode"><button type="button" class="is-on" data-mode="book">📅 New booking</button><button type="button" data-mode="maint">🔧 Maintenance</button></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           ${field('Check-in', `<input class="ns-input" type="datetime-local" name="in" value="${inDay}T14:00">`)}
           ${field('Check-out', `<input class="ns-input" type="datetime-local" name="out" value="${outDay}T11:00">`)}
         </div>
         <div id="qb-sum" class="ns-demo-hint" style="background:#E9F5EE;color:#157A56">Checking the ${W.unit}…</div>
+        <div id="qb-maint" hidden style="display:flex;flex-direction:column;gap:10px">
+          ${field('Reason', '<input class="ns-input" name="reason" maxlength="120" placeholder="e.g. Fan repair">')}
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${REASONS.map((r) => `<button type="button" class="ns-chip" data-reason="${esc(r)}">${esc(r)}</button>`).join('')}</div>
+          <div class="ns-help">The ${W.unit} can’t be booked while it’s blocked. Tap the block on the calendar later to change or remove it.</div>
+        </div>
+        <div id="qb-book" style="display:flex;flex-direction:column;gap:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           ${field('Guest name *', '<input class="ns-input" name="name" autocomplete="off" maxlength="120">')}
           ${field('Phone', '<input class="ns-input" name="phone" type="tel" autocomplete="off" placeholder="+91 98400 12233">')}
@@ -196,17 +357,24 @@ page('calendar', async (ctx) => {
           ${field('Status', `<select class="ns-input" name="status">${options([['confirmed', 'Confirmed — arriving later'], ['pending', 'Pending (not confirmed yet)'],
             ...(inDay <= today ? [['checked_in', 'Check in now']] : [])], inDay === today ? 'checked_in' : 'confirmed')}</select>`)}
           ${field('Booked via', `<select class="ns-input" name="source">${options(SOURCES, 'walk_in')}</select>`)}
-          ${field('Paid now (₹)', '<input class="ns-input" name="paid" inputmode="decimal" placeholder="0">')}
-          ${field('Method', `<select class="ns-input" name="method">${options(METHOD_OPTIONS, 'upi')}</select>`)}
+          ${ctx.allow('record_payments') ? `${field('Paid now (₹)', '<input class="ns-input" name="paid" inputmode="decimal" placeholder="0">')}
+          ${field('Method', `<select class="ns-input" name="method">${options(METHOD_OPTIONS, 'upi')}</select>`)}` : ''}
         </div>
-        <div id="qb-ref">${field('UPI transaction ID (UTR)', '<input class="ns-input" name="ref" autocomplete="off" placeholder="12-digit UTR">')}</div>
-        <a href="check-in.html?bed=${encodeURIComponent(bed.id)}&in=${inDay}&out=${outDay}" style="font-size:12.5px;font-weight:700;text-decoration:underline;color:#6B7280">Need ID, email or nationality? Open the full form →</a>`,
+        ${ctx.allow('record_payments') ? `<div id="qb-ref">${field('UPI transaction ID (UTR)', '<input class="ns-input" name="ref" autocomplete="off" placeholder="12-digit UTR">')}</div>` : ''}
+        <a href="check-in.html?bed=${encodeURIComponent(bed.id)}&in=${inDay}&out=${outDay}" style="font-size:12.5px;font-weight:700;text-decoration:underline;color:#6B7280">Need ID, email or nationality? Open the full form →</a>
+        </div>`,
       actions: [{ label: 'Cancel', onClick: () => { clearSel(); } },
         { label: 'Save booking', kind: 'primary', onClick: async (el) => {
           const v = (n) => el.querySelector(`[name=${n}]`).value.trim();
+          if (mode === 'maint') {
+            const from = fromInputDT(v('in')); const to = fromInputDT(v('out'));
+            if (!from || !to || new Date(to) <= new Date(from)) throw new Error('The end must be after the start.');
+            await rpc('set_bed_block', { p_bed: bed.id, p_from: from, p_to: to, p_reason: v('reason') || 'Maintenance' });
+            toast(`${bed.label} blocked for maintenance.`); hint(TIP()); draw(); return;
+          }
           if (!guestId && v('name').length < 2) throw new Error('Enter the guest’s name.');
           if (rate === null) throw new Error(`This ${W.unit} isn’t free for those dates.`);
-          const paid = v('paid') ? toPaise(v('paid')) : 0;
+          const paid = el.querySelector('[name=paid]') && v('paid') ? toPaise(v('paid')) : 0;
           if (Number.isNaN(paid) || paid < 0) throw new Error('Enter a valid amount paid.');
           if (paid > 0 && v('method') === 'upi' && !v('ref')) throw new Error('Enter the UPI transaction ID (UTR).');
           const res = await rpc('create_booking', { p: {
@@ -223,6 +391,20 @@ page('calendar', async (ctx) => {
         } }],
     });
     m.el.querySelector('.ns-x').addEventListener('click', clearSel);
+    let mode = 'book';
+    const saveBtn = [...m.el.querySelectorAll('.ns-modal-foot .ns-btn')].pop();
+    m.el.querySelector('#qb-mode').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mode]'); if (!b) return; mode = b.dataset.mode;
+      m.el.querySelectorAll('#qb-mode button').forEach((x) => x.classList.toggle('is-on', x === b));
+      m.el.querySelector('#qb-book').hidden = mode !== 'book'; m.el.querySelector('#qb-maint').hidden = mode !== 'maint';
+      m.el.querySelector('#qb-sum').hidden = mode !== 'book';
+      if (saveBtn) saveBtn.textContent = mode === 'maint' ? 'Block for maintenance' : 'Save booking';
+      if (mode === 'maint') m.el.querySelector('[name=reason]').focus();
+    });
+    m.el.querySelectorAll('[data-reason]').forEach((c) => c.addEventListener('click', () => {
+      m.el.querySelector('[name=reason]').value = c.dataset.reason;
+      m.el.querySelectorAll('[data-reason]').forEach((x) => x.classList.toggle('is-on', x === c));
+    }));
     const f = (n) => m.el.querySelector(`[name=${n}]`);
     const check = async () => {
       const inAt = fromInputDT(f('in').value); const outAt = fromInputDT(f('out').value); const box = m.el.querySelector('#qb-sum');
@@ -244,21 +426,25 @@ page('calendar', async (ctx) => {
     };
     ['in', 'out'].forEach((n) => f(n).addEventListener('change', check));
     if (roomsMode()) ['adults', 'children'].forEach((n) => f(n).addEventListener('input', check));
-    f('method').addEventListener('change', () => { m.el.querySelector('#qb-ref').hidden = f('method').value !== 'upi'; });
-    f('phone').addEventListener('input', debounce(async () => {
-      const digits = f('phone').value.replace(/\D/g, ''); const box = m.el.querySelector('#qb-returning');
-      guestId = null; f('name').disabled = false;
-      if (digits.length < 8) { box.innerHTML = ''; return; }
-      const found = await rpc('search_guests', { p_property: ctx.property_id, p_q: digits }).catch(() => []);
-      if (!found.length) { box.innerHTML = ''; return; }
-      const g = found[0];
-      box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#EAF1FB;font-size:13px">
-        <span>Returning guest: <b>${esc(g.full_name)}</b></span><button type="button" class="ns-btn-ghost" style="height:30px;font-size:12px" id="qb-use">Use</button></div>`;
-      box.querySelector('#qb-use').onclick = () => {
-        guestId = g.id; f('name').value = g.full_name; f('name').disabled = true;
-        box.innerHTML = `<div class="ns-muted">Booking for <b>${esc(g.full_name)}</b> (existing guest)</div>`;
-      };
-    }, 400));
+    f('method')?.addEventListener('change', () => { m.el.querySelector('#qb-ref').hidden = f('method').value !== 'upi'; });
+    const lookup = debounce(async (src) => {
+      if (guestId) return;
+      const box = m.el.querySelector('#qb-returning'); const v = src.value.trim(); const digits = v.replace(/\D/g, '');
+      const qv = src.name === 'phone' ? (digits.length >= 6 ? digits : '') : (v.length >= 3 ? v : '');
+      if (!qv) { box.innerHTML = ''; return; }
+      const found = await rpc('search_guests', { p_property: ctx.property_id, p_q: qv }).catch(() => []);
+      if (!found.length || guestId) { box.innerHTML = ''; return; }
+      box.innerHTML = `<div class="gs-list" style="margin-top:0"><div class="gs-head">Existing guests — tap to use</div>${found.slice(0, 4).map((g) => `<button type="button" class="gs-item" data-gid="${esc(g.id)}">
+          ${guestFace(g.full_name, 30)}<span class="gs-main"><b>${esc(g.full_name)}</b><span>${esc([g.phone, g.nationality].filter(Boolean).join(' · '))}</span></span></button>`).join('')}</div>`;
+      box.querySelectorAll('[data-gid]').forEach((b) => b.addEventListener('click', () => {
+        const g = found.find((x) => x.id === b.dataset.gid); guestId = g.id;
+        f('name').value = g.full_name; f('phone').value = g.phone || ''; f('name').readOnly = true; f('phone').readOnly = true;
+        box.innerHTML = `<div class="gs-picked" style="padding:8px 12px">${guestFace(g.full_name, 30)}<span style="flex:1;font-size:13px"><b>${esc(g.full_name)}</b> · existing guest</span>
+          <button type="button" class="ns-btn-ghost" style="height:30px;font-size:12px" id="qb-clear">Clear</button></div>`;
+        box.querySelector('#qb-clear').onclick = () => { guestId = null; f('name').readOnly = false; f('phone').readOnly = false; f('name').value = ''; f('phone').value = ''; box.innerHTML = ''; f('name').focus(); };
+      }));
+    }, 300);
+    ['name', 'phone'].forEach((n) => f(n).addEventListener('input', () => lookup(f(n))));
     check();
   }
 

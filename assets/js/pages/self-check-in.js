@@ -1,5 +1,5 @@
 // Public page — guests open it from the link in their confirmation email / WhatsApp.
-import { idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
+import { langPicker, countryOptions, idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
 
 init();
 
