@@ -110,7 +110,7 @@ page('rooms', async (ctx) => {
       title: `Maintenance · ${b.label}`, width: 480,
       body: list.length ? `<div style="display:flex;flex-direction:column;gap:10px">${list.map((k) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid #F0EBDB;border-radius:10px">
           <div><b>🔧 ${esc(k.reason || 'Maintenance')}</b><div class="ns-muted" style="font-size:12.5px">${fmtDayTime(k.starts_at)} → ${fmtDayTime(k.ends_at)}</div></div>
-          <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-unblock="${esc(k.id)}">Remove</button></div>`).join('')}</div>`
+          ${k.feed_id ? '<span class="ns-muted" style="font-size:12px;text-align:right">Imported — change it<br>on the OTA</span>' : `<button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-unblock="${esc(k.id)}">Remove</button>`}</div>`).join('')}</div>`
         : '<div class="ns-muted">No current or upcoming maintenance.</div>',
       actions: [{ label: 'Close' }, { label: '+ Add another block', kind: 'primary', onClick: () => { setTimeout(() => blockBed(b), 50); } }],
     }).el.querySelectorAll('[data-unblock]').forEach((btn) => btn.addEventListener('click', async () => {

@@ -254,7 +254,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a class="signin" href="login.html?demo=0">Sign in</a>
+      <a class="signin" href="login.html">Sign in</a>
       <a class="btn btn-primary" href="signup.html">Start free trial</a>
     </div>
   </div>
@@ -265,13 +265,13 @@
   <div class="hero" id="top">
     <div class="wrap">
       <div>
-        <span class="eyebrow"><i></i>Made in India for hostels, homestays &amp;boutique hotels</span>
-        <h1>Manage your property with the power of your mobile device, <em>Bed by bed.</em></h1>
+        <span class="eyebrow"><i></i>Made in India for hostels, homestays &amp; small hotels</span>
+        <h1>Run your hostel from your phone. <em>Bed by bed.</em></h1>
         <p class="lead">NammaStay handles bookings, check-ins, guest IDs and UPI payments in one simple app. Built and tested behind the front desk of a working backpacker hostel.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          <a class="btn btn-light" href="login.html?demo=1" data-demo>Try the live demo</a>
+          <a class="btn btn-light" href="#early-access" data-walkthrough>Book a free walkthrough</a>
         </div>
         <p class="hero-note">No card needed · One flat price per property · Pay by UPI</p>
       </div>
@@ -469,7 +469,7 @@
       <p class="sub center" style="text-align:center">Every feature, unlimited staff and unlimited bookings. Start with 15 days free — no card needed. Pay by UPI when you’re ready.</p>
       <div class="price-grid" id="price-grid"></div>
       <ul class="price-incl">
-        <li>Bed-level bookings &amp; calendar</li><li>Guest online check-in</li><li>UPI QR payments, no gateway fees</li>
+        <li>Bed-level bookings &amp; calendar</li><li>Airbnb &amp; Booking.com calendar sync</li><li>Guest online check-in</li><li>UPI QR payments, no gateway fees</li>
         <li>Dashboard, reports &amp; CSV export</li><li>Unlimited staff with roles</li><li>ID photos auto-deleted for privacy</li>
       </ul>
     </div>
@@ -516,9 +516,10 @@
         <details><summary>How is my guests’ ID data protected?</summary><p>Aadhaar numbers are stored masked (last 4 digits only), ID photos are kept in private storage and deleted automatically after the period you choose, and staff only see what their role allows.</p></details>
         <details><summary>Can my staff have limited access?</summary><p>Yes. There are four roles — owner, manager, front desk and accountant. For example, an accountant can see payments and reports but not guest ID documents.</p></details>
         <details><summary>Can I manage more than one property?</summary><p>Yes. One login can belong to several properties, and you switch between them from the menu. Each property keeps its own rooms, rates, team and reports.</p></details>
+        <details><summary>Does it sync with Airbnb and Booking.com?</summary><p>Yes — by calendar sync (iCal). Each bed or room gets its own NammaStay calendar link to paste into Airbnb, Booking.com, Agoda or Vrbo, and their calendar links come back into NammaStay, checked every 30 minutes. Nights booked on one side close on the other, and you get an alert if two bookings clash. Calendar sync shares dates only (not prices), and each OTA refreshes on its own schedule. Hostelworld and MakeMyTrip need a channel-manager connection, which we’re working on.</p></details>
         <details><summary>How much does it cost?</summary><p>One flat monthly price per property, based on its type and size — see Pricing above. Every feature and unlimited staff are included. There are no per-booking or per-guest fees.</p></details>
         <details><summary>What happens after the free trial?</summary><p>Pay for a month or a year by UPI from the Billing tab in Settings and enter the transaction ID — we confirm it and your access continues. If you don’t renew, your data stays safe and visible; only new bookings pause until you do.</p></details>
-        <details><summary>Can I try it before signing up?</summary><p>Yes — the live demo is loaded with sample bookings for a 9-bed hostel. Click around freely: create bookings, take payments, check guests in and out.</p></details>
+        <details><summary>Can I try it before paying?</summary><p>Yes — the 15-day free trial has every feature and needs no card. Prefer a guided tour first? Book a free 15-minute walkthrough and we’ll show you around on WhatsApp or a video call.</p></details>
       </div>
     </div>
   </section>
@@ -528,10 +529,10 @@
     <div class="wrap">
       <div class="cta-box reveal">
         <h2>Ready to retire the register?</h2>
-        <p>Start your free trial in two minutes, or click around a demo hostel first.</p>
+        <p>Start your free trial in two minutes, or book a free 15-minute walkthrough and we’ll show you around.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="signup.html">Start 15-day free trial</a>
-          <a class="btn btn-ghost-dark" href="login.html?demo=1" data-demo>Try the live demo</a>
+          <a class="btn btn-ghost-dark" href="#early-access" data-walkthrough>Book a free walkthrough</a>
         </div>
       </div>
     </div>
@@ -545,7 +546,7 @@
       <a href="#features">Features</a>
       <a href="#privacy">Privacy</a>
       <a href="#faq">FAQ</a>
-      <a href="login.html?demo=0">Staff sign in</a>
+      <a href="login.html">Staff sign in</a>
       <a href="#early-access">Contact</a>
       <a href="#" data-contact hidden>WhatsApp</a>
     </nav>
@@ -558,25 +559,23 @@
  * assets/js/config.js has your keys. Until then it falls back to:
  * whatsapp: your number with country code, digits only, e.g. '919840012345'
  * email:    e.g. 'hello@thenammastay.com'
- * demoUrl:  the demo link — 'login.html?demo=1' opens the sample-data demo on purpose.
- *           (With Supabase connected, plain login.html is always the real sign-in.)
+   "Book a free walkthrough" opens WhatsApp (or email) with these details.
  */
 var NS_SITE = {
   // Shown until the site is connected to Supabase; after that, live prices come from the database
   prices: [
-    { id: 'monthly', kind: 'hostel', name: 'Monthly', period_months: 1, price_paise: 165000, description: 'Billed every month' },
-    { id: 'yearly', kind: 'hostel', name: 'Yearly', period_months: 12, price_paise: 1650000, description: '2 months free' },
-    { id: 'homestay_monthly', kind: 'homestay', name: 'Monthly', period_months: 1, price_paise: 99900, description: 'Homestays up to 6 rooms', max_units: 6 },
-    { id: 'homestay_yearly', kind: 'homestay', name: 'Yearly', period_months: 12, price_paise: 999000, description: '2 months free', max_units: 6 },
-    { id: 'hotel_s_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 249900, max_units: 20 },
-    { id: 'hotel_s_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 2499000, max_units: 20 },
-    { id: 'hotel_m_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 399900, min_units: 21, max_units: 50 },
-    { id: 'hotel_m_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 3999000, min_units: 21, max_units: 50 },
+    { id: 'monthly', kind: 'hostel', name: 'Monthly', period_months: 1, price_paise: 399900, description: 'Billed every month' },
+    { id: 'yearly', kind: 'hostel', name: 'Yearly', period_months: 12, price_paise: 2799900, description: 'Save ₹19,989 a year' },
+    { id: 'homestay_monthly', kind: 'homestay', name: 'Monthly', period_months: 1, price_paise: 199900, description: 'Homestays up to 6 rooms', max_units: 6 },
+    { id: 'homestay_yearly', kind: 'homestay', name: 'Yearly', period_months: 12, price_paise: 1299900, description: 'Save ₹10,989 a year', max_units: 6 },
+    { id: 'hotel_s_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 399900, max_units: 20 },
+    { id: 'hotel_s_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 2799900, max_units: 20 },
+    { id: 'hotel_m_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 699900, min_units: 21, max_units: 50 },
+    { id: 'hotel_m_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 4599900, min_units: 21, max_units: 50 },
     { id: 'hotel_l_quote', kind: 'hotel', name: 'Large hotels', period_months: 1, price_paise: 0, min_units: 51, is_quote: true }
   ],
   whatsapp: '',
-  email: '',
-  demoUrl: 'login.html?demo=1'
+  email: ''
 };
 /* ==================================== */
 (function () {
@@ -632,7 +631,7 @@ var NS_SITE = {
       (d.beds ? '\nBeds/rooms: ' + d.beds : '') + (d.message ? '\nNote: ' + d.message : '');
     if (NS_SITE.whatsapp) { window.open('https://wa.me/' + NS_SITE.whatsapp + '?text=' + encodeURIComponent(summary), '_blank', 'noopener'); done('Almost done!', 'Tap send in WhatsApp and we’ll reply shortly.'); return; }
     if (NS_SITE.email) { location.href = 'mailto:' + NS_SITE.email + '?subject=' + encodeURIComponent('NammaStay early access') + '&body=' + encodeURIComponent(summary); done('Almost done!', 'Send the email that just opened and we’ll reply shortly.'); return; }
-    done('Thanks, ' + d.name.split(' ')[0] + '!', 'Demo mode: this form isn’t connected yet, so nothing was sent.');
+    done('Thanks, ' + d.name.split(' ')[0] + '!', 'This form isn’t connected yet, so nothing was sent — please WhatsApp or email us.');
   });
 
   /* ---- Pricing: live from the database when connected ---- */
@@ -663,7 +662,7 @@ var NS_SITE = {
         var mid = i === 0 && order.length > 1;
         return '<div class="price-card' + (mid ? ' best' : '') + '">' + (mid ? '<span class="tag">Most popular</span>' : '') + '<h3>' + size + '</h3>' +
           (q ? '<div class="amt" style="font-size:32px">Custom</div><p>' + esc(q.description || 'Priced for your hotel') + '</p><a class="btn btn-light" href="#early-access">Talk to us</a>'
-             : '<div class="amt">' + inr(m.price_paise) + ' <small>/ month</small></div>' + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — 2 months free</p>' : '') +
+             : '<div class="amt">' + inr(m.price_paise) + ' <small>/ month</small></div>' + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — save ' + inr(m.price_paise * 12 - y.price_paise) + '</p>' : '') +
                '<a class="btn ' + (mid ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a>') + '</div>';
       });
     }
@@ -683,7 +682,13 @@ var NS_SITE = {
     }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rows) { if (rows && rows.length) { allPlans = rows; drawPrices(); } }).catch(function () {});
   }
 
-  document.querySelectorAll('[data-demo]').forEach(function (a) { a.href = NS_SITE.demoUrl; });
+  // "Book a free walkthrough" → WhatsApp / email; otherwise scroll to the early-access form
+  (function () {
+    var t = 'Hi! I’d like a free 15-minute walkthrough of NammaStay for my property.';
+    var href = NS_SITE.whatsapp ? 'https://wa.me/' + NS_SITE.whatsapp + '?text=' + encodeURIComponent(t)
+      : NS_SITE.email ? 'mailto:' + NS_SITE.email + '?subject=' + encodeURIComponent('NammaStay walkthrough') + '&body=' + encodeURIComponent(t) : '#early-access';
+    document.querySelectorAll('[data-walkthrough]').forEach(function (a) { a.href = href; if (href.indexOf('http') === 0) { a.target = '_blank'; a.rel = 'noopener'; } });
+  })();
   document.getElementById('yr').textContent = new Date().getFullYear();
 
   var nav = document.getElementById('nav');

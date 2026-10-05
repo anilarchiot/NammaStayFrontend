@@ -6,10 +6,10 @@
   (function () {
     var base = ((window.NAMMASTAY_CONFIG || {}).adminUrl || 'https://admin.thenammastay.com').replace(/\/$/, '');
     var demo = /(^|[?&])demo=1/.test(location.search);
-    location.replace(base + '/subscribers.html' + location.search + location.hash);
+    location.replace(base + '/admin-login.html' + location.search + location.hash);
     void demo;
   })();
 </script></head>
 <body style="font-family:system-ui,sans-serif;padding:40px;text-align:center">
-  NammaStay admin has moved to <a href="https://admin.thenammastay.com/subscribers.html">admin.thenammastay.com</a>.
+  NammaStay admin has moved to <a href="https://admin.thenammastay.com/admin-login.html">admin.thenammastay.com</a>.
 </body></html>

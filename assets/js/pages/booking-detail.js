@@ -1,5 +1,5 @@
 import {
-  openInvoice, openReceipt, receiptDoc, q, sb, fmtDate, W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
+  DEMO, openInvoice, openReceipt, receiptDoc, q, sb, fmtDate, W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
   modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, viewIdDocs, param, uuidOk,
   SITE_URL, titleCase,
 } from '../core.js';
@@ -10,6 +10,7 @@ const ACTIVITY = {
   changed: (d) => `Stay changed — ${fmtDayTime(d.check_in_at)} to ${fmtDayTime(d.check_out_at)}${d.bed_changed ? ', bed moved' : ''} · total ${rupees(d.total_paise)}`,
   payment: (d) => `Payment received — ${rupees(d.amount_paise)} via ${String(d.method).toUpperCase()} (${d.code})`,
   extra_added: (d) => `Extra added: ${d.name}${Number(d.qty) !== 1 ? ` × ${Number(d.qty)}` : ''} (${rupees(d.amount_paise)})`,
+  paylink_created: (d) => `Payment link sent — ${rupees(d.amount_paise)}`,
   extra_removed: (d) => `Extra removed: ${d.name} (${rupees(d.amount_paise)})`,
   discount: (d) => (Number(d.pct) ? `Discount set to ${Number(d.pct)}% (−${rupees(d.amount_paise)})` : 'Discount removed'),
   refund: (d) => `Refund — ${rupees(d.amount_paise)} via ${String(d.method).toUpperCase()} (${d.code})`,
@@ -81,6 +82,7 @@ page(null, async (ctx) => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
           ${b.balance_paise > 0 && ctx.allow('record_payments') && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn" id="pay">Record payment</button>' : ''}
           ${ctx.can('owner', 'manager') && ctx.allow('refunds') && b.paid_paise > 0 ? '<button type="button" class="ns-btn-ghost" id="refund">Refund</button>' : ''}
+          ${b.balance_paise > 0 && ctx.allow('record_payments') && ctx.can('owner', 'manager', 'front_desk') && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn-ghost" id="paylink" style="color:#2D5FA6">💳 Payment link</button>' : ''}
           <button type="button" class="ns-btn-ghost" id="invoice">🧾 Invoice</button>
           ${ctx.can('owner', 'manager') && !b.discount_paise && !['cancelled', 'no_show'].includes(b.status) ? '<button type="button" class="ns-btn-ghost" id="disc" style="font-size:12px">Discount</button>' : ''}
         </div>
@@ -167,6 +169,44 @@ page(null, async (ctx) => {
   $('#pay')?.addEventListener('click', () => paymentDialog('payment'));
   $('#add-extra')?.addEventListener('click', () => addExtraDialog());
   $('#invoice')?.addEventListener('click', () => openInvoice(b.id).catch((e) => toast(e.message, { error: true })));
+  // ---- online payment links (Razorpay)
+  const fnCall = async (body) => { const { data, error } = await sb.functions.invoke('razorpay', { body });
+    if (error || data?.error) { let m = data?.error || error?.message; try { const j = await error?.context?.json?.(); if (j?.error) m = j.error; } catch { /* ignore */ } throw new Error(m || 'Payment link service unavailable.'); } return data; };
+  const links = await rpc('paylink_list', { p_booking: b.id }).catch(() => []);
+  if (links.some((l) => l.status === 'created')) {                       // guest may have paid since — ask Razorpay quietly
+    fnCall({ action: 'check', booking_id: b.id }).then((r) => { if (r?.paid) { toast('Online payment received ✓'); setTimeout(() => location.reload(), 900); } }).catch(() => {});
+  }
+  $('#paylink')?.addEventListener('click', () => {
+    const st = { link: null };
+    const waText = (url, amt) => `Hello ${g.full_name.split(' ')[0]}, please pay ${rupees(amt)} for your stay at ${d.property.name} (booking ${b.code}) securely here: ${url}`;
+    const m = modal({
+      title: '💳 Online payment link', width: 520,
+      body: `<div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ns-muted" style="font-size:13px">The guest pays by UPI, card or net banking on Razorpay. NammaStay marks it paid automatically.</div>
+          ${field('Amount (₹)', `<input class="ns-input" name="amt" inputmode="decimal" value="${b.balance_paise / 100}">`, `Balance due: ${rupees(b.balance_paise)}`)}
+          <div id="pl-out"></div>
+          ${links.length ? `<div><div class="ns-muted" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Earlier links</div>
+            ${links.map((l) => `<div class="pl-row"><span>${rupees(l.amount_paise)} · ${fmtDayTime(l.created_at)}</span>
+              <span class="ns-pill ${l.status === 'paid' ? 'green' : l.status === 'created' ? 'amber' : 'grey'}">${{ created: 'Waiting', paid: 'Paid', expired: 'Expired', cancelled: 'Cancelled' }[l.status]}</span></div>`).join('')}</div>` : ''}
+        </div>`,
+      actions: [{ label: 'Close' }, { label: 'Create link', kind: 'primary', onClick: async (el) => {
+        const amt = toPaise(el.querySelector('[name=amt]').value);
+        if (!(amt >= 100) || amt > b.balance_paise) throw new Error(`Enter ₹1 to ${rupees(b.balance_paise)}.`);
+        const r = await fnCall({ action: 'create', booking_id: b.id, amount_paise: amt });
+        const phone = String(g.phone || '').replace(/\D/g, '');
+        el.querySelector('#pl-out').innerHTML = `<div class="pl-box"><div class="pl-url">${esc(r.short_url)}</div>
+          <div class="pl-acts"><button type="button" class="ns-btn-ghost" data-pl-copy>Copy</button>
+            <a class="ns-btn" style="background:#25D366;border-color:#25D366" target="_blank" rel="noopener" href="https://wa.me/${phone}?text=${encodeURIComponent(waText(r.short_url, amt))}">Send on WhatsApp</a>
+            <a class="ns-btn-ghost" target="_blank" rel="noopener" href="${esc(r.short_url)}">Open</a></div>
+          <div class="ns-help">Valid for 7 days. The guest also gets it by SMS/email when their number/email is saved.${DEMO ? ' <button type="button" class="ns-btn-ghost" data-pl-sim style="height:28px;font-size:11.5px;margin-left:6px">Demo: guest pays</button>' : ''}</div></div>`;
+        el.querySelector('[data-pl-copy]').onclick = async () => { try { await navigator.clipboard.writeText(r.short_url); toast('Link copied.'); } catch { toast(r.short_url); } };
+        el.querySelector('[data-pl-sim]')?.addEventListener('click', async () => { await sb.functions.invoke('razorpay', { body: { action: 'demo_pay', link_id: r.id } }); toast('Online payment received ✓'); location.reload(); });
+        el.querySelector('.ns-modal-foot .ns-btn')?.remove();
+        return false;
+      } }],
+    });
+    void m; void st;
+  });
   dlg.querySelectorAll('[data-receipt]').forEach((btn) => btn.addEventListener('click', async () => {
     const pay = d.payments.find((x) => x.code === btn.dataset.receipt);
     const prop = await q(sb.from('properties').select('*').eq('id', d.property.id).limit(1)).then((r) => r[0] || d.property).catch(() => d.property);

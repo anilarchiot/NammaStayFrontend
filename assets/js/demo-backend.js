@@ -228,14 +228,14 @@ function seedLeads() {
 }
 
 const DEFAULT_PLANS = [
-  { id: 'homestay_monthly', kind: 'homestay', name: 'Monthly', period_months: 1, price_paise: 99900, description: 'Homestays up to 6 rooms', min_units: null, max_units: 6, is_quote: false, is_active: true, sort: 1 },
-  { id: 'homestay_yearly', kind: 'homestay', name: 'Yearly', period_months: 12, price_paise: 999000, description: 'Homestays · 2 months free', min_units: null, max_units: 6, is_quote: false, is_active: true, sort: 2 },
-  { id: 'monthly', kind: 'hostel', name: 'Monthly', period_months: 1, price_paise: 165000, description: 'Billed every month', min_units: null, max_units: null, is_quote: false, is_active: true, sort: 10 },
-  { id: 'yearly', kind: 'hostel', name: 'Yearly', period_months: 12, price_paise: 1650000, description: '2 months free', min_units: null, max_units: null, is_quote: false, is_active: true, sort: 11 },
-  { id: 'hotel_s_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 249900, description: 'Hotels up to 20 rooms', min_units: null, max_units: 20, is_quote: false, is_active: true, sort: 20 },
-  { id: 'hotel_s_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 2499000, description: 'Up to 20 rooms · 2 months free', min_units: null, max_units: 20, is_quote: false, is_active: true, sort: 21 },
-  { id: 'hotel_m_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 399900, description: 'Hotels with 21–50 rooms', min_units: 21, max_units: 50, is_quote: false, is_active: true, sort: 22 },
-  { id: 'hotel_m_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 3999000, description: '21–50 rooms · 2 months free', min_units: 21, max_units: 50, is_quote: false, is_active: true, sort: 23 },
+  { id: 'homestay_monthly', kind: 'homestay', name: 'Monthly', period_months: 1, price_paise: 199900, description: 'Homestays up to 6 rooms', min_units: null, max_units: 6, is_quote: false, is_active: true, sort: 1 },
+  { id: 'homestay_yearly', kind: 'homestay', name: 'Yearly', period_months: 12, price_paise: 1299900, description: 'Homestays · save ₹10,989 a year', min_units: null, max_units: 6, is_quote: false, is_active: true, sort: 2 },
+  { id: 'monthly', kind: 'hostel', name: 'Monthly', period_months: 1, price_paise: 399900, description: 'Billed every month', min_units: null, max_units: null, is_quote: false, is_active: true, sort: 10 },
+  { id: 'yearly', kind: 'hostel', name: 'Yearly', period_months: 12, price_paise: 2799900, description: 'Save ₹19,989 a year', min_units: null, max_units: null, is_quote: false, is_active: true, sort: 11 },
+  { id: 'hotel_s_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 399900, description: 'Hotels up to 20 rooms', min_units: null, max_units: 20, is_quote: false, is_active: true, sort: 20 },
+  { id: 'hotel_s_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 2799900, description: 'Up to 20 rooms · save ₹19,989 a year', min_units: null, max_units: 20, is_quote: false, is_active: true, sort: 21 },
+  { id: 'hotel_m_monthly', kind: 'hotel', name: 'Monthly', period_months: 1, price_paise: 699900, description: 'Hotels with 21–50 rooms', min_units: 21, max_units: 50, is_quote: false, is_active: true, sort: 22 },
+  { id: 'hotel_m_yearly', kind: 'hotel', name: 'Yearly', period_months: 12, price_paise: 4599900, description: '21–50 rooms · save ₹37,989 a year', min_units: 21, max_units: 50, is_quote: false, is_active: true, sort: 23 },
   { id: 'hotel_l_quote', kind: 'hotel', name: 'Large hotels', period_months: 1, price_paise: 0, description: '50+ rooms — custom pricing', min_units: 51, max_units: null, is_quote: true, is_active: true, sort: 24 },
 ];
 function plansFor() {
@@ -261,7 +261,7 @@ function seedBilling() {
              other('Hilltop Backpackers', 'Manali', 'Aisha Khan', 'aisha@hilltop.co', 40, 'trial'),
              other('Beach Shack Stays', 'Goa', 'Joseph D’Souza', 'joseph@goabeach.in', 12, 'grace'),
              other('Mehta Guest House', 'Udaipur', 'Karan Mehta', 'karan@mehta.in', 8, 'expired')],
-    pending: [{ id: uuid(), property_id: null, property: 'Hilltop Backpackers', owner_email: 'aisha@hilltop.co', plan_id: 'yearly', amount_paise: 1650000,
+    pending: [{ id: uuid(), property_id: null, property: 'Hilltop Backpackers', owner_email: 'aisha@hilltop.co', plan_id: 'yearly', amount_paise: 2799900,
                 utr: '412398765432', submitted_at: D(-0.1) }],
   };
 }
@@ -272,6 +272,110 @@ function offerPct(guestId) {
 }
 const roomGst = (mode, fixed, perNight) => (mode === 'none' ? 0 : mode === 'fixed' ? fixed : perNight <= 100000 ? 0 : perNight <= 750000 ? 5 : 18);
 function fyOf(d) { const y = Number(d.slice(0, 4)); const m = Number(d.slice(5, 7)); const s = m >= 4 ? y : y - 1; return `${s}-${String(s + 1).slice(2)}`; }
+const OTA_NAMES = { airbnb: 'Airbnb', booking: 'Booking.com', agoda: 'Agoda', vrbo: 'Vrbo', google: 'Google Calendar', other: 'OTA' };
+function demoOtaSync() {
+  const results = [];
+  for (const f of DB.feeds || []) {
+    if (/fail|broken/i.test(f.import_url)) { Object.assign(f, { last_synced_at: new Date().toISOString(), last_status: 'error', last_error: 'The OTA answered 404 — check the link is still valid.' }); results.push({ feed: f.id, error: f.last_error }); continue; }
+    let added = 0;
+    if (!DB.blocks.some((k) => k.feed_id === f.id)) {
+      let h = 0; for (const ch of f.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      let day = addDays(ymd(), 3 + (h % 6));
+      for (let n = 0; n < 2 && day < addDays(ymd(), 60); ) {
+        const len = 2 + ((h >>> (n * 3)) % 2);
+        const a = new Date(`${day}T14:00:00+05:30`).toISOString(); const z = new Date(`${addDays(day, len)}T11:00:00+05:30`).toISOString();
+        if (!booked(f.bed_id, a, z) && !blocked(f.bed_id, a, z)) {
+          DB.blocks.push({ id: uuid(), property_id: P, bed_id: f.bed_id, starts_at: a, ends_at: z, reason: `🔗 ${OTA_NAMES[f.channel] || 'OTA'} · reserved`,
+            feed_id: f.id, external_uid: `demo-${f.id}-${n}`, created_by: null, created_at: new Date().toISOString() });
+          added++; n++; day = addDays(day, len + 4 + (h % 5));
+        } else day = addDays(day, 1);
+      }
+    }
+    Object.assign(f, { last_synced_at: new Date().toISOString(), last_status: 'ok', last_error: null, events_count: DB.blocks.filter((k) => k.feed_id === f.id).length });
+    results.push({ feed: f.id, added, updated: 0, removed: 0, clashes: 0 });
+  }
+  save(); return { synced: results.length, results };
+}
+function seedExpenses() {
+  const out = []; const t = ymd(); const [y, m] = t.split('-').map(Number);
+  const add = (day, category, rupee, method, vendor, note) => out.push({ id: uuid(), property_id: P, spent_on: day, category, amount_paise: rupee * 100, method, vendor, note, created_by: ME, created_at: new Date().toISOString() });
+  const firstPay = (DB.payments || []).map((x) => x.received_at.slice(0, 7)).sort()[0] || `${y}-${String(m).padStart(2, '0')}`;
+  for (let k = 5; k >= 0; k--) {
+    const d = new Date(Date.UTC(y, m - 1 - k, 1)); const mm = d.toISOString().slice(0, 7);
+    if (mm < firstPay) continue;                                     // only months that have sample income
+    const day = (n) => { const x = `${mm}-${String(n).padStart(2, '0')}`; return x > t ? t : x; };
+    if (day(1) > t) continue;
+    add(day(1), 'rent', 18000, 'bank', 'Landlord', 'Monthly rent');
+    if (day(5) <= t) add(day(5), 'salaries', 14000, 'bank', 'Front desk + housekeeping', null);
+    if (day(8) <= t) add(day(8), 'electricity', 4200 + (k * 370) % 1500, 'upi', 'TNEB', null);
+    if (day(10) <= t) add(day(10), 'internet', 1179, 'upi', 'ACT Fibernet', null);
+    if (day(12) <= t) add(day(12), 'laundry', 2600 + (k * 210) % 900, 'cash', 'Raja Laundry', 'Bedsheets & towels');
+    if (day(15) <= t) add(day(15), 'supplies', 1800 + (k * 150) % 700, 'cash', 'Supermarket', 'Toiletries, cleaning');
+    if (day(20) <= t) add(day(20), 'ota_commission', 3100 + (k * 420) % 1600, 'bank', 'Hostelworld', 'Commission');
+    if (k % 2 === 0 && day(24) <= t) add(day(24), 'repairs', 1500, 'cash', 'Electrician', 'Fan repair');
+  }
+  return out;
+}
+function profitSummary(from, to) {
+  const tz = (iso) => new Date(new Date(iso).getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const net = (x) => (x.kind === 'refund' ? -x.amount_paise : x.amount_paise);
+  const rev = DB.payments.filter((x) => tz(x.received_at) >= from && tz(x.received_at) <= to).reduce((a, x) => a + net(x), 0);
+  const exps = DB.expenses.filter((x) => x.spent_on >= from && x.spent_on <= to);
+  const exp = exps.reduce((a, x) => a + x.amount_paise, 0);
+  const cats = {}; exps.forEach((x) => { cats[x.category] = (cats[x.category] || 0) + x.amount_paise; });
+  const [y, m] = to.split('-').map(Number); const months = [];
+  for (let k = 5; k >= 0; k--) {
+    const mm = new Date(Date.UTC(y, m - 1 - k, 1)).toISOString().slice(0, 7);
+    months.push({ month: mm, revenue_paise: DB.payments.filter((x) => tz(x.received_at).startsWith(mm)).reduce((a, x) => a + net(x), 0),
+      expenses_paise: DB.expenses.filter((x) => x.spent_on.startsWith(mm)).reduce((a, x) => a + x.amount_paise, 0) });
+  }
+  return { revenue_paise: rev, expenses_paise: exp, profit_paise: rev - exp, margin: rev > 0 ? Math.round(((rev - exp) * 1000) / rev) / 10 : null,
+    by_category: Object.entries(cats).map(([category, total_paise]) => ({ category, total_paise })).sort((a, b) => b.total_paise - a.total_paise), months };
+}
+function demoRazorpay(body) {
+  if (body.action === 'test') { if (!DB.rzp) return { error: 'Save your Razorpay keys first.' }; return { ok: true, mode: DB.rzp.key_id.startsWith('rzp_live') ? 'live' : 'test' }; }
+  if (body.action === 'create') {
+    if (!DB.rzp) return { error: 'Connect Razorpay first: Settings → Property details → Online payments.' };
+    const b = DB.bookings.find((x) => x.id === body.booking_id); if (!b) return { error: 'Booking not found.' };
+    const bal = b.total_paise - b.paid_paise;
+    if (!(body.amount_paise >= 100 && body.amount_paise <= bal)) return { error: 'Amount must be between ₹1 and the balance.' };
+    const id = 'plink_' + uuid().replace(/-/g, '').slice(0, 14); const short_url = 'https://rzp.io/rzp/' + id.slice(6, 14);
+    DB.paylinks.push({ id: uuid(), property_id: P, booking_id: b.id, rzp_link_id: id, short_url, amount_paise: body.amount_paise, status: 'created', created_by: ME, created_at: new Date().toISOString(), paid_at: null });
+    audit(b, 'paylink_created', { amount_paise: body.amount_paise, url: short_url }); return { id, short_url, amount_paise: body.amount_paise };
+  }
+  if (body.action === 'demo_pay') {
+    const l = DB.paylinks.find((x) => x.rzp_link_id === body.link_id); if (!l || l.status === 'paid') return { already: true };
+    const b = DB.bookings.find((x) => x.id === l.booking_id); const amt = Math.min(l.amount_paise, b.total_paise - b.paid_paise);
+    if (amt > 0) { const pay = { id: uuid(), property_id: P, booking_id: b.id, code: 'TXN-' + DB.seq.txn++, kind: 'payment', method: 'upi', amount_paise: amt,
+      reference: 'pay_' + uuid().replace(/-/g, '').slice(0, 14), note: 'Paid online — Razorpay payment link', received_at: new Date().toISOString(), received_by: ME, created_at: new Date().toISOString() };
+      DB.payments.push(pay); b.paid_paise += amt; }
+    Object.assign(l, { status: 'paid', paid_at: new Date().toISOString() });
+    notify('Online payment received', `${b.code} · paid via payment link`, b.id); return { paid: 1 };
+  }
+  if (body.action === 'check') return { paid: 0 };
+  return { error: 'Unknown action.' };
+}
+// ---- NammaStay subscription invoices (demo)
+function demoInvoiceDoc({ id, propertyName, propertyId, amount, planName, start, end, utr, submitted }) {
+  const st = DB.invset; const P0 = DB.properties[0]; const own = propertyId === P;
+  const gst = !!st.gstin; const rate = gst ? Number(st.gst_rate) : 0;
+  const taxable = Math.round(amount * 100 / (100 + rate)); const tax = amount - taxable;
+  const buyerState = own ? (P0.bill_gstin ? P0.bill_gstin.slice(0, 2) : P0.bill_state) : null; const inter = gst && !!buyerState && buyerState !== st.state_code;
+  const d0 = new Date(); const y = d0.getMonth() >= 3 ? d0.getFullYear() : d0.getFullYear() - 1; const fy = `${y}-${String(y + 1).slice(2)}`;
+  DB.invCount = (DB.invCount || 0) + 1; const number = `${st.invoice_prefix}/${fy}/${String(DB.invCount).padStart(4, '0')}`;
+  const fd = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).replace('Sept', 'Sep');
+  const doc = { number, issued_at: new Date().toISOString(), fy, subscription: true, title: gst ? 'Tax invoice' : 'Invoice', gst, inter_state: inter,
+    seller: { name: 'NammaStay', legal_name: st.legal_name || 'NammaStay', gstin: st.gstin, address: st.address, phone: '+91 98400 00000', email: 'billing@thenammastay.com' },
+    buyer: { name: own ? (P0.bill_name || P0.name) : propertyName, company: own && P0.bill_name && P0.bill_name !== P0.name ? P0.name : null, gstin: own ? P0.bill_gstin : null,
+      address: own ? (P0.bill_address || [P0.address, P0.city].filter(Boolean).join(', ')) : null, phone: null, email: null },
+    period: { plan: planName, from: start, to: end, property: propertyName },
+    lines: [{ desc: `NammaStay subscription — ${planName} plan (${fd(start)} → ${fd(end)}) · ${propertyName}`, sac: st.sac, qty: 1, rate_paise: amount, amount_paise: amount, gst_rate: rate, taxable_paise: taxable, tax_paise: tax }],
+    amount_paise: amount, taxable_paise: taxable, cgst_paise: gst && !inter ? Math.floor(tax / 2) : 0, sgst_paise: gst && !inter ? tax - Math.floor(tax / 2) : 0, igst_paise: gst && inter ? tax : 0,
+    paid_paise: amount, balance_paise: 0, payments: [{ code: 'UPI', kind: 'payment', method: 'upi', amount_paise: amount, received_at: submitted, reference: utr }] };
+  DB.pinv.unshift({ number, issued_at: doc.issued_at, total_paise: amount, payment_id: id, property: propertyName, property_id: propertyId, doc });
+  if (own) notify('Invoice ' + number + ' is ready', 'Settings → Billing → Your invoices', null);
+  return doc;
+}
 function allProps() {
   const m = DB.billing.mine; const now = Date.now();
   const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: 'Hostel Owner', owner_email: 'owner@demo.nammastay',
@@ -306,9 +410,26 @@ function load() {
     .map(([name, category, price_paise, unit], i) => ({ id: uuid(), property_id: P, name, category, price_paise, unit, is_active: true, sort: i + 1, created_at: new Date().toISOString() }));
   if (!DB.charges) DB.charges = [];
   DB.bookings.forEach((b) => { if (b.charges_paise == null) b.charges_paise = 0; });
-  DB.beds.forEach((b) => { if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 }); });
+  DB.beds.forEach((b) => { if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 }); if (!b.ical_token) b.ical_token = uuid(); });
+  if (!DB.feeds) DB.feeds = [];
+  if (!DB.expenses) DB.expenses = seedExpenses();
+  if (!DB.paylinks) DB.paylinks = [];
+  if (!DB.invset) DB.invset = { legal_name: 'Namma Groups', gstin: '33AAKFN1234C1Z8', address: 'Little Mount, Saidapet, Chennai 600015', state_code: '33', sac: '998314', gst_rate: 18, invoice_prefix: 'NS' };
+  if (!DB.pinv) {
+    DB.pinv = []; const now = Date.now();
+    [[95, 'Monthly'], [65, 'Monthly']].forEach(([ago, plan]) => demoInvoiceDoc({ id: uuid(), propertyName: DB.properties[0].name, propertyId: P, amount: 399900, planName: plan,
+      start: new Date(now - ago * 864e5).toISOString(), end: new Date(now - (ago - 30) * 864e5).toISOString(), utr: '6' + String(412000000 + ago * 777), submitted: new Date(now - ago * 864e5).toISOString() }));
+    DB.notifications = (DB.notifications || []).filter((n) => !/^Invoice NS/.test(n.title || ''));
+  }
+  if (!DB.rem) {
+    const d = (n) => new Date(Date.now() + n * 864e5).toISOString();
+    DB.rem = [['Hilltop Backpackers', 'Manali', 'Aisha Khan', '+91 98160 22113', 'aisha@hilltop.co', 'trial_3d', d(3)], ['Beach Shack Stays', 'Goa', 'Joseph D’Souza', '+91 98220 44551', 'joseph@goabeach.in', 'expired', d(-1)],
+      ['Blue Door Hostel', 'Pondicherry', 'Meera Krishnan', '+91 94430 77120', 'meera@bluedoor.in', 'renew_7d', d(6)]]
+      .map(([property, city, owner, phone, email, kind, ends_at], i) => ({ id: uuid(), kind, ends_at, created_at: new Date(Date.now() - i * 36e5).toISOString(), emailed_at: i === 0 ? new Date().toISOString() : null,
+        whatsapp_done_at: null, property_id: null, property, city, phone, owner, email }));
+  }
   if (!DB.billing) DB.billing = seedBilling();
-  if (!DB.billing.plans.some((p) => p.kind)) DB.billing.plans = DEFAULT_PLANS.map((x) => ({ ...x }));
+  if (!DB.billing.plans.some((p) => p.kind) || DB.billing.plans.find((p) => p.id === 'monthly')?.price_paise === 165000) DB.billing.plans = DEFAULT_PLANS.map((x) => ({ ...x }));
 
   save();
   return DB;
@@ -771,6 +892,8 @@ const RPC = {
     const end = new Date(start); end.setMonth(end.getMonth() + plan.period_months);
     Object.assign(target, { paid_until: end.toISOString(), plan_id: plan.id });
     if (own) Object.assign(own, { status: 'approved', review_note: p_note || null, period_start: start.toISOString(), period_end: end.toISOString() });
+    demoInvoiceDoc({ id: p_id, propertyName: sp.property || DB.properties[0].name, propertyId: sp.property_id === P ? P : null, amount: sp.amount_paise,
+      planName: plan.name, start: start.toISOString(), end: end.toISOString(), utr: sp.utr, submitted: sp.submitted_at || new Date().toISOString() });
     if (sp.property_id === P) notify('Subscription payment confirmed', 'Paid until ' + end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), null);
     return { status: 'approved', paid_until: end.toISOString() };
   },
@@ -962,6 +1085,58 @@ const RPC = {
       payments: DB.payments.filter((x) => x.booking_id === b.id).map((x) => ({ code: x.code, kind: x.kind, method: x.method, amount_paise: x.amount_paise, received_at: x.received_at, reference: x.reference })) };
     DB.invoices.push({ booking_id: b.id, number, doc }); return doc;
   },
+  save_expense: ({ p }) => {
+    if (!(p.amount_paise >= 1)) fail('Enter the amount.');
+    if (p.id) { const x = DB.expenses.find((e) => e.id === p.id) || fail('Expense not found.'); Object.assign(x, { spent_on: p.spent_on || ymd(), category: p.category || x.category,
+      amount_paise: p.amount_paise, method: p.method || x.method, vendor: p.vendor || null, note: p.note || null }); return x.id; }
+    const x = { id: uuid(), property_id: P, spent_on: p.spent_on || ymd(), category: p.category || 'other', amount_paise: p.amount_paise, method: p.method || 'cash',
+      vendor: p.vendor || null, note: p.note || null, created_by: ME, created_at: new Date().toISOString() };
+    DB.expenses.push(x); return x.id;
+  },
+  delete_expense: ({ p_id }) => { DB.expenses = DB.expenses.filter((x) => x.id !== p_id); return null; },
+  profit_summary: ({ p_from, p_to }) => profitSummary(p_from, p_to),
+  razorpay_status: () => (DB.rzp ? { connected: true, mode: DB.rzp.key_id.startsWith('rzp_live') ? 'live' : 'test', key_hint: DB.rzp.key_id.slice(0, 9) + '…' + DB.rzp.key_id.slice(-4), webhook: !!DB.rzp.hook }
+    : { connected: false, mode: null, key_hint: null, webhook: false }),
+  set_razorpay_keys: ({ p_key_id, p_key_secret, p_webhook_secret }) => {
+    if (!p_key_id) { DB.rzp = null; return null; }
+    if (!/^rzp_(test|live)_[A-Za-z0-9]{8,32}$/.test(p_key_id)) fail('The Key ID looks like rzp_live_XXXXXXXX (Razorpay → Account & Settings → API Keys).');
+    if (!p_key_secret && !DB.rzp?.secret) fail('Enter the Key Secret too.');
+    DB.rzp = { key_id: p_key_id, secret: p_key_secret || DB.rzp?.secret, hook: p_webhook_secret || DB.rzp?.hook || null }; return null;
+  },
+  paylink_list: ({ p_booking }) => DB.paylinks.filter((l) => l.booking_id === p_booking).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
+  admin_mfa_info: () => ({ admin: true, has_factor: true, aal: 'aal2' }),
+  set_billing_details: ({ p }) => {
+    const g = String(p.bill_gstin || '').toUpperCase(); if (g && !/^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/.test(g)) fail('Check the GSTIN — 15 characters, e.g. 33ABCDE1234F1Z5.');
+    Object.assign(DB.properties[0], { bill_name: p.bill_name || null, bill_gstin: g || null, bill_address: p.bill_address || null, bill_state: g ? g.slice(0, 2) : (p.bill_state || null) }); return null;
+  },
+  my_billing_details: () => { const x = DB.properties[0]; return { bill_name: x.bill_name || null, bill_gstin: x.bill_gstin || null, bill_address: x.bill_address || null, bill_state: x.bill_state || null, name: x.name }; },
+  my_platform_invoices: () => DB.pinv.filter((x) => x.property_id === P),
+  admin_platform_invoices: ({ p_property }) => DB.pinv.filter((x) => !p_property || x.property_id === p_property),
+  admin_invoice_settings: () => ({ ...DB.invset, payee_name: DB.billing.settings?.payee_name, support_email: DB.billing.settings?.support_email, support_whatsapp: DB.billing.settings?.support_whatsapp }),
+  admin_save_invoice_settings: ({ p }) => {
+    const g = String(p.gstin || '').toUpperCase(); if (g && !/^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/.test(g)) fail('Check the GSTIN — 15 characters.');
+    Object.assign(DB.invset, { legal_name: p.legal_name || null, gstin: g || null, address: p.address || null, state_code: g ? g.slice(0, 2) : (p.state_code || DB.invset.state_code),
+      sac: p.sac || DB.invset.sac, gst_rate: Number(p.gst_rate ?? DB.invset.gst_rate), invoice_prefix: (p.invoice_prefix || DB.invset.invoice_prefix).toUpperCase() }); return null;
+  },
+  admin_backfill_invoices: () => 0,
+  run_billing_reminders: () => 0,
+  admin_reminders: ({ p_all }) => DB.rem.filter((r) => p_all || !r.whatsapp_done_at).map((r) => ({ ...r, text: { title: { trial_3d: 'Your free trial ends in 3 days', trial_1d: 'Your free trial ends tomorrow',
+    trial_ended: 'Your free trial has ended', renew_7d: 'Your NammaStay plan renews in 7 days', renew_1d: 'Your NammaStay plan ends tomorrow', expired: 'Your NammaStay plan has ended' }[r.kind], body: '' } })),
+  admin_mark_reminder: ({ p_id, p_done }) => { const r = DB.rem.find((x) => x.id === p_id); if (r) r.whatsapp_done_at = p_done ? new Date().toISOString() : null; return null; },
+  ota_overview: () => DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id).sort((a, b) => a.sort - b.sort).map((b) => ({
+    bed_id: b.id, label: b.label, room: r.name, is_active: b.is_active, token: b.ical_token,
+    feeds: (DB.feeds || []).filter((f) => f.bed_id === b.id) }))),
+  ota_feed_save: ({ p }) => {
+    const url = String(p.import_url || '').trim();
+    if (!/^https:\/\//.test(url)) fail('Paste the full calendar link — it starts with https://');
+    if (/thenammastay|\/functions\/v1\/ical/i.test(url)) fail('That’s a NammaStay link — paste the link from the OTA instead.');
+    DB.feeds = DB.feeds || [];
+    if (DB.feeds.some((f) => f.bed_id === p.bed_id && f.import_url === url)) fail('That calendar link is already added for this bed/room.');
+    const f = { id: uuid(), property_id: P, bed_id: p.bed_id, channel: p.channel || 'other', import_url: url, label: null, last_synced_at: null, last_status: null, last_error: null, events_count: 0, created_at: new Date().toISOString() };
+    DB.feeds.push(f); return f.id;
+  },
+  ota_feed_delete: ({ p_feed }) => { DB.feeds = (DB.feeds || []).filter((f) => f.id !== p_feed); DB.blocks = DB.blocks.filter((k) => k.feed_id !== p_feed); return null; },
+  ota_new_token: ({ p_bed }) => { const b = bedOf(p_bed); b.ical_token = uuid(); return b.ical_token; },
   demo_checkin_token: () => {
     const b = DB.bookings.filter((x) => ['pending', 'confirmed'].includes(x.status) && T(x.check_in_at) > Date.now() && !x.self_checkin_at)
       .sort((x, y) => T(x.check_in_at) - T(y.check_in_at))[0];
@@ -970,7 +1145,7 @@ const RPC = {
 };
 
 // ---------------------------------------------------------------- table access (the few direct reads/writes pages make)
-const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications', bed_blocks: 'blocks', bookings: 'bookings', extra_items: 'extras', booking_charges: 'charges' };
+const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications', bed_blocks: 'blocks', bookings: 'bookings', extra_items: 'extras', booking_charges: 'charges', expenses: 'expenses', payment_links: 'paylinks' };
 function table(name) {
   const st = { filters: [], order: [], limit: null, op: 'select', payload: null, head: false, returning: false };
   const run = async (single) => {
@@ -1049,6 +1224,10 @@ export function createDemoClient() {
   const ok = (data) => ({ data, error: null });
   return {
     demo: true,
+    functions: { invoke: async (name, opts) => { await new Promise((r) => setTimeout(r, 250));
+      if (name === 'ota-sync') { load(); return { data: demoOtaSync(), error: null }; }
+      if (name === 'razorpay') { load(); const r = demoRazorpay(opts?.body || {}); save(); return r.error ? { data: r, error: { message: r.error } } : { data: r, error: null }; }
+      return { data: null, error: { message: `Function ${name} isn’t available in the demo.` } }; } },
     reset: resetDemo,
     kind: demoKind,
     setKind: setDemoKind,
