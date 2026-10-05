@@ -12,7 +12,7 @@ window.NAMMASTAY_CONFIG = {
   supabaseUrl: '',
   supabaseAnonKey: '',
   siteUrl: 'https://thenammastay.com',
-  adminUrl: 'https://admin.thenammastay.com'   // NammaStay admin website (old admin links redirect here)
+  adminUrl: 'https://admin.thenammastay.com'
 };
 
 (function () {

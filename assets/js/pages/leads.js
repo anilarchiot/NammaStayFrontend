@@ -1,5 +1,5 @@
 // Leads from the homepage "Get early access" form. Visible only to NammaStay platform admins.
-import { page, rpc, content, setSubtitle, headerActions, headerSearch, esc, fmtDayTime, modal, toast, field, options,
+import { adminPage, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, fmtDayTime, modal, toast, field, options,
   downloadCsv, showFatal, $, $$ } from '../core.js';
 
 const STATUS = [['new', 'New', 'amber'], ['contacted', 'Contacted', 'blue'], ['demo_booked', 'Demo booked', 'purple'], ['won', 'Won', 'green'], ['lost', 'Lost', 'grey']];
@@ -7,7 +7,7 @@ const LABEL = Object.fromEntries(STATUS.map(([v, l]) => [v, l]));
 const COLOR = Object.fromEntries(STATUS.map(([v, , c]) => [v, c]));
 const TYPE = { hostel: 'Hostel', homestay: 'Homestay', hotel: 'Hotel / guest house', other: 'Other' };
 
-page(null, async (ctx) => {
+adminPage(async (ctx) => {
   if (!ctx.isAdmin) { showFatal('Leads are only visible to NammaStay admins.'); return; }
   const state = { status: '', q: '', cursor: null, rows: [] };
   const head = headerActions();

@@ -1,16 +1,17 @@
 // NammaStay admin: every subscribing property, UPI payments to confirm, prices & settings.
-import { page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
+import { openPlatformInvoice, GST_STATES, options, adminPage, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
   confirmDialog, toast, field, showFatal, $, $$ } from '../core.js';
 
 const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Complimentary', 'grey'], suspended: ['Suspended', 'red'] };
 
-page(null, async (ctx) => {
+adminPage(async (ctx) => {
   if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
   let q = '';
   headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div>';
   headerSearch('Search property, city, owner…', (v) => { q = v; draw(); });
 
-  async function draw() {
+  async function draw() { await drawInner(); invoiceCard(); }
+  async function drawInner() {
     const d = await rpc('admin_subscriptions', { p_q: q || null });
     const plan = Object.fromEntries(d.plans.map((p) => [p.id, p]));
     const count = (s) => d.properties.filter((p) => p.state === s).length;
@@ -128,3 +129,44 @@ page(null, async (ctx) => {
   }
   await draw();
 });
+
+// ------------------------------------------------------------ GST invoices for subscriptions (NammaStay → properties)
+async function invoiceCard() {
+  const st = await rpc('admin_invoice_settings').catch(() => null);
+  if (!st || document.getElementById('inv-set')) return;               // database not updated yet (023)
+  const list = await rpc('admin_platform_invoices', { p_property: null }).catch(() => []);
+  document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
+  <div class="ns-card" style="display:flex;flex-direction:column;gap:14px" id="inv-set">
+    <div class="ns-h3">Invoice settings (your subscription invoices)</div>
+    <div class="ns-muted" style="font-size:12.5px">An invoice is created automatically each time you approve a payment, numbered like ${esc(st.invoice_prefix)}/2026-27/0001. Prices include GST; same state → CGST + SGST, other states → IGST. Without your GSTIN the invoice shows no GST. Confirm the SAC code and rate with your CA.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      ${field('Legal / business name', `<input class="ns-input" name="legal_name" value="${esc(st.legal_name || '')}" placeholder="e.g. Namma Groups">`)}
+      ${field('Your GSTIN (optional)', `<input class="ns-input" name="gstin" maxlength="15" value="${esc(st.gstin || '')}" placeholder="33ABCDE1234F1Z5" style="text-transform:uppercase">`)}
+      ${field('Address on invoice', `<input class="ns-input" name="address" maxlength="300" value="${esc(st.address || '')}" placeholder="Street, city, PIN">`)}
+      ${field('Your state', `<select class="ns-input" name="state_code">${options(GST_STATES, st.state_code || '33')}</select>`)}
+      ${field('SAC code', `<input class="ns-input" name="sac" value="${esc(st.sac || '')}">`)}
+      ${field('GST %', `<input class="ns-input" name="gst_rate" type="number" min="0" max="28" step="0.5" value="${Number(st.gst_rate)}">`)}
+      ${field('Invoice prefix', `<input class="ns-input" name="invoice_prefix" maxlength="10" value="${esc(st.invoice_prefix || 'NS')}" style="text-transform:uppercase">`)}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ns-btn" id="inv-save">Save invoice settings</button>
+      <button type="button" class="ns-btn-ghost" id="inv-backfill">Create invoices for past payments</button></div>
+    <div><div class="ns-muted" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin:6px 0">Recent invoices (${list.length})</div>
+      ${list.length ? list.slice(0, 20).map((x, i) => `<div class="pl-row"><span><b>${esc(x.number)}</b> · ${esc(x.property)} · ${fmtDate(x.issued_at)}</span>
+          <span style="display:flex;gap:8px;align-items:center"><b>${rupees(x.total_paise)}</b><button type="button" class="ns-btn-ghost" style="height:30px;font-size:12px" data-ainv="${i}">View / PDF</button></span></div>`).join('')
+        : '<div class="ns-empty" style="padding:12px">No invoices yet — approve a payment, or create invoices for past payments.</div>'}</div>
+  </div>`);
+  document.querySelectorAll('[data-ainv]').forEach((b) => b.onclick = () => openPlatformInvoice(list[+b.dataset.ainv].doc));
+  const v = (n) => document.querySelector(`#inv-set [name=${n}]`).value.trim();
+  document.getElementById('inv-save').onclick = async (e) => {
+    e.target.disabled = true;
+    try { await rpc('admin_save_invoice_settings', { p: { legal_name: v('legal_name'), gstin: v('gstin').toUpperCase(), address: v('address'), state_code: v('state_code'),
+      sac: v('sac'), gst_rate: v('gst_rate'), invoice_prefix: v('invoice_prefix').toUpperCase() } }); toast('Invoice settings saved — used for new invoices.'); }
+    catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+  };
+  document.getElementById('inv-backfill').onclick = async (e) => {
+    e.target.disabled = true;
+    try { const n = await rpc('admin_backfill_invoices'); toast(n ? `${n} invoice${n > 1 ? 's' : ''} created.` : 'All approved payments already have invoices.');
+      document.getElementById('inv-set').remove(); invoiceCard(); }
+    catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
+  };
+}
