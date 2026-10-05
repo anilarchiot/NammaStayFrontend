@@ -11,6 +11,8 @@ const DEMO_ON = (() => {
   } catch { return false; }
 })();
 export const DEMO = DEMO_ON;
+/** Base URL of the server functions (iCal links, OTA sync) */
+export const FUNCTIONS_URL = (CFG.supabaseUrl ? CFG.supabaseUrl.replace(/\/$/, '') : 'https://YOUR-PROJECT.supabase.co') + '/functions/v1';
 export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
 export const sb = LIVE
@@ -19,6 +21,8 @@ export const sb = LIVE
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
 export const TZ = 'Asia/Kolkata';
+/** The separate NammaStay admin website */
+export const ADMIN_URL = String(CFG.adminUrl || 'https://admin.thenammastay.com').replace(/\/$/, '');
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -100,6 +104,8 @@ export async function q(promise, { withCount = false } = {}) {
 const PAGE_ROLES = {
   dashboard: null, bookings: null, calendar: null, rooms: null, payments: null,
   guests: ['owner', 'manager', 'front_desk'],
+  ota: ['owner', 'manager'],
+  expenses: ['owner', 'manager', 'accountant'],
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
   settings: ['owner', 'manager'],
@@ -204,6 +210,14 @@ export function guestFace(name = '', size = 22) {
     ${glasses ? '<g stroke="#1F2937" stroke-width="1" fill="none"><circle cx="16.2" cy="22.5" r="3"/><circle cx="23.8" cy="22.5" r="3"/><path d="M19.2 22.5h1.6"/></g>' : ''}</svg>`;
 }
 
+// ---- OTA channels (calendar sync)
+export const OTA = {
+  airbnb: { name: 'Airbnb', color: '#FF5A5F' }, booking: { name: 'Booking.com', color: '#003580' }, agoda: { name: 'Agoda', color: '#5C2D91' },
+  vrbo: { name: 'Vrbo', color: '#1E64C8' }, google: { name: 'Google Calendar', color: '#188038' }, other: { name: 'Other', color: '#6B7280' },
+};
+export const otaOf = (reason) => { const m = /^🔗 (.+?) ·/.exec(String(reason || '')); if (!m) return null;
+  const key = Object.keys(OTA).find((k) => OTA[k].name === m[1]) || 'other'; return { key, ...OTA[key], label: m[1] }; };
+
 // ---- countries (nationality dropdowns): India first, then A–Z
 export const COUNTRIES = 'Afghanistan,Albania,Algeria,Andorra,Angola,Antigua and Barbuda,Argentina,Armenia,Australia,Austria,Azerbaijan,Bahamas,Bahrain,Bangladesh,Barbados,Belarus,Belgium,Belize,Benin,Bhutan,Bolivia,Bosnia and Herzegovina,Botswana,Brazil,Brunei,Bulgaria,Burkina Faso,Burundi,Cabo Verde,Cambodia,Cameroon,Canada,Central African Republic,Chad,Chile,China,Colombia,Comoros,Congo,Costa Rica,Côte d’Ivoire,Croatia,Cuba,Cyprus,Czechia,Democratic Republic of the Congo,Denmark,Djibouti,Dominica,Dominican Republic,Ecuador,Egypt,El Salvador,Equatorial Guinea,Eritrea,Estonia,Eswatini,Ethiopia,Fiji,Finland,France,Gabon,Gambia,Georgia,Germany,Ghana,Greece,Grenada,Guatemala,Guinea,Guinea-Bissau,Guyana,Haiti,Honduras,Hong Kong,Hungary,Iceland,India,Indonesia,Iran,Iraq,Ireland,Israel,Italy,Jamaica,Japan,Jordan,Kazakhstan,Kenya,Kiribati,Kuwait,Kyrgyzstan,Laos,Latvia,Lebanon,Lesotho,Liberia,Libya,Liechtenstein,Lithuania,Luxembourg,Macau,Madagascar,Malawi,Malaysia,Maldives,Mali,Malta,Marshall Islands,Mauritania,Mauritius,Mexico,Micronesia,Moldova,Monaco,Mongolia,Montenegro,Morocco,Mozambique,Myanmar,Namibia,Nauru,Nepal,Netherlands,New Zealand,Nicaragua,Niger,Nigeria,North Korea,North Macedonia,Norway,Oman,Pakistan,Palau,Palestine,Panama,Papua New Guinea,Paraguay,Peru,Philippines,Poland,Portugal,Qatar,Romania,Russia,Rwanda,Saint Kitts and Nevis,Saint Lucia,Saint Vincent and the Grenadines,Samoa,San Marino,São Tomé and Príncipe,Saudi Arabia,Senegal,Serbia,Seychelles,Sierra Leone,Singapore,Slovakia,Slovenia,Solomon Islands,Somalia,South Africa,South Korea,South Sudan,Spain,Sri Lanka,Sudan,Suriname,Sweden,Switzerland,Syria,Taiwan,Tajikistan,Tanzania,Thailand,Timor-Leste,Togo,Tonga,Trinidad and Tobago,Tunisia,Turkey,Turkmenistan,Tuvalu,Uganda,Ukraine,United Arab Emirates,United Kingdom,United States,Uruguay,Uzbekistan,Vanuatu,Vatican City,Venezuela,Vietnam,Yemen,Zambia,Zimbabwe'.split(',');
 /** <option> list for a nationality <select>; keeps an older free-text value that isn't in the list */
@@ -245,6 +259,59 @@ export function page(key, fn) {
       console.error(e);
       showFatal(e.message || 'Something went wrong.');
     }
+  })();
+}
+
+// ---------------------------------------------------------------- NammaStay admin area (separate login: admin-login.html)
+const ADMIN_NAV = [
+  ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
+  ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
+  ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
+];
+const hostelHref = (page) => { try { return new URL(SITE_URL).origin === location.origin || location.protocol === 'file:' ? page : `${SITE_URL}/${page}`; } catch { return page; } };
+function adminChrome(user, hasProperty) {
+  document.body.classList.add('ns-admin-area');
+  const brand = $('.ns-sidebar .ns-brand');
+  if (brand) { brand.href = 'admin.html'; if (!brand.querySelector('.ns-admin-tag')) brand.insertAdjacentHTML('beforeend', '<span class="ns-admin-tag">Admin</span>'); }
+  const here = __PATH().split('/').pop() || 'admin.html';
+  const nav = $('.ns-sidebar .ns-nav');
+  if (nav) nav.innerHTML = ADMIN_NAV.map(([href, label, svg]) => `<a href="${href}" class="ns-nav-link${here === href ? ' is-active" aria-current="page' : ''}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label}</span></a>`).join('')
+    + (hasProperty ? `<div class="ns-nav-section">Your property</div><a href="${hostelHref('dashboard.html')}" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>Open hostel app</span></a>` : '');
+  $$('.ns-sidebar a[href="settings.html"], .ns-sidebar .ns-demo-badge, .ns-bell, .ns-mobilebar .ns-bell').forEach((e) => e.remove());
+  const nm = $('.ns-sidebar .ns-user-name'); const sub = $('.ns-sidebar .ns-user-sub'); const av = $('.ns-sidebar .ns-user .ns-avatar, .ns-sidebar .ns-user > div:first-child');
+  if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'NammaStay admin';
+  if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
+  const so = $('.ns-sidebar .ns-signout');
+  if (so) { so.href = 'admin-login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); }); }
+}
+/** Admin screens: their own login, their own menu, no property needed. */
+export function adminPage(fn) {
+  if (NOT_CONNECTED) { location.replace('admin-login.html'); return; }
+  (async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return; }
+      if (!DEMO) {                                                      // 2-step login: set up / code entered?
+        const mfa = await rpc('admin_mfa_info').catch(() => null);
+        if (mfa && mfa.admin && (!mfa.has_factor || mfa.aal !== 'aal2')) {
+          location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return;
+        }
+      }
+      const isAdmin = await rpc('is_platform_admin').catch(() => false);
+      const mems = isAdmin ? await rpc('my_memberships').catch(() => []) : [];
+      adminChrome(session.user, (mems || []).length > 0);
+      if (!isAdmin) {
+        const host = $('.ns-content'); host.style.padding = '24px';
+        host.innerHTML = `<div class="ns-card" style="max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
+          <div class="ns-h3">This account doesn’t have NammaStay admin access.</div>
+          <button type="button" class="ns-btn" id="adm-switch">Sign in with an admin account</button></div>`;
+        $('#adm-switch').onclick = async () => { await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); };
+        reveal(); return;
+      }
+      await fn({ user: session.user, isAdmin: true });
+      reveal();
+    } catch (e) { console.error(e); showFatal(e.message || 'Something went wrong.'); }
   })();
 }
 
@@ -301,7 +368,7 @@ async function boot(key) {
     showFatal('Your role doesn’t have access to this page.');
     throw new Stop();
   }
-  const PAGE_PERM = { reports: 'view_reports', payments: 'view_payments' };
+  const PAGE_PERM = { reports: 'view_reports', payments: 'view_payments', expenses: 'view_reports' };
   if (PAGE_PERM[key] && !ctx.allow(PAGE_PERM[key])) {
     showFatal('Your role doesn’t have access to this page. Ask the owner if you need it.');
     throw new Stop();
@@ -330,12 +397,29 @@ function applyChrome(ctx) {
     const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
   }
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
+  if (['owner', 'manager'].includes(ctx.role) && !$('.ns-sidebar a[href="ota.html"]')) {         // OTA calendar sync
+    const rl = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
+    if (rl) {
+      const a = document.createElement('a'); a.href = 'ota.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2"></path><path d="M3 12a9 9 0 0115.5-6.2"></path><path d="M18 2v4h-4"></path><path d="M6 22v-4h4"></path></svg><span>OTA sync</span>';
+      if (/ota\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      rl.insertAdjacentElement('afterend', a);
+    }
+  }
   if (!ctx.allow('view_payments')) $$('a[href="payments.html"]').forEach((a) => { a.style.display = 'none'; });
   $$('.ns-mobile-nav a[href="rooms.html"], .ns-drawer a[href="rooms.html"]').forEach((a) => { const sp = a.querySelector('span') || a; sp.textContent = W.setup; });
   if (!['owner', 'manager', 'front_desk'].includes(ctx.role)) {
     $$('a[href^="check-in.html"]').forEach((a) => { a.style.display = 'none'; });
   }
-  if (ctx.isAdmin) addLeadsLink();
+  if (['owner', 'manager', 'accountant'].includes(ctx.role) && ctx.allow('view_reports') && !$('.ns-sidebar a[href="expenses.html"]')) {   // Expenses & profit
+    const rp = $('.ns-sidebar .ns-nav-link[href="reports.html"]');
+    if (rp) {
+      const a = document.createElement('a'); a.href = 'expenses.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path></svg><span>Expenses &amp; profit</span>';
+      if (/expenses\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      rp.insertAdjacentElement('afterend', a);
+    }
+  }
   if (DEMO) demoBadge();
   const out = $('.ns-signout');
   if (out) out.addEventListener('click', async (e) => {
@@ -379,44 +463,22 @@ function accessBanner(ctx) {
   if (mobilebar && mobilebar.parentNode === main) mobilebar.insertAdjacentElement('afterend', el); else main.prepend(el);
 }
 
-function addLeadsLink() {
-  const reports = $('.ns-sidebar .ns-nav-link[href="reports.html"]');
-  if (!reports || $('.ns-sidebar .ns-nav-link[href="leads.html"]')) return;
-  const a = document.createElement('a');
-  a.href = 'leads.html'; a.className = 'ns-nav-link';
-  a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path></svg><span>Leads</span>';
-  if (/leads\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-  const ad = document.createElement('a');
-  ad.href = 'admin.html'; ad.className = 'ns-nav-link';
-  ad.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg><span>Admin panel</span>';
-  if (/admin\.html$/.test(__PATH())) { ad.classList.add('is-active'); ad.setAttribute('aria-current', 'page'); }
-  const label = document.createElement('div');
-  label.className = 'ns-nav-section'; label.textContent = 'NammaStay admin';
-  reports.insertAdjacentElement('afterend', label);
-  label.insertAdjacentElement('afterend', ad);
-  ad.insertAdjacentElement('afterend', a);
-  const b = document.createElement('a');
-  b.href = 'subscribers.html'; b.className = 'ns-nav-link';
-  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg><span>Subscribers</span>';
-  if (/subscribers\.html$/.test(__PATH())) { b.classList.add('is-active'); b.setAttribute('aria-current', 'page'); }
-  a.insertAdjacentElement('afterend', b);
-}
 const __PATH = () => location.pathname;
 
 function demoBadge() {
-  const host = $('.ns-sidebar .ns-user') || $('.ns-sidebar');
-  if (!host || $('.ns-demo-badge')) return;
+  if ($('.ns-demo-badge')) return;                                   // floating "Demo ▾" button (not in the sidebar)
   const el = document.createElement('div');
   el.className = 'ns-demo-badge';
   const k = sb.kind?.() || 'hostel';
   const role = sb.viewAs?.() || 'owner';
   const opt = (list, cur) => list.map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${l}</option>`).join('');
   el.innerHTML = `<details class="ns-demo-menu">
-      <summary><b>Demo mode</b><span>Options ▾</span></summary>
+      <summary aria-label="Demo options"><b>Demo</b><span>▾</span></summary>
       <div class="ns-demo-panel">
         <label>View as<select data-role-as>${opt([['owner', 'Owner'], ['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']], role)}</select></label>
         <label>Property type<select data-kind>${opt([['hostel', 'Hostel'], ['hotel', 'Hotel'], ['homestay', 'Homestay']], k)}</select></label>
         <div class="ns-demo-acts"><button type="button" data-reset>Reset data</button><button type="button" data-exit>Exit demo</button></div>
+        <a href="admin-login.html?demo=1" class="ns-demo-admin">Open NammaStay admin area →</a>
         <div class="ns-demo-note">Sample data, saved only in this browser.</div>
       </div></details>`;
   el.querySelector('[data-role-as]').addEventListener('change', (e) => {
@@ -432,7 +494,8 @@ function demoBadge() {
       sb.reset(); location.reload();
     }
   });
-  host.parentNode.insertBefore(el, host);
+  document.body.appendChild(el);
+  document.addEventListener('click', (e) => { const d = el.querySelector('details'); if (d?.open && !el.contains(e.target)) d.open = false; });
 }
 
 /** Replace a page-header subtitle (the grey line under the page title) */
@@ -799,14 +862,16 @@ export function invoiceHtml(d) {
         ${d.seller.gstin ? `<div><b>GSTIN:</b> ${esc(d.seller.gstin)}</div>` : ''}</div>
       <div style="text-align:right"><div class="inv-title">${esc(d.title)}</div><div><b>${esc(d.number)}</b></div><div>${docDate(d.issued_at)}</div></div></div>
     <div class="inv-parties"><div><div class="inv-lbl">Billed to</div><b>${esc(d.buyer.company || d.buyer.name)}</b>
-        ${d.buyer.company ? `<div>Guest: ${esc(d.buyer.name)}</div>` : ''}${d.buyer.gstin ? `<div>GSTIN: ${esc(d.buyer.gstin)}</div>` : ''}
+        ${d.buyer.company ? `<div>${d.subscription ? 'Property' : 'Guest'}: ${esc(d.subscription ? d.buyer.company : d.buyer.name)}</div>` : ''}${d.buyer.gstin ? `<div>GSTIN: ${esc(d.buyer.gstin)}</div>` : ''}${d.buyer.address ? `<div>${esc(d.buyer.address)}</div>` : ''}
         <div>${esc([d.buyer.phone, d.buyer.email].filter(Boolean).join(' · '))}</div></div>
-      <div><div class="inv-lbl">Stay</div><b>${esc(d.stay.code)}</b> · ${esc(d.stay.room)} · ${esc(d.stay.bed)}
-        <div>${docDate(d.stay.check_in_at)} → ${docDate(d.stay.check_out_at)} · ${d.stay.nights} night${d.stay.nights > 1 ? 's' : ''}</div></div></div>
+      ${d.stay ? `<div><div class="inv-lbl">Stay</div><b>${esc(d.stay.code)}</b> · ${esc(d.stay.room)} · ${esc(d.stay.bed)}
+        <div>${docDate(d.stay.check_in_at)} → ${docDate(d.stay.check_out_at)} · ${d.stay.nights} night${d.stay.nights > 1 ? 's' : ''}</div></div>`
+        : `<div><div class="inv-lbl">Subscription</div><b>${esc(d.period?.plan || '')} plan</b> · ${esc(d.period?.property || '')}
+        <div>${docDate(d.period?.from)} → ${docDate(d.period?.to)}</div></div>`}</div>
     <table class="inv-table"><thead><tr><th>Description</th><th>SAC</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th>${d.gst ? '<th style="text-align:right">GST</th>' : ''}<th style="text-align:right">Amount</th></tr></thead>
       <tbody>${d.lines.map(row).join('')}</tbody></table>
     <div class="inv-totals">
-      ${d.gst ? `<div><span>Taxable value</span><span>${money2(d.taxable_paise)}</span></div><div><span>CGST</span><span>${money2(d.cgst_paise)}</span></div><div><span>SGST</span><span>${money2(d.sgst_paise)}</span></div>` : ''}
+      ${d.gst ? `<div><span>Taxable value</span><span>${money2(d.taxable_paise)}</span></div>${d.igst_paise ? `<div><span>IGST</span><span>${money2(d.igst_paise)}</span></div>` : `<div><span>CGST</span><span>${money2(d.cgst_paise)}</span></div><div><span>SGST</span><span>${money2(d.sgst_paise)}</span></div>`}` : ''}
       <div class="inv-grand"><span>Total${d.gst ? ' (incl. GST)' : ''}</span><span>${money2(d.amount_paise)}</span></div>
       <div><span>Paid</span><span>${money2(d.paid_paise)}</span></div>
       <div class="inv-bal"><span>Balance due</span><span>${money2(d.balance_paise)}</span></div></div>
@@ -875,10 +940,12 @@ export async function documentPdf(d) {
     t('This is a computer-generated receipt; no signature is required.', M, y, { s: 8, c: '#6B7280' });
     return new Blob([await doc.save()], { type: 'application/pdf' });
   }
-  t('BILLED TO', M, y, { b: true, s: 8, c: '#6B7280' }); t('STAY', W / 2, y, { b: true, s: 8, c: '#6B7280' }); y += 13;
-  const bl = [d.buyer.company || d.buyer.name, d.buyer.company ? 'Guest: ' + d.buyer.name : null, d.buyer.gstin ? 'GSTIN: ' + d.buyer.gstin : null,
+  t('BILLED TO', M, y, { b: true, s: 8, c: '#6B7280' }); t(d.stay ? 'STAY' : 'SUBSCRIPTION', W / 2, y, { b: true, s: 8, c: '#6B7280' }); y += 13;
+  const bl = [d.buyer.company && !d.subscription ? d.buyer.company : d.buyer.name, d.buyer.company ? (d.subscription ? 'Property: ' + d.buyer.company : 'Guest: ' + d.buyer.name) : null,
+    d.buyer.gstin ? 'GSTIN: ' + d.buyer.gstin : null, d.buyer.address || null,
     [d.buyer.phone, d.buyer.email].filter(Boolean).join(' | ')].filter(Boolean);
-  const sl = [`${d.stay.code} | ${d.stay.room} | ${d.stay.bed}`, `${docDate(d.stay.check_in_at)} to ${docDate(d.stay.check_out_at)} | ${d.stay.nights} night(s)`];
+  const sl = d.stay ? [`${d.stay.code} | ${d.stay.room} | ${d.stay.bed}`, `${docDate(d.stay.check_in_at)} to ${docDate(d.stay.check_out_at)} | ${d.stay.nights} night(s)`]
+    : [`${d.period?.plan || ''} plan | ${d.period?.property || ''}`, `${docDate(d.period?.from)} to ${docDate(d.period?.to)}`];
   bl.forEach((l, i) => t(l, M, y + i * 12, { b: i === 0 })); sl.forEach((l, i) => t(l, W / 2, y + i * 12, { b: i === 0 }));
   y += Math.max(bl.length, sl.length) * 12 + 16;
   const cols = d.gst ? [[M, 'Description'], [300, 'SAC'], [370, 'Qty', 1], [440, 'Rate', 1], [485, 'GST', 1], [W - M, 'Amount', 1]]
@@ -895,7 +962,7 @@ export async function documentPdf(d) {
   }
   line(M, y - 4, W - M); y += 14;
   const tot = [];
-  if (d.gst) tot.push(['Taxable value', d.taxable_paise], ['CGST', d.cgst_paise], ['SGST', d.sgst_paise]);
+  if (d.gst) tot.push(['Taxable value', d.taxable_paise], ...(d.igst_paise ? [['IGST', d.igst_paise]] : [['CGST', d.cgst_paise], ['SGST', d.sgst_paise]]));
   tot.push([`Total${d.gst ? ' (incl. GST)' : ''}`, d.amount_paise, 1], ['Paid', d.paid_paise], ['Balance due', d.balance_paise, 1]);
   tot.forEach(([l, v, b]) => { t(l, 380, y, { b }); t(pdfMoney(v), W - M, y, { b, r: 1 }); y += 14; });
   if (d.payments?.length) {
@@ -950,6 +1017,16 @@ export async function openInvoice(bookingId, buyer = null) {
       try { await openInvoice(bookingId, b.name || b.gstin ? b : null); m.el.querySelector('.ns-x').click(); } catch (e) { toast(e.message, { error: true }); }
     }) });
 }
+/** NammaStay subscription invoice (NammaStay → property) */
+export function openPlatformInvoice(d) {
+  docModal({ title: `${d.title} ${d.number}`, html: invoiceHtml(d), d, fileName: `${d.number.replace(/[^A-Za-z0-9-]+/g, '-')}.pdf` });
+}
+export const GST_STATES = [['01', 'Jammu & Kashmir'], ['02', 'Himachal Pradesh'], ['03', 'Punjab'], ['04', 'Chandigarh'], ['05', 'Uttarakhand'], ['06', 'Haryana'],
+  ['07', 'Delhi'], ['08', 'Rajasthan'], ['09', 'Uttar Pradesh'], ['10', 'Bihar'], ['11', 'Sikkim'], ['12', 'Arunachal Pradesh'], ['13', 'Nagaland'], ['14', 'Manipur'],
+  ['15', 'Mizoram'], ['16', 'Tripura'], ['17', 'Meghalaya'], ['18', 'Assam'], ['19', 'West Bengal'], ['20', 'Jharkhand'], ['21', 'Odisha'], ['22', 'Chhattisgarh'],
+  ['23', 'Madhya Pradesh'], ['24', 'Gujarat'], ['26', 'Dadra & Nagar Haveli and Daman & Diu'], ['27', 'Maharashtra'], ['29', 'Karnataka'], ['30', 'Goa'],
+  ['31', 'Lakshadweep'], ['32', 'Kerala'], ['33', 'Tamil Nadu'], ['34', 'Puducherry'], ['35', 'Andaman & Nicobar Islands'], ['36', 'Telangana'],
+  ['37', 'Andhra Pradesh'], ['38', 'Ladakh']];
 export function openReceipt(r) {
   docModal({ title: `${r.title} ${r.number}`, html: receiptHtml(r), d: r, fileName: `Receipt-${r.number}.pdf` });
 }

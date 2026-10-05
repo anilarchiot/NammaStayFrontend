@@ -1,4 +1,4 @@
-import { W, SITE_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
 const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
@@ -60,11 +60,14 @@ page('settings', async (ctx) => {
               <div class="ns-h3">Payments</div>
               ${field('Your UPI ID', `<input class="ns-input" name="upi_id" value="${esc(p.upi_id || '')}" placeholder="yourname@okaxis">`,
                 'Guests scan a QR on the booking and pay straight to this UPI ID. No gateway fees.')}
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="ns-btn" id="save-upi">Save UPI ID</button>
+                <span class="ns-muted" id="upi-state" style="font-size:12.5px">${p.upi_id ? '✓ Saved' : 'Not set yet'}</span></div>
             </div>
             <div class="ns-card" style="display:flex;flex-direction:column;gap:12px">
               <div class="ns-h3">Privacy</div>
               ${field('Delete ID photos after (days)', `<input class="ns-input" type="number" min="1" max="3650" name="id_doc_retention_days" value="${p.id_doc_retention_days}">`,
                 'Counted from the guest’s last check-out.')}
+              <button type="button" class="ns-btn-ghost" id="save-privacy" style="align-self:flex-start">Save</button>
             </div>
           </div>
         </div>`);
@@ -76,6 +79,25 @@ page('settings', async (ctx) => {
         try { await q(sb.from('properties').update(v).eq('id', ctx.property_id)); toast('Saved.'); }
         catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
         finally { e.target.disabled = false; }
+      };
+      // each card can be saved on its own
+      const upiIn = $('#prop2 [name=upi_id]');
+      upiIn.addEventListener('input', () => { $('#upi-state').textContent = upiIn.value.trim() === (p.upi_id || '') ? (p.upi_id ? '✓ Saved' : 'Not set yet') : 'Not saved yet'; });
+      $('#save-upi').onclick = async (e) => {
+        const upi = upiIn.value.trim().replace(/\s+/g, '');
+        if (upi && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(upi)) return toast('That UPI ID doesn’t look right — it looks like name@okaxis or 9840012345@ybl.', { error: true });
+        e.target.disabled = true;
+        try { await q(sb.from('properties').update({ upi_id: upi || null }).eq('id', ctx.property_id)); p.upi_id = upi || null; upiIn.value = upi;
+          $('#upi-state').textContent = upi ? '✓ Saved' : 'Not set yet'; toast(upi ? `UPI ID saved — guests will pay to ${upi}.` : 'UPI ID removed.'); }
+        catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
+        finally { e.target.disabled = false; }
+      };
+      $('#save-privacy').onclick = async (e) => {
+        const days = parseInt($('#prop2 [name=id_doc_retention_days]').value, 10);
+        if (!(days >= 1 && days <= 3650)) return toast('Enter 1 to 3650 days.', { error: true });
+        e.target.disabled = true;
+        try { await q(sb.from('properties').update({ id_doc_retention_days: days }).eq('id', ctx.property_id)); toast(`Saved — ID photos are deleted ${days} days after check-out.`); }
+        catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
       };
       moreCards(ctx, p);
       $('#reset-demo')?.addEventListener('click', async () => {
@@ -264,6 +286,7 @@ page('settings', async (ctx) => {
         catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
       });
       draw();
+      billingExtras(ctx);
     },
 
     // ------------------------------------------------------------ My account (password, email, devices)
@@ -460,7 +483,60 @@ function permsCard(ctx) {
 }
 
 // ------------------------------------------------------------ invoices & GST · regular-guest offers
+async function razorpayCard(ctx) {
+  const st = await rpc('razorpay_status', { p_property: ctx.property_id }).catch(() => null);
+  if (!st) return;                                                   // database not updated yet (021)
+  const owner = ctx.role === 'owner';
+  const hook = `${FUNCTIONS_URL}/razorpay?p=${ctx.property_id}`;
+  document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
+  <div class="ns-card" style="display:flex;flex-direction:column;gap:12px;margin-top:20px" id="rzp-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="ns-h3">💳 Online payments (Razorpay)</div>
+      ${st.connected ? `<span class="ns-pill green">Connected · ${st.mode === 'live' ? 'Live' : 'Test mode'} · ${esc(st.key_hint)}</span>` : '<span class="ns-pill grey">Not connected</span>'}</div>
+    <div class="ns-muted" style="font-size:13px">Send guests a payment link (UPI, card, net banking). Money goes straight to <b>your</b> Razorpay account, and NammaStay marks the booking paid automatically. Razorpay charges its own fee per payment.</div>
+    ${owner ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+        ${field('Key ID', `<input class="ns-input" name="rzp_id" placeholder="rzp_live_XXXXXXXX" value="${esc(st.connected ? '' : '')}" autocomplete="off">`, st.connected ? 'Saved — type a new one only to change it.' : 'Razorpay → Account & Settings → API Keys')}
+        ${field('Key Secret', `<input class="ns-input" type="password" name="rzp_secret" placeholder="${st.connected ? '•••••••• saved' : 'Shown once when you create the key'}" autocomplete="new-password">`)}
+        ${field('Webhook secret (recommended)', `<input class="ns-input" type="password" name="rzp_hook" placeholder="${st.webhook ? '•••••••• saved' : 'Any long password you choose'}" autocomplete="new-password">`)}</div>
+      <details class="ota-howto"><summary>Set up the webhook (payments show as paid within seconds)</summary>
+        <div style="font-size:12.5px;line-height:1.6;margin-top:8px">Razorpay → Account & Settings → <b>Webhooks</b> → <b>Add new webhook</b>:<br>
+          URL: <input class="ns-input" readonly value="${esc(hook)}" style="height:34px;font-size:12px;margin:4px 0" id="rzp-hook-url"><br>
+          Secret: the same <b>Webhook secret</b> as above · Events: tick <b>payment_link.paid</b>, <b>payment_link.expired</b>, <b>payment_link.cancelled</b>.<br>
+          Without a webhook, NammaStay still checks for payment whenever the booking is opened.</div></details>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ns-btn" id="rzp-save">Save</button>
+        ${st.connected ? '<button type="button" class="ns-btn-ghost" id="rzp-test">Test connection</button><button type="button" class="ns-btn-ghost" id="rzp-off" style="color:#B23A3A">Disconnect</button>' : ''}</div>`
+    : '<div class="ns-help">Only the owner can connect or change Razorpay.</div>'}
+  </div>`);
+  if (!owner) return;
+  const v = (n) => $(`#rzp-card [name=${n}]`).value.trim();
+  $('#rzp-save').onclick = async (e) => {
+    const id = v('rzp_id') || (st.connected ? '__keep__' : '');
+    if (!id) return toast('Paste your Razorpay Key ID (starts with rzp_live_ or rzp_test_).', { error: true });
+    e.target.disabled = true;
+    try {
+      if (id === '__keep__') {
+        if (!v('rzp_secret') && !v('rzp_hook')) return toast('Nothing to change.');
+        return toast('To change secrets, paste the Key ID again too.', { error: true });
+      }
+      await rpc('set_razorpay_keys', { p_property: ctx.property_id, p_key_id: id, p_key_secret: v('rzp_secret'), p_webhook_secret: v('rzp_hook') });
+      toast('Razorpay connected.'); location.replace('settings.html');
+    } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+  };
+  $('#rzp-test')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    try { const { data, error } = await sb.functions.invoke('razorpay', { body: { action: 'test', property_id: ctx.property_id } });
+      if (error || data?.error) throw new Error(data?.error || error.message);
+      toast(`Razorpay works ✓ (${data.mode === 'live' ? 'live' : 'test'} mode)`);
+    } catch (err) { toast(`${err.message} — check the keys, and that the razorpay function is deployed.`, { error: true }); } finally { e.target.disabled = false; }
+  });
+  $('#rzp-off')?.addEventListener('click', async () => {
+    if (!await confirmDialog('Disconnect Razorpay', 'Payment links stop working until you connect again. Payments already received stay recorded.', { confirmLabel: 'Disconnect', danger: true })) return;
+    await rpc('set_razorpay_keys', { p_property: ctx.property_id, p_key_id: '', p_key_secret: '', p_webhook_secret: '' }); toast('Disconnected.'); location.replace('settings.html');
+  });
+}
+
 function moreCards(ctx, p) {
+  razorpayCard(ctx);
   const offers = p.offers || { enabled: false, tiers: [{ from_stay: 2, pct: 5 }, { from_stay: 5, pct: 10 }] };
   const tiers = [...(offers.tiers || []), { from_stay: '', pct: '' }, { from_stay: '', pct: '' }].slice(0, 3);
   document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
@@ -516,4 +592,35 @@ function moreCards(ctx, p) {
     save(e.target, { offers: { enabled: on, tiers: t } }, on ? 'Offers are on — they apply to new bookings.' : 'Offers saved (off).');
   };
   if (!ctx.can('owner', 'manager')) $$('#gst-card button, #offer-card button').forEach((b) => b.remove());
+}
+
+// ------------------------------------------------------------ subscription invoices (from NammaStay) + billing details
+async function billingExtras(ctx) {
+  const [det, inv] = await Promise.all([rpc('my_billing_details', { p_property: ctx.property_id }).catch(() => null), rpc('my_platform_invoices', { p_property: ctx.property_id }).catch(() => null)]);
+  if (!det) return;                                                   // database not updated yet (023)
+  const host = document.querySelector('.ns-content');
+  host.insertAdjacentHTML('beforeend', `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:20px">
+    <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="bill-det">
+      <div class="ns-h3">Billing details for your invoices</div>
+      <div class="ns-muted" style="font-size:12.5px">Shown on the invoices NammaStay sends you. Add your GSTIN to claim input tax credit.</div>
+      ${field('Name on invoice', `<input class="ns-input" name="bill_name" maxlength="120" value="${esc(det.bill_name || '')}" placeholder="${esc(det.name)}">`)}
+      ${field('GSTIN (optional)', `<input class="ns-input" name="bill_gstin" maxlength="15" value="${esc(det.bill_gstin || '')}" placeholder="33ABCDE1234F1Z5" style="text-transform:uppercase">`)}
+      ${field('Billing address', `<input class="ns-input" name="bill_address" maxlength="300" value="${esc(det.bill_address || '')}" placeholder="Door no, street, city, PIN">`)}
+      ${field('State', `<select class="ns-input" name="bill_state"><option value="">Choose…</option>${options(GST_STATES, det.bill_state || '')}</select>`)}
+      <button type="button" class="ns-btn" id="save-bill" style="align-self:flex-start">Save billing details</button>
+    </div>
+    <div class="ns-card" style="padding:0;overflow:hidden">
+      <div class="ns-h3" style="padding:18px 20px">Your invoices</div>
+      ${inv && inv.length ? inv.map((x, i) => `<div class="pl-row" style="padding:10px 20px"><span><b>${esc(x.number)}</b> · ${fmtDate(x.issued_at)}<br><span class="ns-muted" style="font-size:12px">${esc(x.doc.period?.plan || '')} plan · ${fmtDate(x.doc.period?.from)} – ${fmtDate(x.doc.period?.to)}</span></span>
+          <span style="display:flex;gap:8px;align-items:center"><b>${rupees(x.total_paise)}</b><button type="button" class="ns-btn-ghost" data-inv-i="${i}" style="height:32px;font-size:12px">View / PDF</button></span></div>`).join('')
+        : '<div class="ns-empty" style="padding:18px">Invoices appear here after each payment is confirmed.</div>'}
+    </div></div>`);
+  $$('[data-inv-i]').forEach((b) => b.onclick = () => openPlatformInvoice(inv[+b.dataset.invI].doc));
+  $('#save-bill').onclick = async (e) => {
+    const v = (n) => $(`#bill-det [name=${n}]`).value.trim();
+    e.target.disabled = true;
+    try { await rpc('set_billing_details', { p_property: ctx.property_id, p: { bill_name: v('bill_name'), bill_gstin: v('bill_gstin').toUpperCase(), bill_address: v('bill_address'), bill_state: v('bill_state') } });
+      toast('Billing details saved — used on your next invoice.'); }
+    catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
+  };
 }
