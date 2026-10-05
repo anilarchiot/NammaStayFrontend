@@ -1,6 +1,6 @@
 // NammaStay admin panel — every property using NammaStay, what needs attention,
 // and one screen per property with owner contact, usage, subscription and actions.
-import { page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDayTime, pill, modal, confirmDialog,
+import { adminPage, openPlatformInvoice, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDayTime, pill, modal, confirmDialog,
   toast, field, options, showFatal, param, uuidOk, waNumber, ROLE_LABEL, SITE_URL, $, $$ } from '../core.js';
 
 const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'],
@@ -12,7 +12,7 @@ const ago = (iso) => {
   return d <= 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 30 ? `${d} days ago` : fmtDate(iso);
 };
 
-page(null, async (ctx) => {
+adminPage(async (ctx) => {
   if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
   const id = param('id');
   if (uuidOk(id)) return propertyView(id);
@@ -26,6 +26,32 @@ async function overview() {
   $('#add-prop').onclick = addPropertyDialog;
   headerSearch('Search property, city, owner…', (v) => { q = v.toLowerCase(); drawTable(); });
   const d = await rpc('admin_overview');
+  const drawReminders = async () => {
+    const host = document.getElementById('rem-card'); if (!host) return;
+    const list = await rpc('admin_reminders', { p_all: false }).catch(() => null);
+    if (list === null) { host.remove(); return; }                                    // database not updated yet (023)
+    const KIND = { trial_3d: ['Trial ends in 3 days', 'amber'], trial_1d: ['Trial ends tomorrow', 'amber'], trial_ended: ['Trial ended', 'red'],
+      renew_7d: ['Renews in 7 days', 'blue'], renew_1d: ['Plan ends tomorrow', 'amber'], expired: ['Plan ended', 'red'] };
+    const wa = (r) => {
+      const first = String(r.owner || '').split(/[\s@]/)[0] || 'there';
+      const msg = `Hello ${first}, this is NammaStay. ${r.text.title} for ${r.property}. ${/ended/.test(r.text.title) ? 'Choose a plan in Settings → Billing to keep using NammaStay' : 'You can choose a plan any time in Settings → Billing'} — reply here if you need help. Thank you!`;
+      return `https://wa.me/${String(r.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+    };
+    host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="ns-h3">Reminders to follow up <span class="ns-muted" style="font-weight:600">(${list.length})</span></div>
+        <button type="button" class="ns-btn-ghost" id="rem-run" style="height:32px;font-size:12px">Check now</button></div>
+      <div class="ns-muted" style="font-size:12.5px">Owners also get these in the app${'' /* email via billing-reminders */} and by email (when email is set up). Tap WhatsApp to send a friendly nudge, then Done.</div>
+      ${list.length ? list.map((r) => `<div class="pl-row" style="gap:10px;flex-wrap:wrap">
+          <span style="min-width:0;flex:1"><b>${esc(r.property)}</b> <span class="ns-pill ${KIND[r.kind][1]}">${KIND[r.kind][0]}</span><br>
+            <span class="ns-muted" style="font-size:12px">${esc(r.owner || '')}${r.phone ? ' · ' + esc(r.phone) : ''} · ends ${fmtDate(r.ends_at)}${r.emailed_at ? ' · ✉ emailed' : ''}</span></span>
+          <span style="display:flex;gap:6px">${r.phone ? `<a class="ns-btn" style="height:32px;font-size:12px;background:#25D366;border-color:#25D366" target="_blank" rel="noopener" href="${esc(wa(r))}">WhatsApp</a>` : ''}
+            <button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-rem-done="${esc(r.id)}">Done</button></span></div>`).join('')
+        : '<div class="ns-empty" style="padding:12px">Nothing to follow up. 🎉</div>'}`;
+    host.querySelectorAll('[data-rem-done]').forEach((b) => b.onclick = async () => { await rpc('admin_mark_reminder', { p_id: b.dataset.remDone, p_done: true }); drawReminders(); });
+    host.querySelector('#rem-run').onclick = async (e) => { e.target.disabled = true; const n = await rpc('run_billing_reminders').catch((err) => { toast(err.message, { error: true }); return null; });
+      if (n !== null) toast(n ? `${n} new reminder${n > 1 ? 's' : ''} sent in the app.` : 'No new reminders today.'); drawReminders(); };
+  };
+  setTimeout(drawReminders, 0);
   const c = d.counts;
   setSubtitle(`${d.total} properties on NammaStay`);
   const stat = (l, v, sub = '', dark = false) => `<div class="ns-stat${dark ? ' is-dark' : ''}"><div class="ns-stat-label">${l}</div><div class="ns-stat-value">${v}</div>${sub ? `<div class="ns-stat-sub">${sub}</div>` : ''}</div>`;
@@ -59,6 +85,7 @@ async function overview() {
         ${att('Payment due', d.payment_due, (r) => `ended ${fmtDate(r.ended_at)}`, 'Nobody is overdue. 🎉')}
       </div>
     </div>
+    <div class="ns-card" id="rem-card" style="display:flex;flex-direction:column;gap:8px"></div>
     ${att('Not using NammaStay lately', d.inactive, (r) => `last active ${ago(r.last_seen_at || r.last_booking_at).toLowerCase()}`, 'Everyone has been active in the last 2 weeks.')}
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -90,6 +117,9 @@ async function overview() {
 // ------------------------------------------------------------ one property
 async function propertyView(id) {
   const d = await rpc('admin_property', { p_property: id });
+  const invs = await rpc('admin_platform_invoices', { p_property: id }).catch(() => []);
+  const invBy = Object.fromEntries((invs || []).map((x) => [x.payment_id, x]));
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-pinv]'); if (b && invBy[b.dataset.pinv]) openPlatformInvoice(invBy[b.dataset.pinv].doc); });
   const p = d.property; const s = d.subscription; const u = d.usage;
   const owner = d.members.find((m) => m.role === 'owner');
   document.title = `${p.name} · Admin · NammaStay`;
@@ -139,10 +169,11 @@ async function propertyView(id) {
         ${d.members.map((m) => `<tr><td style="font-weight:700">${esc(m.name || m.email)}<div class="ns-muted" style="font-weight:500">${esc(m.email || '')}</div></td>
           <td>${esc(ROLE_LABEL[m.role] || m.role)}</td><td class="ns-muted">${ago(m.last_seen_at)}</td></tr>`).join('')}</tbody></table></div></div>
       <div class="ns-card" style="padding:0;overflow:hidden"><div class="ns-h3" style="padding:18px 20px">Subscription payments</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:520px"><thead><tr><th>Submitted</th><th>Amount</th><th>UTR</th><th>Status</th><th>Covers</th></tr></thead><tbody>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:520px"><thead><tr><th>Submitted</th><th>Amount</th><th>UTR</th><th>Status</th><th>Covers</th><th>Invoice</th></tr></thead><tbody>
         ${d.payments.map((x) => `<tr><td>${fmtDayTime(x.submitted_at)}</td><td style="font-weight:700">${rupees(x.amount_paise)}</td><td class="ns-muted">${esc(x.utr)}</td>
-          <td>${pill(...HIST[x.status])}</td><td class="ns-muted">${x.period_end ? `${fmtDate(x.period_start)} – ${fmtDate(x.period_end)}` : '—'}</td></tr>`).join('')
-          || '<tr><td colspan="5" class="ns-empty">No payments yet.</td></tr>'}
+          <td>${pill(...HIST[x.status])}</td><td class="ns-muted">${x.period_end ? `${fmtDate(x.period_start)} – ${fmtDate(x.period_end)}` : '—'}</td>
+          <td>${invBy[x.id] ? `<button type="button" class="ns-btn-ghost" style="height:30px;font-size:12px" data-pinv="${esc(x.id)}">${esc(invBy[x.id].number)}</button>` : '<span class="ns-muted">—</span>'}</td></tr>`).join('')
+          || '<tr><td colspan="6" class="ns-empty">No payments yet.</td></tr>'}
         </tbody></table></div>
         ${d.payments.some((x) => x.status === 'pending') ? '<div style="padding:12px 20px;border-top:1px solid #F3EFE1"><a href="subscribers.html" style="font-weight:800">Approve pending payments →</a></div>' : ''}
       </div>
@@ -193,7 +224,7 @@ function addPropertyDialog() {
         <div id="trial-days">${field('Trial days', '<input class="ns-input" name="trial_days" type="number" min="0" max="365" value="15">')}</div>
         <label style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600">
           <input type="checkbox" name="add_me" checked style="margin-top:2px"> Add me as manager, so I can set up their rooms, beds and rates</label>
-        <div style="grid-column:1/-1">${field('Private note (optional)', '<input class="ns-input" name="admin_note" maxlength="300" placeholder="e.g. Met at travel expo; agreed ₹1,650/month">')}</div>
+        <div style="grid-column:1/-1">${field('Private note (optional)', '<input class="ns-input" name="admin_note" maxlength="300" placeholder="e.g. Met at travel expo; agreed ₹27,999/year">')}</div>
       </div>`,
     actions: [{ label: 'Cancel' }, { label: 'Add property', kind: 'primary', onClick: async (el) => {
       const v = (n) => el.querySelector(`[name=${n}]`);
