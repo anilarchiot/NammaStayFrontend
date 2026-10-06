@@ -300,26 +300,6 @@ async function arrivalsView(ctx) {
       <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="ns-h3">${titleTxt} <span class="ns-muted" style="font-weight:600">(${list.length})</span></div></div>
       ${list.length ? list.map((b) => row(b, kind)).join('') : `<div class="ns-empty" style="padding:22px">${empty}</div>`}</div>`;
   }
-  function render() {
-    if (!d) return;
-    const bs = d.bookings.filter(match).sort((a, b) => (a.check_in_at > b.check_in_at ? 1 : -1));
-    const now = new Date().toISOString();
-    const arriving = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) <= today && b.check_out_at > now);
-    const inToday = bs.filter((b) => b.status === 'checked_in' && ymd(b.check_in_at) === today);
-    const staying = d.bookings.filter((b) => b.status === 'checked_in').length;
-    const upcoming = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) > today && ymd(b.check_in_at) <= addDays(today, 7));
-    setSubtitle(`${fmtDay(today + 'T12:00:00+05:30')} · ${arriving.length} to arrive · ${staying} staying now`);
-    content(`
-      <a href="check-in.html?new=1" class="ci-new">
-        <span style="font-size:26px;line-height:1">＋</span>
-        <span><b style="font-size:16px">New registration</b><br><span style="font-size:13px;opacity:.85">Walk-in or new booking — guest details, ${W.unit}, dates and payment</span></span>
-        <span style="margin-left:auto;font-size:20px">→</span></a>
-      ${section('Arriving today', arriving, 'arriving', 'No more arrivals today. 🎉')}
-      ${section('Checked in today', inToday, 'in', 'Nobody has checked in yet today.')}
-      ${section('Next 7 days', upcoming, 'upcoming', 'No arrivals in the next 7 days.')}`,
-    'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
-  }
-
   document.querySelector('.ns-content').addEventListener('click', async (e) => {
     const ci = e.target.closest('[data-checkin]');
     if (ci) {
