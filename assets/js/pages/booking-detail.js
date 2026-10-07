@@ -10,6 +10,7 @@ const ACTIVITY = {
   changed: (d) => `Stay changed — ${fmtDayTime(d.check_in_at)} to ${fmtDayTime(d.check_out_at)}${d.bed_changed ? ', bed moved' : ''} · total ${rupees(d.total_paise)}`,
   payment: (d) => `Payment received — ${rupees(d.amount_paise)} via ${String(d.method).toUpperCase()} (${d.code})`,
   extra_added: (d) => `Extra added: ${d.name}${Number(d.qty) !== 1 ? ` × ${Number(d.qty)}` : ''} (${rupees(d.amount_paise)})`,
+  form_c: (d) => (d.ref ? `Form C ${d.kind} report submitted — ${d.ref}` : `Form C ${d.kind} report cleared`),
   paylink_created: (d) => `Payment link sent — ${rupees(d.amount_paise)}`,
   extra_removed: (d) => `Extra removed: ${d.name} (${rupees(d.amount_paise)})`,
   discount: (d) => (Number(d.pct) ? `Discount set to ${Number(d.pct)}% (−${rupees(d.amount_paise)})` : 'Discount removed'),
@@ -103,6 +104,7 @@ page(null, async (ctx) => {
             <button type="button" class="ns-btn-ghost" id="copy-link">Copy link</button>
             ${g.phone ? `<a class="ns-btn-ghost" target="_blank" rel="noopener" href="https://wa.me/${esc(g.phone.replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi ${g.full_name.split(' ')[0]}, your booking ${b.code} at ${d.property.name} is ready. Please check in online here: ${selfLink}`)}">Send on WhatsApp</a>` : ''}
           </div></div>` : ''}
+      ${staff && g.nationality && !/^(india|indian)$/i.test(String(g.nationality).trim()) && !['cancelled', 'no_show'].includes(b.status) ? '<div id="fc-box"></div>' : ''}
     </div>
 
     <div class="ns-dialog-foot" style="padding:16px 26px;border-top:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -168,6 +170,17 @@ page(null, async (ctx) => {
   }));
   $('#pay')?.addEventListener('click', () => paymentDialog('payment'));
   $('#add-extra')?.addEventListener('click', () => addExtraDialog());
+  // ---- Form C status for foreign guests
+  (async () => {
+    const box = document.getElementById('fc-box'); if (!box) return;
+    const fc = await q(sb.from('form_c').select('*').eq('booking_id', b.id)).then((r) => r[0] || {}).catch(() => null);
+    if (fc === null) { box.remove(); return; }                                    // database not updated yet (024)
+    const due = new Date(new Date(b.arrived_at || b.check_in_at).getTime() + 864e5); const ms = due - Date.now();
+    const st = fc.arrival_at ? `<span class="ns-pill green">Arrival reported ✓ ${esc(fc.arrival_ref || '')}</span>${fc.departure_at ? ` <span class="ns-pill green">Departure ✓ ${esc(fc.departure_ref || '')}</span>` : b.status === 'checked_out' ? ' <span class="ns-pill amber">Departure report due</span>' : ''}`
+      : b.status === 'checked_in' ? `<span class="ns-pill ${ms < 0 ? 'red' : ms < 6 * 36e5 ? 'amber' : 'blue'}">${ms < 0 ? 'Form C overdue' : `Form C due in ${Math.floor(ms / 36e5)}h`}</span>`
+      : '<span class="ns-pill grey">Form C after check-in (within 24 h)</span>';
+    box.innerHTML = `<div class="fc-bk"><span><b>🌍 Foreign guest · Form C</b><br>${st}</span><a class="ns-btn-ghost" href="formc.html" style="height:32px;font-size:12px">Open Form C</a></div>`;
+  })();
   $('#invoice')?.addEventListener('click', () => openInvoice(b.id).catch((e) => toast(e.message, { error: true })));
   // ---- online payment links (Razorpay)
   const fnCall = async (body) => { const { data, error } = await sb.functions.invoke('razorpay', { body });

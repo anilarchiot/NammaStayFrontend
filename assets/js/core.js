@@ -21,6 +21,8 @@ export const sb = LIVE
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
 export const TZ = 'Asia/Kolkata';
+/** The marketing website (homepage) — the hostel app lives on its own address (app.thenammastay.com) */
+export const MARKETING_URL = String(CFG.marketingUrl || 'https://thenammastay.com').replace(/\/$/, '');
 /** The separate NammaStay admin website */
 export const ADMIN_URL = String(CFG.adminUrl || 'https://admin.thenammastay.com').replace(/\/$/, '');
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -105,6 +107,7 @@ const PAGE_ROLES = {
   dashboard: null, bookings: null, calendar: null, rooms: null, payments: null,
   guests: ['owner', 'manager', 'front_desk'],
   ota: ['owner', 'manager'],
+  formc: ['owner', 'manager', 'front_desk'],
   expenses: ['owner', 'manager', 'accountant'],
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
@@ -266,7 +269,9 @@ export function page(key, fn) {
 const ADMIN_NAV = [
   ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
   ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
+  ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
+  ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
 ];
 const hostelHref = (page) => { try { return new URL(SITE_URL).origin === location.origin || location.protocol === 'file:' ? page : `${SITE_URL}/${page}`; } catch { return page; } };
 function adminChrome(user, hasProperty) {
@@ -397,6 +402,16 @@ function applyChrome(ctx) {
     const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
   }
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
+  if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
+    const ci = $('.ns-sidebar .ns-nav-link[href="check-in.html"]');
+    if (ci) {
+      const a = document.createElement('a'); a.href = 'formc.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"></path></svg><span>Form C</span><b class="ns-nav-count" id="formc-count" hidden></b>';
+      if (/formc\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      ci.insertAdjacentElement('afterend', a);
+      rpc('formc_due_count', { p_property: ctx.property_id }).then((n) => { const c = $('#formc-count'); if (c && n > 0) { c.textContent = n; c.hidden = false; } }).catch(() => {});
+    }
+  }
   if (['owner', 'manager'].includes(ctx.role) && !$('.ns-sidebar a[href="ota.html"]')) {         // OTA calendar sync
     const rl = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
     if (rl) {

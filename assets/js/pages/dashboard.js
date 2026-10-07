@@ -62,4 +62,10 @@ page('dashboard', async (ctx) => {
           <div class="ns-h3">Departing today</div><a href="bookings.html?status=checked_in" style="font-size:12px;font-weight:700">View all</a></div>${departing}</div>
       </div>
     </div>`);
+  // ---- Form C: foreign guests waiting for their FRRO arrival report
+  if (ctx.can('owner', 'manager', 'front_desk')) {
+    const n = await rpc('formc_due_count', { p_property: ctx.property_id }).catch(() => 0);
+    if (n > 0) document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<a class="ns-card fc-dash" href="formc.html">
+      <span><b>Form C due for ${n} foreign guest${n > 1 ? 's' : ''}</b><br><span class="ns-muted" style="font-size:12.5px">Report to FRRO within 24 hours of arrival.</span></span><span>Open Form C →</span></a>`);
+  }
 });

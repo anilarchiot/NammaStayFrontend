@@ -1,5 +1,5 @@
 // Self sign-up: 1) create account → 2) create property → 15-day free trial starts.
-import { DEMO, NOT_CONNECTED, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
+import { MARKETING_URL, DEMO, NOT_CONNECTED, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
 
 const box = $('.ns-login-main > div');
 const brand = box.querySelector('.ns-login-brand').outerHTML;
@@ -16,7 +16,7 @@ init();
 
 async function init() {
   if (NOT_CONNECTED) {
-    render('Start your free trial', 'Sign-up is unavailable right now. Please try again later.', '<a class="ns-btn ns-btn-lg" href="index.html">Back to home</a>');
+    render('Start your free trial', 'Sign-up is unavailable right now. Please try again later.', `<a class="ns-btn ns-btn-lg" href="${MARKETING_URL}">Back to home</a>`);
     return;
   }
   if (DEMO) {

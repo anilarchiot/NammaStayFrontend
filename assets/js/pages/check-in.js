@@ -4,6 +4,8 @@ import { guestFace, newId, countryOptions, statusPill, fmtDayTime, fmtDay, heade
 } from '../core.js';
 
 page('checkin', async (ctx) => {
+  // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
+  if (!param('new') && !uuidOk(param('guest')) && !uuidOk(param('bed')) && !param('in')) return arrivalsView(ctx);
   const back = document.querySelector('.ns-main > [style*="height:76px"] a[href="bookings.html"]');
   if (back) { back.href = 'check-in.html'; back.textContent = '← Check-in list'; }
   const guestId = uuidOk(param('guest')) ? param('guest') : null;
@@ -174,7 +176,7 @@ page('checkin', async (ctx) => {
     const prof = await rpc('guest_profile', { p_guest: id }).catch(() => null);
     state.guest = g;
     f('full_name').value = g.full_name || ''; f('phone').value = g.phone || ''; f('email').value = g.email || '';
-    f('dob').value = g.dob || ''; f('nationality').innerHTML = countryOptions(g.nationality || ''); f('id_type').value = g.id_type || '';
+    f('dob').value = g.dob || ''; f('nationality').innerHTML = countryOptions(g.nationality || ''); f('nationality').dispatchEvent(new Event('change')); f('id_type').value = g.id_type || '';
     f('id_number').value = g.id_number || '';
     GF.forEach((n) => { f(n).readOnly = true; f(n).classList.add('is-filled'); if (f(n).tagName === 'SELECT') f(n).disabled = true; });
     const stays = prof ? prof.stays.filter((x) => ['checked_in', 'checked_out'].includes(x.status)).length : 0;
@@ -198,6 +200,12 @@ page('checkin', async (ctx) => {
     f('full_name').focus();
   }
   ['full_name', 'phone'].forEach((n) => f(n).addEventListener('input', debounce(() => suggest(f(n)), 300)));
+  // foreign guest → Form C reminder
+  const natHint = document.createElement('div'); natHint.className = 'ns-help fc-hint'; natHint.hidden = true;
+  natHint.innerHTML = '🌍 Foreign guest: report on <b>Form C</b> within 24 hours of arrival — take a passport photo (front &amp; visa page) below, then finish on the <a href="formc.html">Form C</a> page.';
+  f('nationality').closest('.ns-field')?.appendChild(natHint);
+  const natCheck = () => { natHint.hidden = !f('nationality').value || /^(india|indian)$/i.test(f('nationality').value); };
+  f('nationality').addEventListener('change', natCheck); natCheck();
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-gid]'); if (b) selectGuest(b.dataset.gid); });
   document.addEventListener('click', (e) => { if (!e.target.closest('#gs-wrap, [name=full_name], [name=phone]')) hideList(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideList(); });
@@ -259,3 +267,82 @@ page('checkin', async (ctx) => {
 
   await loadBeds();
 });
+
+// ------------------------------------------------------------ arrivals list (default view)
+async function arrivalsView(ctx) {
+  const title = document.querySelector('.ns-main > [style*="height:76px"] [style*="font-size:21px"]'); if (title) title.textContent = 'Check-in';
+  document.querySelector('.ns-main > [style*="height:76px"] a[href="bookings.html"]')?.remove();
+  const today = ymd();
+  let q = '';
+  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn" href="check-in.html?new=1">+ New registration</a>';
+  headerSearch('Search guest or booking…', (v) => { q = v.trim().toLowerCase(); render(); });
+  let d = null;
+
+  async function load() {
+    d = await rpc('calendar_range', { p_property: ctx.property_id, p_from: addDays(today, -2), p_days: 10 });
+    render();
+  }
+  const bedOf = (b) => d.beds.find((x) => x.id === b.bed_id) || { room: '', label: '' };
+  const match = (b) => !q || [b.guest, b.code, bedOf(b).label, bedOf(b).room].some((x) => String(x || '').toLowerCase().includes(q));
+
+  function row(b, kind) {
+    const bed = bedOf(b); const inDay = ymd(b.check_in_at);
+    const late = kind === 'arriving' && inDay < today;
+    const due = b.balance_paise > 0 ? `<span class="ns-pill amber">${rupees(b.balance_paise)} due</span>` : '<span class="ns-pill green">Paid</span>';
+    return `<div class="ci-row">
+      <div class="ci-main">
+        <div style="font-weight:800;font-size:14.5px">${esc(b.guest)} ${late ? '<span class="ns-pill red">Late — was due ' + esc(fmtDay(b.check_in_at)) + '</span>' : ''}</div>
+        <div class="ns-muted" style="font-size:12.5px">${esc(bed.room)} · ${esc(bed.label)} · ${esc(fmtDayTime(b.check_in_at))} → ${esc(fmtDay(b.check_out_at))}</div>
+      </div>
+      <div class="ci-tags">${statusPill(b.status)} ${due}</div>
+      <div class="ci-acts">
+        ${kind === 'arriving' ? `<button type="button" class="ns-btn" data-checkin="${esc(b.id)}" style="height:36px">Check in</button>` : ''}
+        ${kind === 'in' ? `<button type="button" class="ns-btn-ghost" data-wa="${esc(b.id)}" style="height:36px;color:#157A56">WhatsApp</button>` : ''}
+        <a class="ns-btn-ghost" href="booking-detail.html?id=${esc(b.id)}" style="height:36px">Open</a>
+      </div></div>`;
+  }
+  function section(titleTxt, list, kind, empty) {
+    return `<div class="ns-card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="ns-h3">${titleTxt} <span class="ns-muted" style="font-weight:600">(${list.length})</span></div></div>
+      ${list.length ? list.map((b) => row(b, kind)).join('') : `<div class="ns-empty" style="padding:22px">${empty}</div>`}</div>`;
+  }
+  function render() {
+    if (!d) return;
+    const bs = d.bookings.filter(match).sort((a, b) => (a.check_in_at > b.check_in_at ? 1 : -1));
+    const now = new Date().toISOString();
+    const arriving = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) <= today && b.check_out_at > now);
+    const inToday = bs.filter((b) => b.status === 'checked_in' && ymd(b.check_in_at) === today);
+    const staying = d.bookings.filter((b) => b.status === 'checked_in').length;
+    const upcoming = bs.filter((b) => ['pending', 'confirmed'].includes(b.status) && ymd(b.check_in_at) > today && ymd(b.check_in_at) <= addDays(today, 7));
+    setSubtitle(`${fmtDay(today + 'T12:00:00+05:30')} · ${arriving.length} to arrive · ${staying} staying now`);
+    content(`
+      <a href="check-in.html?new=1" class="ci-new">
+        <span style="font-size:26px;line-height:1">＋</span>
+        <span><b style="font-size:16px">New registration</b><br><span style="font-size:13px;opacity:.85">Walk-in or new booking — guest details, ${W.unit}, dates and payment</span></span>
+        <span style="margin-left:auto;font-size:20px">→</span></a>
+      ${section('Arriving today', arriving, 'arriving', 'No more arrivals today. 🎉')}
+      ${section('Checked in today', inToday, 'in', 'Nobody has checked in yet today.')}
+      ${section('Next 7 days', upcoming, 'upcoming', 'No arrivals in the next 7 days.')}`,
+    'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
+  }
+
+  document.querySelector('.ns-content').addEventListener('click', async (e) => {
+    const ci = e.target.closest('[data-checkin]');
+    if (ci) {
+      const b = d.bookings.find((x) => x.id === ci.dataset.checkin); const bed = bedOf(b);
+      const msg = `${b.guest} → ${bed.room} · ${bed.label}.` + (b.balance_paise > 0 ? ` ${rupees(b.balance_paise)} is still due — you can take it now on the booking screen.` : '');
+      if (!await confirmDialog(`Check in ${b.guest}?`, msg, { confirmLabel: 'Check in' })) return;
+      ci.disabled = true;
+      try {
+        await rpc('booking_action', { p_booking: b.id, p_action: 'check_in' });
+        toast(`${b.guest} checked in.`);
+        await load();
+        if (b.balance_paise > 0) setTimeout(() => { location.href = `booking-detail.html?id=${b.id}`; }, 700);
+      } catch (err) { toast(err.message, { error: true }); ci.disabled = false; }
+      return;
+    }
+    const wa = e.target.closest('[data-wa]');
+    if (wa) sendBookingWhatsApp(wa.dataset.wa).catch((err) => toast(err.message, { error: true }));
+  });
+  await load();
+}

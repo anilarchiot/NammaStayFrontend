@@ -12,7 +12,6 @@ async function init() {
     stepText.textContent = `Step ${n} of 3 — ${label}`;
     [...bars].forEach((b, i) => { b.style.background = i < n ? '#1C9A6C' : '#2A3963'; });
   };
-  if (NOT_CONNECTED) return stop('Online check-in is unavailable right now. Please check in at the front desk.');
   let token = param('t');
   if (!token && DEMO) {               // demo: open the next upcoming booking's link
     token = (await sb.rpc('demo_checkin_token')).data;
@@ -27,6 +26,7 @@ async function init() {
     footer.innerHTML = '';
   };
   const stop = (msg) => { body.innerHTML = `<div style="padding:30px 10px;text-align:center;font-size:14px;line-height:1.6">${esc(msg)}</div>`; footer.innerHTML = ''; reveal(); };
+  if (NOT_CONNECTED) return stop('Online check-in is unavailable right now. Please check in at the front desk.');
 
   if (!uuidOk(token)) return stop('Please open the check-in link sent to you by the hostel.');
   const top = document.querySelector('.ns-phone > div'); if (top && !top.querySelector('.ns-lang')) {

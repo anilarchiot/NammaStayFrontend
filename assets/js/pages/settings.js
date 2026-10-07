@@ -214,6 +214,7 @@ page('settings', async (ctx) => {
       const a = b.access; const [label, color] = STATE[a.state] || [a.state, 'grey'];
       const plans = b.plans; const payable = plans.filter((x) => !x.is_quote);
       let chosen = payable.find((x) => x.id === a.plan_id) || payable[payable.length - 1] || null;
+      let coupon = null;                                                            // { code, plan, amount_paise }
       const KIND = { hostel: 'hostels & PGs', hotel: 'hotels', homestay: 'homestays' };
       const tierNote = `Prices for ${KIND[b.kind] || 'your property'} · you have ${b.units} ${b.units === 1 ? W.unit : W.units}`;
       const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for NammaStay for ' + ctx.property_name)}`
@@ -248,6 +249,8 @@ page('settings', async (ctx) => {
                 <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
             </div>
             ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
+            <div class="cp-row"><input class="ns-input" id="coupon" placeholder="Have a coupon code?" maxlength="20" style="text-transform:uppercase" autocomplete="off">
+              <button type="button" class="ns-btn-ghost" id="coupon-apply">Apply</button><span id="coupon-msg" class="ns-muted" style="font-size:12.5px"></span></div>
             <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
               <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
               <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
@@ -268,8 +271,9 @@ page('settings', async (ctx) => {
 
       const draw = async () => {
         if (!$('#qr') || !chosen) return;
-        $('#amt').textContent = rupees(chosen.price_paise);
-        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: chosen.price_paise, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
+        const due = coupon && coupon.plan === chosen.id ? coupon.amount_paise : chosen.price_paise;
+        $('#amt').innerHTML = due !== chosen.price_paise ? `${rupees(due)} <s class="ns-muted" style="font-weight:600">${rupees(chosen.price_paise)}</s>` : rupees(due);
+        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: due, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
         $('#upi-open').href = link;
         const url = await qrDataUrl(link);
         if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
@@ -278,11 +282,19 @@ page('settings', async (ctx) => {
         chosen = payable.find((x) => x.id === p.dataset.plan);
         $$('[data-plan]').forEach((x) => x.classList.toggle('is-on', x === p)); draw();
       });
+      $('#coupon-apply')?.addEventListener('click', async () => {
+        const code = $('#coupon').value.trim().toUpperCase(); const msg = $('#coupon-msg');
+        if (!code) { coupon = null; msg.textContent = ''; draw(); return; }
+        try { const r = await rpc('check_coupon', { p_property: ctx.property_id, p_plan: chosen.id, p_code: code });
+          coupon = { code: r.code, plan: chosen.id, amount_paise: r.amount_paise }; msg.innerHTML = `<b style="color:#157A56">✓ ${esc(r.code)}: ${rupees(r.discount_paise)} off</b>`; draw(); }
+        catch (e) { coupon = null; msg.innerHTML = `<span style="color:#B23A3A">${esc(e.message)}</span>`; draw(); }
+      });
       $('#submit-pay')?.addEventListener('click', async (e) => {
         const utr = $('#utr').value.replace(/\s/g, '');
         if (!/^[0-9A-Za-z]{6,35}$/.test(utr)) return toast('Enter the UPI transaction ID (UTR) from your payment app.', { error: true });
         e.target.disabled = true;
-        try { await rpc('submit_subscription_payment', { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr }); toast('Thanks! We’ll confirm your payment shortly.'); show('billing'); }
+        try { await rpc('submit_subscription_payment', coupon && coupon.plan === chosen.id
+            ? { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr, p_coupon: coupon.code } : { p_property: ctx.property_id, p_plan: chosen.id, p_utr: utr }); toast('Thanks! We’ll confirm your payment shortly.'); show('billing'); }
         catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
       });
       draw();
