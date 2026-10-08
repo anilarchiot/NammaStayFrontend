@@ -1,5 +1,5 @@
 // OTA calendar sync (iCal) — export each bed/room's NammaStay calendar to OTAs, import OTA calendars back.
-import { page, rpc, sb, content, setSubtitle, headerActions, esc, toast, confirmDialog, field, options, showFatal, W,
+import { fmtDate, rupees, modal, page, rpc, sb, content, setSubtitle, headerActions, esc, toast, confirmDialog, field, options, showFatal, W,
   FUNCTIONS_URL, OTA, DEMO, $, $$ } from '../core.js';
 
 const ago = (iso) => {
@@ -28,6 +28,7 @@ page('ota', async (ctx) => {
     setSubtitle(`${feeds.length} OTA calendar${feeds.length === 1 ? '' : 's'} connected · last sync ${ago(lastSync)}${errs ? ` · ${errs} need attention` : ''}`);
     let room = null;
     content(`
+      <div id="cx-card"></div>
       <div class="ns-card ota-intro">
         <div class="ns-h3">Keep Airbnb, Booking.com and NammaStay in step</div>
         <div class="ota-steps">
@@ -71,6 +72,7 @@ page('ota', async (ctx) => {
           </div></div>`;
       }).join('') || '<div class="ns-card ns-empty">Add your rooms and beds first (Rooms).</div>'}`);
 
+    cxCard(ctx);
     $$('.ota-bed').forEach((card) => {
       const bed = beds.find((x) => x.bed_id === card.dataset.bed);
       const urlEl = card.querySelector('[data-exp-url]'); const chEl = card.querySelector('[data-exp-ch]');
@@ -115,3 +117,76 @@ page('ota', async (ctx) => {
   $('#sync-now').onclick = () => syncNow();
   await draw();
 });
+
+// ------------------------------------------------------------ Two-way channel manager (Channex)
+async function cxCard(ctx) {
+  const host = document.getElementById('cx-card'); if (!host) return;
+  const st = await rpc('cx_status', { p_property: ctx.property_id }).catch(() => null);
+  if (!st) { host.remove(); return; }                                              // database not updated yet (027)
+  const call = async (body) => { const { data, error } = await sb.functions.invoke('channex', { body: { property_id: ctx.property_id, ...body } });
+    if (error || data?.error) { let m = data?.error || error?.message; try { const j = await error?.context?.json?.(); if (j?.error) m = j.error; } catch { /* ignore */ } throw new Error(m || 'Channel manager unavailable.'); } return data; };
+  const link = st.link; const owner = ctx.can('owner');
+  const ago = (iso) => { if (!iso) return 'never'; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  const mapped = st.maps.filter((m) => m.cx_room_type_id);
+  const unmappedGroups = st.groups.filter((g) => !st.maps.some((m) => m.group_key === g.group_key && m.cx_room_type_id));
+  const OTA_COL = { 'Booking.com': '#003580', BookingCom: '#003580', Airbnb: '#FF5A5F', Agoda: '#5C2D91', MakeMyTrip: '#E8352E', Goibibo: '#2276E3', Hostelworld: '#F25621', Expedia: '#1B2B5A', Yatra: '#D7262C' };
+  host.innerHTML = `<div class="ns-card cx-card">
+    <div class="cx-head"><div><div class="ns-h3">⚡ Two-way channel manager <span class="ns-pill amber" style="font-size:10.5px">Test mode</span></div>
+      <div class="ns-muted" style="font-size:12.5px">Real-time with Booking.com, Agoda, Expedia, Airbnb, MakeMyTrip/Goibibo, Hostelworld and more: free ${W.units} and your prices (with seasonal &amp; weekend rules) go out, OTA bookings come in with the guest’s details.</div></div>
+      ${link?.cx_property_id ? `<span class="ns-pill ${link.enabled ? (link.last_error ? 'red' : 'green') : 'grey'}">${link.enabled ? (link.last_error ? 'Needs attention' : 'Connected') : 'Paused'}</span>` : ''}</div>
+    ${!link?.cx_property_id ? `
+      <ol class="cx-steps"><li><b>Set up</b> — NammaStay creates your ${W.units} and prices on the channel manager.</li><li><b>Connect your OTAs</b> — sign in to Booking.com, MakeMyTrip… once, inside NammaStay.</li><li><b>Done</b> — everything stays in sync automatically.</li></ol>
+      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-setup">Set up channel manager</button>
+        <details class="cx-adv"><summary>Already have a Channex property?</summary><div style="display:flex;gap:8px;margin-top:6px"><input class="ns-input" id="cx-existing" placeholder="Channex property ID" style="height:36px"><button type="button" class="ns-btn-ghost" id="cx-link" style="height:36px">Link it</button></div></details></div>`
+    : `
+      <div class="cx-stats"><span>Prices &amp; availability sent <b>${ago(link.last_push_at)}</b></span><span>Bookings checked <b>${ago(link.last_pull_at)}</b></span><span>${mapped.length} ${mapped.length === 1 ? 'room type' : 'room types'} linked</span></div>
+      ${link.last_error ? `<div class="cx-err">⚠ ${esc(link.last_error)}</div>` : ''}
+      ${unmappedGroups.length ? `<div class="cx-err" style="background:#FFF7E8;border-color:#F3D9A6;color:#7A4F0F">${unmappedGroups.length} new ${unmappedGroups.length === 1 ? 'room/price group isn’t' : 'room/price groups aren’t'} on the channel manager yet — tap <b>Update rooms</b>.</div>` : ''}
+      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-connect">🔗 Connect your OTAs</button><button type="button" class="ns-btn-ghost" id="cx-sync">⟳ Sync now</button>
+        ${unmappedGroups.length ? '<button type="button" class="ns-btn-ghost" id="cx-setup">Update rooms</button>' : ''}
+        ${owner ? `<button type="button" class="ns-btn-ghost" id="cx-toggle" style="margin-left:auto">${link.enabled ? 'Pause' : 'Resume'}</button>` : ''}</div>
+      <details class="cx-adv"><summary>Rooms on the channel manager (${mapped.length})</summary>
+        ${mapped.map((m) => `<div class="pl-row"><span><b>${esc(m.title)}</b> · ${m.beds} ${m.beds === 1 ? W.unit : W.units}</span><span class="ns-muted">${rupees(m.rate_paise)} base</span></div>`).join('')}</details>
+      <div class="cx-bk"><div class="ns-muted" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">Latest OTA bookings</div>
+        ${st.bookings.length ? st.bookings.slice(0, 8).map((b) => `<div class="cx-bk-row${b.problem ? ' is-bad' : ''}">
+            <span class="ota-badge" style="background:${OTA_COL[b.ota] || '#6B7280'}">${esc(b.ota || 'OTA')}</span>
+            <span class="cx-bk-main"><b>${esc(b.guest || '')}</b> · ${b.arrival ? fmtDate(b.arrival + 'T12:00:00+05:30') : ''} → ${b.departure ? fmtDate(b.departure + 'T12:00:00+05:30') : ''} · ${esc(b.code || '')}${b.amount ? ` · ${b.currency === 'INR' || !b.currency ? '₹' + Number(b.amount).toLocaleString('en-IN') : esc(b.currency) + ' ' + b.amount}` : ''}
+              ${b.problem ? `<br><span style="color:#B23A3A">⚠ ${esc(b.problem)}</span>` : ''}</span>
+            <span class="ns-pill ${b.status === 'cancelled' ? 'grey' : b.problem ? 'red' : 'green'}">${b.status === 'cancelled' ? 'Cancelled' : b.status === 'modified' ? 'Changed' : 'New'}</span>
+            ${b.booking_ids?.[0] ? `<a class="ns-btn-ghost" style="height:30px;font-size:12px" href="booking-detail.html?id=${esc(b.booking_ids[0])}">Open</a>` : ''}</div>`).join('')
+          : '<div class="ns-muted" style="font-size:12.5px">No OTA bookings yet. They appear here — and on your calendar — as soon as they arrive.</div>'}</div>`}
+  </div>`;
+  const busy = (b, t) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = t; };
+  const done = (b) => { b.disabled = false; b.textContent = b.dataset.t; };
+  host.querySelector('#cx-setup')?.addEventListener('click', async (e) => {
+    busy(e.target, 'Setting up…');
+    try { const r = await call({ action: 'setup' }); toast(`Channel manager ready — ${r.rooms} room type${r.rooms === 1 ? '' : 's'} created, prices & availability sent.`); cxCard(ctx); }
+    catch (err) { toast(err.message, { error: true }); done(e.target); }
+  });
+  host.querySelector('#cx-link')?.addEventListener('click', async (e) => {
+    const id = host.querySelector('#cx-existing').value.trim(); if (!/^[0-9a-f-]{36}$/i.test(id)) return toast('Paste the Channex property ID (36 characters).', { error: true });
+    busy(e.target, 'Linking…');
+    try { await call({ action: 'setup', cx_property_id: id }); toast('Linked.'); cxCard(ctx); } catch (err) { toast(err.message, { error: true }); done(e.target); }
+  });
+  host.querySelector('#cx-sync')?.addEventListener('click', async (e) => {
+    busy(e.target, 'Syncing…');
+    try { const r = await call({ action: 'sync' });
+      toast(`Synced — ${r.saved} OTA booking update${r.saved === 1 ? '' : 's'}, prices & availability sent.${r.problems?.length ? ' ⚠ ' + r.problems.length + ' need attention' : ''}`, { error: !!r.problems?.length }); cxCard(ctx); }
+    catch (err) { toast(err.message, { error: true }); done(e.target); }
+  });
+  host.querySelector('#cx-connect')?.addEventListener('click', async (e) => {
+    busy(e.target, 'Opening…');
+    try {
+      const { url } = await call({ action: 'iframe' });
+      modal({ title: 'Connect your OTAs', width: 980,
+        body: `<div class="ns-muted" style="font-size:12.5px;margin-bottom:8px">Choose an OTA (Booking.com, MakeMyTrip, Agoda…), sign in with your OTA account, then match each OTA room to a NammaStay room. Each OTA may also need you to approve NammaStay’s channel manager in its own extranet.</div>
+          ${url === 'demo' ? `<div class="cx-frame cx-demo-frame"><div><b>Channex’s “Connect a channel” screen opens here</b><br>Pick an OTA → sign in with your Booking.com / MakeMyTrip / Hostelworld account → match each OTA room to a NammaStay room (e.g. “Mixed Dorm bed” → “6-Bed Mixed Dorm · ₹700”) → Activate.<br><br><span class="ns-muted">Demo: nothing to connect here — tap Done, then Sync now.</span></div></div>`
+            : `<iframe class="cx-frame" src="${esc(url)}" title="Connect OTAs"></iframe>`}`,
+        actions: [{ label: 'Done', kind: 'primary', onClick: () => { setTimeout(() => cxCard(ctx), 50); } }] });
+    } catch (err) { toast(err.message, { error: true }); }
+    done(e.target);
+  });
+  host.querySelector('#cx-toggle')?.addEventListener('click', async () => {
+    await rpc('cx_set_enabled', { p_property: ctx.property_id, p_enabled: !link.enabled }); toast(link.enabled ? 'Paused — nothing is sent or received.' : 'Resumed.'); cxCard(ctx);
+  });
+}

@@ -108,6 +108,8 @@ const PAGE_ROLES = {
   guests: ['owner', 'manager', 'front_desk'],
   ota: ['owner', 'manager'],
   formc: ['owner', 'manager', 'front_desk'],
+  housekeeping: ['owner', 'manager', 'front_desk'],
+  setup: ['owner', 'manager'],
   expenses: ['owner', 'manager', 'accountant'],
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
@@ -402,6 +404,16 @@ function applyChrome(ctx) {
     const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
   }
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
+  if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
+    const rb = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
+    if (rb) {
+      const a = document.createElement('a'); a.href = 'housekeeping.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M6 21V10l6-5 6 5v11"></path><path d="M10 21v-5h4v5"></path></svg><span>Housekeeping</span><b class="ns-nav-count" id="hk-count" hidden></b>';
+      if (/housekeeping\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      rb.insertAdjacentElement('afterend', a);
+      rpc('hk_counts', { p_property: ctx.property_id }).then((c) => { const n = (c?.dirty || 0) + (c?.cleaning || 0); const el = $('#hk-count'); if (el && n > 0) { el.textContent = n; el.hidden = false; } }).catch(() => {});
+    }
+  }
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
     const ci = $('.ns-sidebar .ns-nav-link[href="check-in.html"]');
     if (ci) {
