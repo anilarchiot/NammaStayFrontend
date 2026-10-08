@@ -11,8 +11,8 @@
 window.NAMMASTAY_CONFIG = {
   supabaseUrl: 'https://skcqpfyshbxcyyamsgtj.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrY3FwZnlzaGJ4Y3l5YW1zZ3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2ODg3NTMsImV4cCI6MjEwNjI2NDc1M30.PgKY1xdxnie_F3wj55DTBr5MMvhVcdalf6wRJAgmLK0',
-  siteUrl: 'https://app.thenammastay.com',            // this site — the hostel app (links in WhatsApp messages, invites)
-  appUrl: 'https://app.thenammastay.com',             // the hostel app
+  siteUrl: 'https://thenammastay.com',            // this site — the hostel app (links in WhatsApp messages, invites)
+  appUrl: 'https://thenammastay.com',             // the hostel app
   marketingUrl: 'https://thenammastay.com',        // the homepage
   adminUrl: 'https://admin.thenammastay.com'    // the admin website
 };
