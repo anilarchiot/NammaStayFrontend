@@ -144,8 +144,9 @@ Every early-access request then emails you, sends the person a thank-you, and ap
 ## 8. Automatic ID-photo deletion
 
 1. **Database → Extensions**: enable `pg_cron` and `pg_net`.
-2. Edit `supabase/migrations/005_schedule.sql` (project ref + CRON_SECRET) and run it.
-3. The function deletes ID photos once a guest's last stay is older than the retention days in Settings (default 180). Adjust to what your legal advisor recommends.
+2. Apply migration `006_guest_id_back_documents.sql` after the schema/functions migrations; run it once on existing databases and include it in fresh installs before enabling the purge schedule.
+3. Edit `supabase/migrations/005_schedule.sql` (project ref + CRON_SECRET) and run it.
+4. The function deletes both stored sides of a guest ID once the guest's last stay is older than the retention days in Settings (default 180). Adjust to what your legal advisor recommends.
 
 ## 9. Invite staff
 

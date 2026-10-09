@@ -20,5 +20,5 @@ window.NAMMASTAY_CONFIG = {
   window.NS_INITIAL_HASH = location.hash;             // read before the auth client clears it
   h.classList.add('ns-booting', c.supabaseUrl && c.supabaseAnonKey ? 'ns-live' : 'ns-demo');
   // Safety net: never leave the page blank if a script fails to load
-  setTimeout(function () { h.classList.remove('ns-booting'); }, 8000);
+  setTimeout(function () { h.classList.remove('ns-booting'); h.classList.add('ns-chrome-ready'); }, 8000);
 })();

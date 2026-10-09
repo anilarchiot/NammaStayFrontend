@@ -112,6 +112,7 @@ create table public.guests (
   id_type     public.id_doc_type,
   id_number   text check (char_length(id_number) <= 40),   -- Aadhaar is stored masked: XXXX XXXX 1234
   id_doc_path text,                                          -- file in the private "guest-ids" bucket
+  id_doc_back_path text,                                     -- optional back side in the private "guest-ids" bucket
   notes       text check (char_length(notes) <= 2000),
   tags        text[] not null default '{}',
   consent_at  timestamptz,

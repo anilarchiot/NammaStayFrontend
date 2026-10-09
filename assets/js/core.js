@@ -235,7 +235,51 @@ export function countryOptions(selected = '', { placeholder = 'Choose country…
 export const ROLE_LABEL = { owner: 'Owner', manager: 'Manager', front_desk: 'Front desk', accountant: 'Accountant' };
 
 class Stop extends Error {}
-export function reveal() { document.documentElement.classList.remove('ns-booting'); }
+export function reveal() { document.documentElement.classList.remove('ns-booting'); chromeReady(); }
+
+// ---- sidebar cache: assets/js/app.js shows the last finished menu right away on the next page,
+// so the sidebar doesn't jump from the placeholder HTML menu to the real one while the login is checked.
+const CHROME_KEY = 'ns.chrome.v1';
+const chromeReady = () => document.documentElement.classList.add('ns-chrome-ready');
+export function clearChrome() { try { sessionStorage.removeItem(CHROME_KEY); } catch { /* ignore */ } }
+function saveChrome(area) {
+  try {
+    const nav = $('.ns-sidebar .ns-nav'); if (!nav) return;
+    const clone = nav.cloneNode(true);
+    clone.querySelectorAll('.is-active').forEach((a) => { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
+    const user = $('.ns-sidebar .ns-user'); const brand = $('.ns-sidebar .ns-brand');
+    const settings = $('.ns-sidebar-foot a[href="settings.html"]');
+    const lang = $('.ns-sidebar .ns-lang'); const bell = $('.ns-sidebar .ns-bell:not([data-ns-bell-slot])');
+    let langHtml = '';
+    if (lang && !lang.closest('[data-ns-lang-slot]')) {
+      const c = lang.cloneNode(true);
+      [...c.options].forEach((o, i) => { if (i === lang.selectedIndex) o.setAttribute('selected', ''); else o.removeAttribute('selected'); });
+      langHtml = c.outerHTML;
+    }
+    let prev = {}; try { prev = JSON.parse(sessionStorage.getItem(CHROME_KEY) || '{}') || {}; } catch { /* ignore */ }
+    sessionStorage.setItem(CHROME_KEY, JSON.stringify({
+      area, property: area === 'app' ? (localStorage.getItem('ns.property') || '') : '',
+      nav: clone.innerHTML, user: user ? user.innerHTML : '',
+      brand: brand ? brand.innerHTML : '', brandHref: brand ? brand.getAttribute('href') : '',
+      hideSettings: !settings || settings.style.display === 'none',
+      lang: langHtml || (prev.area === area ? prev.lang || '' : ''),
+      bell: bell ? bell.innerHTML : (prev.area === area ? prev.bell || '' : ''),
+    }));
+  } catch { /* storage full / blocked: the page still works, it just isn't cached */ }
+}
+/** Put back the page's own sidebar HTML (if app.js swapped in the cached one) so it is rebuilt from scratch. */
+function resetRestoredChrome() {
+  const s = window.__nsStaticChrome; if (!s) return {};
+  window.__nsStaticChrome = null;
+  const counts = {};
+  ['hk-count', 'formc-count'].forEach((id) => { const e = document.getElementById(id); if (e && !e.hidden) counts[id] = e.textContent; });
+  const nav = $('.ns-sidebar .ns-nav'); if (nav) nav.innerHTML = s.nav;
+  const user = $('.ns-sidebar .ns-user'); if (user) user.innerHTML = s.user;
+  const st = $('.ns-sidebar-foot a[href="settings.html"]');
+  if (st) { if (s.settings == null) st.removeAttribute('style'); else st.setAttribute('style', s.settings); }
+  return counts;
+}
+const showCount = (id, n) => { const el = document.getElementById(id); if (el) { el.textContent = n > 0 ? n : ''; el.hidden = !(n > 0); } };
 
 export function showFatal(message, { signIn = false } = {}) {
   const box = `<div class="ns-card" style="max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
@@ -276,6 +320,7 @@ const ADMIN_NAV = [
 ];
 const hostelHref = (page) => page;
 function adminChrome(user, hasProperty) {
+  window.__nsStaticChrome = null;
   document.body.classList.add('ns-admin-area');
   const brand = $('.ns-sidebar .ns-brand');
   if (brand) { brand.href = 'admin.html'; if (!brand.querySelector('.ns-admin-tag')) brand.insertAdjacentHTML('beforeend', '<span class="ns-admin-tag">Admin</span>'); }
@@ -285,11 +330,15 @@ function adminChrome(user, hasProperty) {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label}</span></a>`).join('')
     + (hasProperty ? `<div class="ns-nav-section">Your property</div><a href="${hostelHref('dashboard.html')}" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>Open hostel app</span></a>` : '');
   $$('.ns-sidebar a[href="settings.html"], .ns-sidebar .ns-demo-badge, .ns-bell, .ns-mobilebar .ns-bell').forEach((e) => e.remove());
-  const nm = $('.ns-sidebar .ns-user-name'); const sub = $('.ns-sidebar .ns-user-sub'); const av = $('.ns-sidebar .ns-user .ns-avatar, .ns-sidebar .ns-user > div:first-child');
+  const userBox = $('.ns-sidebar .ns-user');
+  const nm = userBox?.querySelector('.ns-user-name'); const sub = userBox?.querySelector('.ns-user-sub'); const av = userBox?.querySelector('.ns-avatar') || userBox?.firstElementChild;
   if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'NammaStay admin';
   if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
+  userBox?.classList.add('is-ready');
   const so = $('.ns-sidebar .ns-signout');
-  if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
+  if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); clearChrome(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
+  saveChrome('admin');
+  chromeReady();
 }
 /** Admin screens: their own login, their own menu, no property needed. */
 export function adminPage(fn) {
@@ -297,7 +346,7 @@ export function adminPage(fn) {
   (async () => {
     try {
       const { data: { session } } = await sb.auth.getSession();
-      if (!session) { location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return; }
+      if (!session) { clearChrome(); location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return; }
       if (!DEMO) {                                                      // 2-step login: set up / code entered?
         const mfa = await rpc('admin_mfa_info').catch(() => null);
         if (mfa && mfa.admin && mfa.has_factor && mfa.aal !== 'aal2') {   // code only if an authenticator is set up
@@ -312,7 +361,7 @@ export function adminPage(fn) {
         host.innerHTML = `<div class="ns-card" style="max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
           <div class="ns-h3">This account doesn’t have NammaStay admin access.</div>
           <button type="button" class="ns-btn" id="adm-switch">Sign in with an admin account</button></div>`;
-        $('#adm-switch').onclick = async () => { await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); };
+        $('#adm-switch').onclick = async () => { clearChrome(); await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); };
         reveal(); return;
       }
       await fn({ user: session.user, isAdmin: true });
@@ -334,6 +383,7 @@ async function boot(key) {
   }
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
+    clearChrome();
     const here = location.pathname.split('/').pop() + location.search;
     location.replace('login.html?next=' + encodeURIComponent(here));
     throw new Stop();
@@ -382,25 +432,32 @@ async function boot(key) {
   ctx.access = await rpc('property_access', { p_property: ctx.property_id }).catch(() => null);
   accessBanner(ctx);
   rpc('touch_presence', { p_property: ctx.property_id }).catch(() => {});
-  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.replace('login.html'); });
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { clearChrome(); location.replace('login.html'); } });
   startNotifications(ctx);
   return ctx;
 }
 
 function applyChrome(ctx) {
-  const nameEl = $('.ns-user-name'); if (nameEl) nameEl.textContent = ctx.name;
-  const subEl = $('.ns-user-sub'); if (subEl) subEl.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
-  const av = $('.ns-avatar'); if (av) av.textContent = initials(ctx.name);
+  const prevCounts = resetRestoredChrome();
+  const userBox = $('.ns-sidebar .ns-user');
+  const nameEl = userBox?.querySelector('.ns-user-name'); if (nameEl) nameEl.textContent = ctx.name;
+  const subEl = userBox?.querySelector('.ns-user-sub'); if (subEl) subEl.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
+  const av = userBox?.querySelector('.ns-avatar'); if (av) av.textContent = initials(ctx.name);
+  userBox?.classList.add('is-ready');
   $$('.ns-nav-link').forEach((a) => {
     const k = NAV_KEY[a.getAttribute('href')];
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
   const so = $('.ns-sidebar a[href="login.html"], .ns-sidebar [data-signout], .ns-sidebar button:last-of-type');
-  if (!$('.ns-sidebar .ns-lang')) {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'padding:4px 12px 8px';
-    wrap.appendChild(langPicker('width:100%;height:34px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 8px'));
-    const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
+  if (!$('.ns-sidebar .ns-lang') || $('.ns-sidebar [data-ns-lang-slot]')) {
+    const slot = $('.ns-sidebar [data-ns-lang-slot]');      // placeholder from app.js: swap in the working picker, same size
+    const wrap = slot || document.createElement('div'); wrap.style.cssText = 'padding:4px 12px 8px';
+    const picker = langPicker('width:100%;height:34px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 8px');
+    if (slot) { slot.removeAttribute('data-ns-lang-slot'); slot.replaceChildren(picker); } else {
+      wrap.appendChild(picker);
+      const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
+    }
   }
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
@@ -410,7 +467,8 @@ function applyChrome(ctx) {
       a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M6 21V10l6-5 6 5v11"></path><path d="M10 21v-5h4v5"></path></svg><span>Housekeeping</span><b class="ns-nav-count" id="hk-count" hidden></b>';
       if (/housekeeping\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
       rb.insertAdjacentElement('afterend', a);
-      rpc('hk_counts', { p_property: ctx.property_id }).then((c) => { const n = (c?.dirty || 0) + (c?.cleaning || 0); const el = $('#hk-count'); if (el && n > 0) { el.textContent = n; el.hidden = false; } }).catch(() => {});
+      if (prevCounts['hk-count']) showCount('hk-count', Number(prevCounts['hk-count']));
+      rpc('hk_counts', { p_property: ctx.property_id }).then((c) => { showCount('hk-count', (c?.dirty || 0) + (c?.cleaning || 0)); saveChrome('app'); }).catch(() => {});
     }
   }
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
@@ -420,7 +478,8 @@ function applyChrome(ctx) {
       a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"></path></svg><span>Form C</span><b class="ns-nav-count" id="formc-count" hidden></b>';
       if (/formc\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
       ci.insertAdjacentElement('afterend', a);
-      rpc('formc_due_count', { p_property: ctx.property_id }).then((n) => { const c = $('#formc-count'); if (c && n > 0) { c.textContent = n; c.hidden = false; } }).catch(() => {});
+      if (prevCounts['formc-count']) showCount('formc-count', Number(prevCounts['formc-count']));
+      rpc('formc_due_count', { p_property: ctx.property_id }).then((n) => { showCount('formc-count', n); saveChrome('app'); }).catch(() => {});
     }
   }
   if (['owner', 'manager'].includes(ctx.role) && !$('.ns-sidebar a[href="ota.html"]')) {         // OTA calendar sync
@@ -462,6 +521,7 @@ function applyChrome(ctx) {
   const out = $('.ns-signout');
   if (out) out.addEventListener('click', async (e) => {
     e.preventDefault();
+    clearChrome();
     await sb.auth.signOut();
     localStorage.removeItem('ns.property');
     location.replace('login.html');
@@ -473,6 +533,8 @@ function applyChrome(ctx) {
       ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
+  saveChrome('app');
+  chromeReady();
 }
 
 // Trial / expiry banner at the top of every screen
@@ -580,6 +642,8 @@ export function content(html, style = 'padding:24px 32px;display:flex;flex-direc
 const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 003.4 0"></path></svg>';
 async function startNotifications(ctx) {
   const bells = [];
+  const prevUnread = parseInt(document.querySelector('[data-ns-bell-slot] .ns-bell-count')?.textContent, 10) || 0;
+  document.querySelectorAll('[data-ns-bell-slot]').forEach((e) => e.remove());   // placeholders from app.js
   for (const host of [$('.ns-sidebar'), $('.ns-mobilebar')]) {
     if (!host) continue;
     const b = document.createElement('button');
@@ -588,6 +652,7 @@ async function startNotifications(ctx) {
     host.appendChild(b); bells.push(b);
   }
   if (!bells.length) return;
+  if (prevUnread) setCount(prevUnread); else saveChrome('app');
   function setCount(n) {
     bells.forEach((b) => {
       b.querySelector('.ns-bell-count')?.remove();
@@ -596,6 +661,7 @@ async function startNotifications(ctx) {
     });
     document.title = document.title.replace(/^\(\d+\+?\)\s/, '');
     if (n) document.title = `(${n > 99 ? '99+' : n}) ${document.title}`;
+    saveChrome('app');
   }
   let unread = 0;
   try {

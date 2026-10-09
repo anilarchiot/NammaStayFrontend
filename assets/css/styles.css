@@ -35,6 +35,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .ns-nav-link svg{flex-shrink:0}
 .ns-sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid #22305A;padding-top:12px}
 .ns-user{display:flex;align-items:center;gap:10px;padding:12px 8px 4px 8px;line-height:1.3}
+.ns-sidebar .ns-user:not(.is-ready){visibility:hidden}
+.ns-live:not(.ns-chrome-ready) .ns-sidebar .ns-nav,.ns-live:not(.ns-chrome-ready) .ns-sidebar .ns-sidebar-foot{visibility:hidden}
 .ns-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
 .ns-user-name{font-size:13px;font-weight:700;color:var(--cream)}
 .ns-user-sub{font-size:11px;color:#8B93A8}

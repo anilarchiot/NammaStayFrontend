@@ -232,7 +232,7 @@ page('checkin', async (ctx) => {
       const ids = await uploadIdSides(document.querySelector('.ns-content'), `${ctx.property_id}/staff`);
       let guestId = state.guest?.id || null;
       if (guestId && (ids.id_doc_path || ids.id_doc_back_path)) {                 // new ID photo for an existing guest
-        const r = await rpc('update_guest', { p_guest: guestId, p: ids }).catch(() => null);
+        const r = await rpc('update_guest', { p_guest: guestId, p: ids });
         const old = [r?.old_id_doc_path, r?.old_id_doc_back_path].filter(Boolean);
         if (old.length) await sb.storage.from('guest-ids').remove(old).catch(() => {});
       }
@@ -274,7 +274,7 @@ async function arrivalsView(ctx) {
   document.querySelector('.ns-main > [style*="height:76px"] a[href="bookings.html"]')?.remove();
   const today = ymd();
   let q = '';
-  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn" href="check-in.html?new=1">+ New registration</a>';
+  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div>';
   headerSearch('Search guest or booking…', (v) => { q = v.trim().toLowerCase(); render(); });
   let d = null;
 
