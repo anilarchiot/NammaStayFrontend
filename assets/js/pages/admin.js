@@ -23,7 +23,11 @@ adminPage(async (ctx) => {
 async function overview() {
   let filter = ''; let q = '';
   headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn-ghost" href="subscribers.html">Payments & prices</a><button type="button" class="ns-btn" id="add-prop">+ Add property</button>';
-  $('#add-prop').onclick = addPropertyDialog;
+  $('#add-prop').onclick = () => addPropertyDialog();
+  if (param('addprop') === '1') {                                                  // "Create property" from a lead
+    const g = (k) => param(k) || '';
+    addPropertyDialog({ lead: g('lead'), name: g('pname'), kind: g('ptype'), city: g('city'), owner_name: g('owner'), phone: g('phone'), owner_email: g('email') });
+  }
   headerSearch('Search property, city, owner…', (v) => { q = v.toLowerCase(); drawTable(); });
   const d = await rpc('admin_overview');
   const drawReminders = async () => {
@@ -52,6 +56,22 @@ async function overview() {
       if (n !== null) toast(n ? `${n} new reminder${n > 1 ? 's' : ''} sent in the app.` : 'No new reminders today.'); drawReminders(); };
   };
   setTimeout(drawReminders, 0);
+  // ---- customer health: who is set up and using NammaStay, who needs a call
+  const drawHealth = async (all = false) => {
+    const host = document.getElementById('health-card'); if (!host) return;
+    const list = await rpc('admin_health').catch(() => null);
+    if (list === null) { host.remove(); return; }                                   // database not updated yet (025)
+    const shown = all ? list : list.slice(0, 8);
+    host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="ns-h3">Customer health <span class="ns-muted" style="font-weight:600">(lowest first)</span></div>
+        <span class="ns-muted" style="font-size:12px">${list.filter((x) => x.score < 40).length} at risk · ${list.filter((x) => x.score >= 70).length} healthy</span></div>
+      ${shown.map((h) => `<a class="hl-row" href="admin.html?id=${esc(h.property_id)}">${healthRing(h.score)}
+          <span class="hl-main"><b>${esc(h.name)}</b> <span class="ns-muted" style="font-size:12px">${esc(h.city || '')} · ${esc(h.state)}</span>${stepDots(h.steps)}</span>
+          <span class="ns-muted hl-meta">${h.bookings_14} bookings / 14 days<br>${h.last_seen_at ? 'seen ' + fmtDate(h.last_seen_at) : 'never signed in'}</span></a>`).join('')}
+      ${list.length > 8 && !all ? '<button type="button" class="ns-btn-ghost" id="hl-all" style="align-self:flex-start;height:32px;font-size:12px">Show all</button>' : ''}`;
+    host.querySelector('#hl-all')?.addEventListener('click', () => drawHealth(true));
+  };
+  setTimeout(drawHealth, 0);
   const c = d.counts;
   setSubtitle(`${d.total} properties on NammaStay`);
   const stat = (l, v, sub = '', dark = false) => `<div class="ns-stat${dark ? ' is-dark' : ''}"><div class="ns-stat-label">${l}</div><div class="ns-stat-value">${v}</div>${sub ? `<div class="ns-stat-sub">${sub}</div>` : ''}</div>`;
@@ -86,6 +106,7 @@ async function overview() {
       </div>
     </div>
     <div class="ns-card" id="rem-card" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="ns-card" id="health-card" style="display:flex;flex-direction:column;gap:8px"></div>
     ${att('Not using NammaStay lately', d.inactive, (r) => `last active ${ago(r.last_seen_at || r.last_booking_at).toLowerCase()}`, 'Everyone has been active in the last 2 weeks.')}
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -117,6 +138,20 @@ async function overview() {
 // ------------------------------------------------------------ one property
 async function propertyView(id) {
   const d = await rpc('admin_property', { p_property: id });
+  rpc('admin_health').then((all) => {                                               // onboarding checklist for this property
+    const h = (all || []).find((x) => x.property_id === id); if (!h) return;
+    let tries = 0;
+    const place = () => {                                   // the property page may redraw: keep the card in place for a few seconds
+      const host = document.querySelector('.ns-content');
+      if (tries++ < 40) setTimeout(place, 100);
+      if (!host || !host.querySelector('#save-note') || host.querySelector('.hl-prop')) return;
+    const STEPS = [['rooms', 'Rooms / beds added'], ['upi', 'UPI ID set'], ['staff', 'Staff invited'], ['first_booking', 'First booking'], ['first_payment', 'First payment recorded'], ['regular_use', '3+ bookings in 14 days']];
+    host.insertAdjacentHTML('afterbegin', `<div class="ns-card hl-prop">${healthRing(h.score, 56)}<div style="flex:1;min-width:0"><div class="ns-h3">Setup &amp; health</div>
+      <div class="hl-steps">${STEPS.map(([k, l]) => `<span class="hl-step${h.steps[k] ? ' is-done' : ''}">${h.steps[k] ? '✓' : '○'} ${l}</span>`).join('')}</div>
+      <div class="ns-muted" style="font-size:12px">${h.bookings_14} bookings in 14 days · active ${h.active_days_7} of the last 7 days</div></div></div>`);
+    };
+    place();
+  }).catch(() => {});
   const invs = await rpc('admin_platform_invoices', { p_property: id }).catch(() => []);
   const invBy = Object.fromEntries((invs || []).map((x) => [x.payment_id, x]));
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-pinv]'); if (b && invBy[b.dataset.pinv]) openPlatformInvoice(invBy[b.dataset.pinv].doc); });
@@ -209,7 +244,7 @@ async function propertyView(id) {
 }
 
 // ------------------------------------------------------------ add a property for a customer
-function addPropertyDialog() {
+function addPropertyDialog(pre = {}) {
   modal({
     title: 'Add a property', width: 620,
     body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -233,10 +268,15 @@ function addPropertyDialog() {
         owner_name: v('owner_name').value, owner_email: v('owner_email').value, complimentary: v('access').value === 'comp',
         trial_days: v('access').value === 'trial' ? v('trial_days').value : null, add_me: v('add_me').checked, admin_note: v('admin_note').value } });
       toast(`${v('name').value} added.`);
+      if (pre.lead) await rpc('admin_lead_converted', { p_lead: pre.lead, p_property: r.property_id }).catch(() => {});
       inviteMessage({ name: v('name').value.trim(), email: v('owner_email').value.trim(), owner: v('owner_name').value.trim(), phone: v('phone').value,
         linked: r.owner_linked, propertyId: r.property_id, addedMe: v('add_me').checked });
     } }],
   });
+  const pf = document.querySelector('.ns-modal');
+  ['name', 'city', 'owner_name', 'phone', 'owner_email'].forEach((k) => { if (pre[k]) pf.querySelector(`[name=${k}]`).value = pre[k]; });
+  if (['hostel', 'homestay', 'hotel'].includes(pre.kind)) pf.querySelector('[name=kind]').value = pre.kind;
+  if (pre.lead) pf.querySelector('.ns-modal-head, h2, .ns-modal-title')?.insertAdjacentHTML('beforeend', ' <span class="ns-pill green" style="font-size:11px">from lead</span>');
   const acc = document.querySelector('.ns-modal [name=access]');
   acc.addEventListener('change', () => { document.getElementById('trial-days').hidden = acc.value !== 'trial'; });
 }
@@ -261,4 +301,18 @@ function inviteMessage({ name, email, owner, phone, linked, propertyId, addedMe 
         window.open(`https://wa.me/${wa}?text=${encodeURIComponent(el.querySelector('#inv-text').value)}`, '_blank', 'noopener'); return false; } }],
   });
   return m;
+}
+
+// ---- health score helpers
+function healthRing(score, size = 40) {
+  const col = score >= 70 ? '#1C9A6C' : score >= 40 ? '#E2A03F' : '#B23A3A'; const r = 15.9; const c = 2 * Math.PI * r;
+  return `<span class="hl-ring" style="width:${size}px;height:${size}px" title="Health ${score}/100"><svg viewBox="0 0 36 36" width="${size}" height="${size}" aria-hidden="true">
+    <circle cx="18" cy="18" r="${r}" fill="none" stroke="#EFE8D2" stroke-width="3.6"></circle>
+    <circle cx="18" cy="18" r="${r}" fill="none" stroke="${col}" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="${(score / 100) * c} ${c}" transform="rotate(-90 18 18)"></circle></svg>
+    <b style="color:${col}">${score}</b></span>`;
+}
+function stepDots(st) {
+  const keys = ['rooms', 'upi', 'staff', 'first_booking', 'first_payment', 'regular_use'];
+  const names = { rooms: 'Rooms', upi: 'UPI', staff: 'Staff', first_booking: 'Booking', first_payment: 'Payment', regular_use: 'Regular use' };
+  return `<span class="hl-dots">${keys.map((k) => `<i class="${st[k] ? 'on' : ''}" title="${names[k]}: ${st[k] ? 'done' : 'not yet'}"></i>`).join('')}</span>`;
 }

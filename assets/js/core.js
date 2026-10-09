@@ -21,10 +21,9 @@ export const sb = LIVE
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
 export const TZ = 'Asia/Kolkata';
-/** The marketing website (homepage) — the hostel app lives on its own address (app.thenammastay.com) */
-export const MARKETING_URL = String(CFG.marketingUrl || 'https://thenammastay.com').replace(/\/$/, '');
-/** The separate NammaStay admin website */
-export const ADMIN_URL = String(CFG.adminUrl || 'https://admin.thenammastay.com').replace(/\/$/, '');
+/** One website: homepage, hostel app, admin pages and legal pages all live on thenammastay.com */
+export const MARKETING_URL = SITE_URL;
+export const ADMIN_URL = SITE_URL;
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -108,6 +107,8 @@ const PAGE_ROLES = {
   guests: ['owner', 'manager', 'front_desk'],
   ota: ['owner', 'manager'],
   formc: ['owner', 'manager', 'front_desk'],
+  housekeeping: ['owner', 'manager', 'front_desk'],
+  setup: ['owner', 'manager'],
   expenses: ['owner', 'manager', 'accountant'],
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
@@ -273,7 +274,7 @@ const ADMIN_NAV = [
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
 ];
-const hostelHref = (page) => { try { return new URL(SITE_URL).origin === location.origin || location.protocol === 'file:' ? page : `${SITE_URL}/${page}`; } catch { return page; } };
+const hostelHref = (page) => page;
 function adminChrome(user, hasProperty) {
   document.body.classList.add('ns-admin-area');
   const brand = $('.ns-sidebar .ns-brand');
@@ -288,7 +289,7 @@ function adminChrome(user, hasProperty) {
   if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'NammaStay admin';
   if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
   const so = $('.ns-sidebar .ns-signout');
-  if (so) { so.href = 'admin-login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); }); }
+  if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
 }
 /** Admin screens: their own login, their own menu, no property needed. */
 export function adminPage(fn) {
@@ -299,7 +300,7 @@ export function adminPage(fn) {
       if (!session) { location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return; }
       if (!DEMO) {                                                      // 2-step login: set up / code entered?
         const mfa = await rpc('admin_mfa_info').catch(() => null);
-        if (mfa && mfa.admin && (!mfa.has_factor || mfa.aal !== 'aal2')) {
+        if (mfa && mfa.admin && mfa.has_factor && mfa.aal !== 'aal2') {   // code only if an authenticator is set up
           location.replace('admin-login.html?next=' + encodeURIComponent(__PATH().split('/').pop() + location.search)); return;
         }
       }
@@ -402,6 +403,16 @@ function applyChrome(ctx) {
     const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
   }
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
+  if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
+    const rb = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
+    if (rb) {
+      const a = document.createElement('a'); a.href = 'housekeeping.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M6 21V10l6-5 6 5v11"></path><path d="M10 21v-5h4v5"></path></svg><span>Housekeeping</span><b class="ns-nav-count" id="hk-count" hidden></b>';
+      if (/housekeeping\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      rb.insertAdjacentElement('afterend', a);
+      rpc('hk_counts', { p_property: ctx.property_id }).then((c) => { const n = (c?.dirty || 0) + (c?.cleaning || 0); const el = $('#hk-count'); if (el && n > 0) { el.textContent = n; el.hidden = false; } }).catch(() => {});
+    }
+  }
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
     const ci = $('.ns-sidebar .ns-nav-link[href="check-in.html"]');
     if (ci) {
@@ -433,6 +444,18 @@ function applyChrome(ctx) {
       a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path></svg><span>Expenses &amp; profit</span>';
       if (/expenses\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
       rp.insertAdjacentElement('afterend', a);
+    }
+  }
+  if (ctx.isAdmin && !$('.ns-sidebar a[data-admin-link]')) {   // NammaStay admins only: admin pages right in the menu
+    const nav = $('.ns-sidebar .ns-nav');
+    if (nav) {
+      const h = document.createElement('div'); h.className = 'ns-nav-section'; h.textContent = 'NammaStay admin';
+      nav.append(h);
+      ADMIN_NAV.forEach(([href, label, svg]) => {
+        const a = document.createElement('a'); a.href = href; a.className = 'ns-nav-link'; a.dataset.adminLink = '1';
+        a.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label}</span>`;
+        nav.append(a);
+      });
     }
   }
   if (DEMO) demoBadge();

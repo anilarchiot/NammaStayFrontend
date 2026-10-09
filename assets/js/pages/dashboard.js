@@ -68,4 +68,26 @@ page('dashboard', async (ctx) => {
     if (n > 0) document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<a class="ns-card fc-dash" href="formc.html">
       <span><b>Form C due for ${n} foreign guest${n > 1 ? 's' : ''}</b><br><span class="ns-muted" style="font-size:12.5px">Report to FRRO within 24 hours of arrival.</span></span><span>Open Form C →</span></a>`);
   }
+  // ---- Housekeeping: beds/rooms waiting to be cleaned
+  if (ctx.can('owner', 'manager', 'front_desk')) {
+    const c = await rpc('hk_counts', { p_property: ctx.property_id }).catch(() => null);
+    const n = c ? (c.dirty || 0) + (c.cleaning || 0) : 0;
+    if (n > 0) document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<a class="ns-card hk-dash" href="housekeeping.html">
+      <span><b>🧺 ${n} ${n > 1 ? W.units : W.unit} to clean</b><br><span class="ns-muted" style="font-size:12.5px">${c.dirty || 0} dirty · ${c.cleaning || 0} being cleaned</span></span><span>Housekeeping →</span></a>`);
+  }
+  // ---- first-time setup checklist (until finished or hidden)
+  if (ctx.can('owner', 'manager')) {
+    const pg = await rpc('setup_progress', { p_property: ctx.property_id }).catch(() => null);
+    const keys = [['details', 'Property details', 'setup.html'], ['rooms', W.units === 'beds' ? 'Dorms & beds' : 'Rooms', 'rooms.html'], ['upi', 'UPI ID', 'settings.html'],
+      ['staff', 'Invite your team', 'settings.html?tab=team'], ['booking', 'First booking', 'check-in.html?new=1']];
+    const n = pg ? keys.filter(([k]) => pg[k]).length : 0;
+    if (pg && n < keys.length && (!pg.done_at || !pg.rooms)) {
+      document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<div class="ns-card su-dash" id="su-dash">
+        <div class="su-dash-top"><div><b>Finish setting up</b> <span class="ns-muted">${n} of ${keys.length} done</span></div>
+          <span style="display:flex;gap:8px"><a class="ns-btn" href="setup.html" style="height:36px">Continue setup</a><button type="button" class="ns-btn-ghost" id="su-hide" style="height:36px">Hide</button></span></div>
+        <div class="su-bar"><i style="width:${(n / keys.length) * 100}%"></i></div>
+        <div class="su-dash-steps">${keys.map(([k, l, h]) => `<a href="${h}" class="${pg[k] ? 'is-ok' : ''}">${pg[k] ? '✓' : '○'} ${l}</a>`).join('')}</div></div>`);
+      document.getElementById('su-hide').onclick = async () => { await rpc('setup_finish', { p_property: ctx.property_id, p_done: true }).catch(() => {}); document.getElementById('su-dash').remove(); };
+    }
+  }
 });

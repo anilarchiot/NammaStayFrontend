@@ -46,7 +46,7 @@ function accountStep() {
       <div class="ns-help" style="margin-top:-8px">At least 10 characters.</div>
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#6B7280">
         <input type="checkbox" id="agree" style="width:16px;height:16px;accent-color:#1C9A6C;margin-top:2px">
-        I agree to use NammaStay for my own property and to handle guest data responsibly.</label>
+        I agree to the <a href="${MARKETING_URL}/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="${MARKETING_URL}/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and to handle my guests’ data responsibly.</label>
       ${errBox}
       <button type="button" class="ns-btn ns-btn-lg" id="go">Create account</button>
       <div style="font-size:14px;color:#6B7280;text-align:center">Already have an account? <a href="login.html" style="font-weight:700">Sign in</a></div>
@@ -90,7 +90,7 @@ function propertyStep(session) {
       const r = await rpc('create_my_property', { p: { name: $('#pname').value, kind: $('#kind').value, city: $('#city').value,
         phone: $('#phone').value, owner_name: $('#oname').value } });
       localStorage.setItem('ns.property', r.property_id);
-      location.replace('rooms.html?welcome=1');
+      location.replace('setup.html');
     } catch (err) { fail(err.message); }
   };
 }

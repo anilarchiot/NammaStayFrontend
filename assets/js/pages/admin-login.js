@@ -1,4 +1,4 @@
-// NammaStay admin sign-in (admin.thenammastay.com).
+// NammaStay admin sign-in (thenammastay.com/admin-login.html).
 // Password → 6-digit code from an authenticator app (first time: scan a QR code to set it up).
 // Only platform admins get in; everyone else is signed out again.
 import { sb, rpc, reveal, esc, param, DEMO, NOT_CONNECTED, markBrowserSession, SITE_URL, $ } from '../core.js';
@@ -6,12 +6,10 @@ import { sb, rpc, reveal, esc, param, DEMO, NOT_CONNECTED, markBrowserSession, S
 const main = document.querySelector('.ns-login-main > div');
 const email = $('#email'); const pw = $('#pw'); const btn = main.querySelector('a[href="admin.html"]');
 const formBits = [...main.children].slice(1);                     // everything below the logo: heading, form, footer
-const next = (() => { const n = param('next') || ''; return /^(admin|subscribers|leads)\.html(\?[^#]*)?$/.test(n) ? n : 'admin.html'; })();
+const next = (() => { const n = param('next') || ''; return /^(admin|subscribers|leads|revenue|activity)\.html(\?[^#]*)?$/.test(n) ? n : 'admin.html'; })();
 const err = document.createElement('div'); err.className = 'ns-error'; err.hidden = true; btn.insertAdjacentElement('beforebegin', err);
 const fail = (m) => { err.textContent = m; err.hidden = false; btn.style.opacity = ''; btn.style.pointerEvents = ''; };
 const go = () => { markBrowserSession(); location.replace(next); };
-// "Hostel staff? Go to the normal sign-in" → the hostel app's sign-in (another website)
-try { const a = main.querySelector('a[href="login.html"]'); if (a && self.origin !== 'null' && new URL(SITE_URL).origin !== self.origin) a.href = `${SITE_URL}/login.html`; } catch { /* keep relative */ }
 
 // ---------- step screens (replace the form) ----------
 function step(html) {
