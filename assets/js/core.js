@@ -285,9 +285,11 @@ function adminChrome(user, hasProperty) {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label}</span></a>`).join('')
     + (hasProperty ? `<div class="ns-nav-section">Your property</div><a href="${hostelHref('dashboard.html')}" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>Open hostel app</span></a>` : '');
   $$('.ns-sidebar a[href="settings.html"], .ns-sidebar .ns-demo-badge, .ns-bell, .ns-mobilebar .ns-bell').forEach((e) => e.remove());
-  const nm = $('.ns-sidebar .ns-user-name'); const sub = $('.ns-sidebar .ns-user-sub'); const av = $('.ns-sidebar .ns-user .ns-avatar, .ns-sidebar .ns-user > div:first-child');
+  const userBox = $('.ns-sidebar .ns-user');
+  const nm = userBox?.querySelector('.ns-user-name'); const sub = userBox?.querySelector('.ns-user-sub'); const av = userBox?.querySelector('.ns-avatar') || userBox?.firstElementChild;
   if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'NammaStay admin';
   if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
+  userBox?.classList.add('is-ready');
   const so = $('.ns-sidebar .ns-signout');
   if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
 }
@@ -388,9 +390,11 @@ async function boot(key) {
 }
 
 function applyChrome(ctx) {
-  const nameEl = $('.ns-user-name'); if (nameEl) nameEl.textContent = ctx.name;
-  const subEl = $('.ns-user-sub'); if (subEl) subEl.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
-  const av = $('.ns-avatar'); if (av) av.textContent = initials(ctx.name);
+  const userBox = $('.ns-sidebar .ns-user');
+  const nameEl = userBox?.querySelector('.ns-user-name'); if (nameEl) nameEl.textContent = ctx.name;
+  const subEl = userBox?.querySelector('.ns-user-sub'); if (subEl) subEl.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
+  const av = userBox?.querySelector('.ns-avatar'); if (av) av.textContent = initials(ctx.name);
+  userBox?.classList.add('is-ready');
   $$('.ns-nav-link').forEach((a) => {
     const k = NAV_KEY[a.getAttribute('href')];
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';

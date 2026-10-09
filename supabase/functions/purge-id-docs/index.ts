@@ -21,7 +21,11 @@ Deno.serve(async (req) => {
     const paths = data.map((r: { path: string }) => r.path);
     const { error: rmErr } = await sb.storage.from("guest-ids").remove(paths);
     if (rmErr) return new Response(rmErr.message, { status: 500 });
-    for (const r of data) await sb.rpc("mark_id_doc_purged", { p_guest: r.guest_id });
+    const guestIds = [...new Set(data.map((r: { guest_id: string }) => r.guest_id))];
+    for (const guestId of guestIds) {
+      const { error: markErr } = await sb.rpc("mark_id_doc_purged", { p_guest: guestId });
+      if (markErr) return new Response(markErr.message, { status: 500 });
+    }
     purged += data.length;
   }
   return new Response(JSON.stringify({ purged }), { headers: { "Content-Type": "application/json" } });

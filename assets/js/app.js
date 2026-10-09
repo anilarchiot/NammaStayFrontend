@@ -15,6 +15,12 @@
   document.querySelectorAll('[data-nav-close]').forEach(function (el) {
     el.addEventListener('click', function () { setNav(false); });
   });
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest && e.target.closest('#ns-sidebar .ns-nav-link');
+    if (!link || link.classList.contains('ns-signout')) return;
+    var target = new URL(link.href, location.href);
+    if (target.href === location.href) e.preventDefault();
+  });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       setNav(false);

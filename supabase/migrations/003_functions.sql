@@ -121,7 +121,8 @@ begin
   if v_guest is null then
     if coalesce(btrim(p#>>'{guest,full_name}'), '') = '' then raise exception 'Guest name is required.'; end if;
     perform public._check_dob(v_dob);
-    insert into public.guests (property_id, full_name, phone, email, dob, nationality, id_type, id_number, id_doc_path, consent_at)
+    insert into public.guests (property_id, full_name, phone, email, dob, nationality, id_type, id_number,
+                               id_doc_path, id_doc_back_path, consent_at)
     values (v_prop,
             btrim(p#>>'{guest,full_name}'),
             public._clean_phone(p#>>'{guest,phone}'),
@@ -131,6 +132,7 @@ begin
             nullif(p#>>'{guest,id_type}', '')::public.id_doc_type,
             public._mask_id(nullif(p#>>'{guest,id_type}', ''), p#>>'{guest,id_number}'),
             nullif(p#>>'{guest,id_doc_path}', ''),
+            nullif(p#>>'{guest,id_doc_back_path}', ''),
             now())
     returning id into v_guest;
   elsif not exists (select 1 from public.guests where id = v_guest and property_id = v_prop) then
@@ -417,7 +419,8 @@ begin
                   then jsonb_build_object('id', g.id, 'full_name', g.full_name)
                   else jsonb_build_object('id', g.id, 'full_name', g.full_name, 'phone', g.phone,
                          'email', g.email, 'nationality', g.nationality, 'id_type', g.id_type,
-                         'id_number', g.id_number, 'id_doc_path', g.id_doc_path, 'dob', g.dob) end,
+                         'id_number', g.id_number, 'id_doc_path', g.id_doc_path,
+                         'id_doc_back_path', g.id_doc_back_path, 'dob', g.dob) end,
     'bed',  jsonb_build_object('id', bd.id, 'label', bd.label, 'room', r.name),
     'property', jsonb_build_object('id', p.id, 'name', p.name, 'upi_id', p.upi_id, 'timezone', p.timezone),
     'created_by', (select coalesce(m.display_name, m.email) from public.property_members m
@@ -852,6 +855,7 @@ declare
   v_b   public.bookings%rowtype;
   v_dob date := nullif(p->>'dob', '')::date;
   v_doc text := nullif(p->>'id_doc_path', '');
+  v_doc_back text := nullif(p->>'id_doc_back_path', '');
 begin
   select * into v_b from public.bookings
    where self_checkin_token = p_token and status in ('pending','confirmed','checked_in') and check_out_at > now()
@@ -871,6 +875,9 @@ begin
   if v_doc is not null and v_doc not like v_b.property_id::text || '/' || p_token::text || '/%' then
     raise exception 'ID upload is invalid. Please try again.';
   end if;
+  if v_doc_back is not null and v_doc_back not like v_b.property_id::text || '/' || p_token::text || '/%' then
+    raise exception 'ID upload is invalid. Please try again.';
+  end if;
 
   update public.guests
      set full_name   = btrim(p->>'full_name'),
@@ -881,6 +888,7 @@ begin
          id_type     = (p->>'id_type')::public.id_doc_type,
          id_number   = coalesce(public._mask_id(p->>'id_type', p->>'id_number'), id_number),
          id_doc_path = coalesce(v_doc, id_doc_path),
+         id_doc_back_path = coalesce(v_doc_back, id_doc_back_path),
          consent_at  = now()
    where id = v_b.guest_id;
 
@@ -898,9 +906,10 @@ end $$;
 create or replace function public.id_docs_due_for_purge(p_limit int default 200)
 returns table (guest_id uuid, path text)
 language sql stable security definer set search_path = public, pg_temp as $$
-  select g.id, g.id_doc_path
+  select g.id, docs.path
     from public.guests g join public.properties p on p.id = g.property_id
-   where g.id_doc_path is not null
+    cross join lateral (values (g.id_doc_path), (g.id_doc_back_path)) docs(path)
+   where docs.path is not null
      and not exists (select 1 from public.bookings b where b.guest_id = g.id
                       and b.check_out_at > now() - make_interval(days => p.id_doc_retention_days))
    limit p_limit
@@ -908,7 +917,7 @@ $$;
 
 create or replace function public.mark_id_doc_purged(p_guest uuid) returns void
 language sql security definer set search_path = public, pg_temp as $$
-  update public.guests set id_doc_path = null where id = p_guest
+  update public.guests set id_doc_path = null, id_doc_back_path = null where id = p_guest
 $$;
 
 -- =====================================================================
