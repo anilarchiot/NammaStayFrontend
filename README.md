@@ -12,7 +12,7 @@ One repo, one website, one domain. Everything is in this folder:
 | `terms.html`, `privacy.html`, `refund.html` | Legal pages |
 
 ## Setup
-1. Push this folder to the GitHub repo (NammaStayFrontend) → Settings → Pages → deploy from `main` / root.
+1. In the GitHub repo (NammaStayFrontend), set Settings → Pages → Build and deployment → Source to **GitHub Actions**.
 2. The `CNAME` file holds `thenammastay.com`. In GoDaddy keep only the apex A records (185.199.108–111.153) and `www` CNAME → `anilarchiot.github.io`.
    The old `app` and `admin` CNAME records can be deleted.
 3. `assets/js/config.js`: paste the Supabase Project URL + anon key. `siteUrl` stays `https://thenammastay.com`.
