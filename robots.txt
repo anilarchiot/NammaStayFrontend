@@ -1,2 +1,8 @@
 User-agent: *
+Allow: /$
+Allow: /index.html
+Allow: /terms.html
+Allow: /privacy.html
+Allow: /refund.html
+Allow: /assets/
 Disallow: /

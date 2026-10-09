@@ -33,7 +33,7 @@ adminPage(async (ctx) => {
           <div class="ns-muted">Check each UTR arrived in your bank / UPI app <b>before</b> approving. Approving extends their access by the plan period.</div></div>
         <div style="overflow-x:auto"><table class="ns-table" style="min-width:760px"><thead><tr><th>Submitted</th><th>Property</th><th>Plan</th><th>Amount</th><th>UTR</th><th></th></tr></thead><tbody>
         ${d.pending.map((p) => `<tr><td>${fmtDayTime(p.submitted_at)}</td><td style="font-weight:700">${esc(p.property)}<div class="ns-muted" style="font-weight:500">${esc(p.owner_email || '')}</div></td>
-          <td>${esc(plan[p.plan_id]?.name || p.plan_id)}</td><td style="font-weight:700">${rupees(p.amount_paise)}</td><td style="font-family:monospace;font-size:13px">${esc(p.utr)}</td>
+          <td>${esc(plan[p.plan_id]?.name || p.plan_id)}</td><td style="font-weight:700">${rupees(p.amount_paise)}${p.coupon_code ? `<div class="ns-pill green" style="font-size:11px;margin-top:2px">${esc(p.coupon_code)}</div>` : ''}</td><td style="font-family:monospace;font-size:13px">${esc(p.utr)}</td>
           <td style="white-space:nowrap"><button type="button" class="ns-btn" style="height:32px;font-size:12px" data-approve="${esc(p.id)}">Approve</button>
             <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-reject="${esc(p.id)}">Reject</button></td></tr>`).join('')
           || '<tr><td colspan="6" class="ns-empty">Nothing to confirm right now.</td></tr>'}

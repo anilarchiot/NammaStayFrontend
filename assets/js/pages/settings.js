@@ -1,4 +1,4 @@
-import { W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { ymd, W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
 const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
@@ -201,8 +201,9 @@ page('settings', async (ctx) => {
         } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
       };
       await extrasCard(ctx);
+      await priceRulesCard(ctx);
       if (!ctx.allow('manage_rooms')) {
-        $$('#save-rates, #x-save, #x-add, #x-suggest, [data-x-del]').forEach((b) => b.remove());
+        $$('#save-rates, #x-save, #x-add, #x-suggest, [data-x-del], #pr-add, [data-pr-edit], [data-pr-del]').forEach((b) => b.remove());
         $$('.ns-content input, .ns-content select').forEach((i) => { i.disabled = true; });
         document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', '<div class="ns-demo-hint">View only — your role can’t change rooms, beds or prices.</div>');
       }
@@ -635,4 +636,86 @@ async function billingExtras(ctx) {
       toast('Billing details saved — used on your next invoice.'); }
     catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
   };
+}
+
+// ------------------------------------------------------------ Seasonal & weekend pricing
+const DOW = [['5', 'Fri'], ['6', 'Sat'], ['0', 'Sun'], ['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu']];
+async function priceRulesCard(ctx) {
+  const [rules, rooms, beds] = await Promise.all([
+    q(sb.from('rate_rules').select('*').eq('property_id', ctx.property_id).order('created_at')).catch(() => null),
+    q(sb.from('rooms').select('id,name,sort').eq('property_id', ctx.property_id).order('sort')),
+    q(sb.from('beds').select('id,label,room_id,rate_paise,is_active,sort').eq('property_id', ctx.property_id).eq('is_active', true).order('sort'))]);
+  if (rules === null) return;                                         // database not updated yet (026)
+  const roomName = Object.fromEntries(rooms.map((r) => [r.id, r.name]));
+  const describe = (r) => {
+    const chg = r.adjust === 'percent' ? `${r.value > 0 ? '+' : ''}${r.value}%` : r.adjust === 'amount' ? `${r.value >= 0 ? '+' : '−'}${rupees(Math.abs(r.value))} a night` : `${rupees(r.value)} a night`;
+    const when = r.kind === 'weekend' ? `${DOW.filter(([d]) => r.weekdays.includes(+d)).map(([, l]) => l).join(', ')} nights`
+      : `${fmtDate(r.date_from + 'T12:00:00+05:30')} – ${fmtDate(r.date_to + 'T12:00:00+05:30')}${r.weekdays ? ` (${DOW.filter(([d]) => r.weekdays.includes(+d)).map(([, l]) => l).join(', ')} only)` : ''}`;
+    return `${when} · <b>${chg}</b>${r.room_ids ? ` · ${r.room_ids.map((id) => esc(roomName[id] || '')).join(', ')}` : ' · all rooms'}${r.min_nights ? ` · min ${r.min_nights} nights` : ''}`;
+  };
+  const host = document.querySelector('.ns-content');
+  host.insertAdjacentHTML('beforeend', `<div class="ns-card pr-card" id="pr-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><div class="ns-h3">Seasonal &amp; weekend pricing</div>
+        <div class="ns-muted" style="font-size:12.5px">Charge more on busy nights automatically — e.g. Fri &amp; Sat +20%, or 20 Dec – 5 Jan +30%. Dates beat weekends when both apply. New bookings use these prices; existing bookings keep theirs.</div></div>
+      <button type="button" class="ns-btn" id="pr-add">+ Add price rule</button></div>
+    ${rules.length ? rules.map((r) => `<div class="pr-row${r.is_active ? '' : ' is-off'}"><span class="pr-ic">${r.kind === 'weekend' ? '📅' : '🎉'}</span>
+        <span class="pr-main"><b>${esc(r.name)}</b>${r.is_active ? '' : ' <span class="ns-pill grey">Off</span>'}<br><span class="ns-muted" style="font-size:12.5px">${describe(r)}</span></span>
+        <span style="display:flex;gap:6px"><button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-pr-edit="${esc(r.id)}">Edit</button>
+        <button type="button" class="ns-icon-del" data-pr-del="${esc(r.id)}" aria-label="Delete ${esc(r.name)}" title="Delete">✕</button></span></div>`).join('')
+      : '<div class="ns-empty" style="padding:14px">No price rules yet — every night uses the normal rate.</div>'}
+    ${beds.length ? `<div class="pr-prev-head"><span class="ns-muted" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">Next 14 nights</span>
+        <select class="ns-input" id="pr-bed" style="height:34px;width:auto;font-size:12.5px">${beds.map((b) => `<option value="${esc(b.id)}">${esc(roomName[b.room_id] || '')} · ${esc(b.label)}</option>`).join('')}</select></div>
+      <div class="pr-strip" id="pr-strip"></div>` : ''}
+  </div>`);
+  const strip = async () => {
+    const sel = document.getElementById('pr-bed'); if (!sel) return; const bed = beds.find((b) => b.id === sel.value);
+    const days = await rpc('rate_preview', { p_bed: bed.id, p_from: ymd(), p_days: 14 }).catch(() => []);
+    document.getElementById('pr-strip').innerHTML = days.map((d) => { const up = d.rate_paise > bed.rate_paise; const dn = d.rate_paise < bed.rate_paise;
+      const dt = new Date(d.day + 'T12:00:00+05:30');
+      return `<div class="pr-day${up ? ' up' : dn ? ' dn' : ''}"><span>${dt.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'Asia/Kolkata' })}</span><b>${dt.getDate()}</b><i>${rupees(d.rate_paise).replace(/\.00$/, '')}</i></div>`; }).join('');
+  };
+  document.getElementById('pr-bed')?.addEventListener('change', strip); strip();
+  document.getElementById('pr-add').onclick = () => ruleDialog(null);
+  $$('[data-pr-edit]').forEach((b) => b.onclick = () => ruleDialog(rules.find((r) => r.id === b.dataset.prEdit)));
+  $$('[data-pr-del]').forEach((b) => b.onclick = async () => {
+    const r = rules.find((x) => x.id === b.dataset.prDel);
+    if (!await confirmDialog('Delete price rule', `“${r.name}” stops applying to new bookings. Existing bookings keep their price.`, { confirmLabel: 'Delete', danger: true })) return;
+    await rpc('rate_rule_delete', { p_id: r.id }); toast('Price rule deleted.'); location.reload();
+  });
+
+  function ruleDialog(r) {
+    const kind0 = r?.kind || 'weekend'; const days0 = r?.weekdays || [5, 6];
+    modal({
+      title: r ? 'Edit price rule' : 'New price rule', width: 560,
+      body: `<div class="pr-form">
+        ${field('Name', `<input class="ns-input" name="name" maxlength="60" value="${esc(r?.name || '')}" placeholder="e.g. Weekend, Christmas & New Year, Pongal">`)}
+        <div class="pr-tabs" role="radiogroup">${[['weekend', '📅 Every week'], ['season', '🎉 Dates / season']].map(([k, l]) => `<label class="pr-tab"><input type="radio" name="kind" value="${k}" ${kind0 === k ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+        <div class="pr-dates" ${kind0 === 'season' ? '' : 'hidden'}>${field('First night', `<input class="ns-input" type="date" name="date_from" value="${esc(r?.date_from || '')}">`)}${field('Last night', `<input class="ns-input" type="date" name="date_to" value="${esc(r?.date_to || '')}">`)}</div>
+        <div><div class="pr-lbl"><span class="pr-days-lbl">${kind0 === 'season' ? 'Only these nights (optional)' : 'Which nights'}</span></div>
+          <div class="pr-days">${DOW.map(([d, l]) => `<label class="pr-day-chip"><input type="checkbox" name="dow" value="${d}" ${(kind0 === 'weekend' ? days0 : (r?.weekdays || [])).includes(+d) ? 'checked' : ''}> ${l}</label>`).join('')}</div></div>
+        <div class="pr-adj">${field('Price change', `<select class="ns-input" name="adjust">${options([['percent', '% more / less'], ['amount', '₹ more / less a night'], ['fixed', 'Fixed price a night']], r?.adjust || 'percent')}</select>`)}
+          ${field('Amount', `<input class="ns-input" name="value" inputmode="decimal" value="${r ? (r.adjust === 'percent' ? r.value : r.value / 100) : '20'}" placeholder="20 = +20%, -10 = 10% off">`)}</div>
+        ${field('Rooms', `<select class="ns-input" name="rooms" multiple size="${Math.min(4, rooms.length)}" style="height:auto">${rooms.map((x) => `<option value="${esc(x.id)}" ${r?.room_ids?.includes(x.id) ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`, 'Leave empty for all rooms · Ctrl/⌘ to pick several')}
+        <div class="pr-adj">${field('Minimum stay (optional)', `<select class="ns-input" name="min_nights">${options([['', 'No minimum'], ...[2, 3, 4, 5, 7].map((n) => [String(n), `${n} nights`])], r?.min_nights ? String(r.min_nights) : '')}</select>`)}
+          ${field('Status', `<select class="ns-input" name="is_active">${options([['1', 'On'], ['0', 'Off']], r && !r.is_active ? '0' : '1')}</select>`)}</div>
+      </div>`,
+      actions: [{ label: 'Cancel' }, { label: 'Save rule', kind: 'primary', onClick: async (el) => {
+        const v = (n) => el.querySelector(`[name=${n}]`).value.trim(); const kind = el.querySelector('[name=kind]:checked').value;
+        if (!v('name')) throw new Error('Give the rule a name.');
+        await rpc('rate_rule_save', { p_property: ctx.property_id, p: { id: r?.id || null, name: v('name'), kind, adjust: v('adjust'), value: v('value'),
+          weekdays: [...el.querySelectorAll('[name=dow]:checked')].map((x) => +x.value), date_from: kind === 'season' ? v('date_from') : null, date_to: kind === 'season' ? v('date_to') : null,
+          room_ids: [...el.querySelector('[name=rooms]').selectedOptions].map((o) => o.value), min_nights: v('min_nights'), is_active: v('is_active') === '1' } });
+        toast('Price rule saved — new bookings use it.'); location.reload();
+      } }],
+    });
+    const m = document.querySelector('.ns-modal');
+    m.querySelectorAll('[name=kind]').forEach((x) => x.addEventListener('change', () => {
+      const season = m.querySelector('[name=kind]:checked').value === 'season';
+      m.querySelector('.pr-dates').hidden = !season; m.querySelector('.pr-days-lbl').textContent = season ? 'Only these nights (optional)' : 'Which nights';
+      const boxes = [...m.querySelectorAll('[name=dow]')];
+      if (season) boxes.forEach((b) => { b.checked = false; });                       // a season covers every night unless you pick some
+      else if (!boxes.some((b) => b.checked)) boxes.forEach((b) => { b.checked = ['5', '6'].includes(b.value); });
+    }));
+  }
 }

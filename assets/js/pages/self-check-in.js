@@ -1,5 +1,5 @@
 // Public page — guests open it from the link in their confirmation email / WhatsApp.
-import { langPicker, countryOptions, idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
+import { MARKETING_URL, langPicker, countryOptions, idUploadFields, wireIdPreviews, uploadIdSides, newId, DEMO, NOT_CONNECTED, sb, esc, fmtDay, fmtDate, field, options, ID_TYPES, compressImage, uploadIdDoc, reveal, param, uuidOk, ymd } from '../core.js';
 
 init();
 
@@ -57,7 +57,7 @@ async function init() {
     <div class="ns-help" style="margin-top:-6px">Passport: the photo page is enough. Foreign guests: add your visa page as the second photo.</div>
     <label style="display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.5">
       <input type="checkbox" name="consent" style="width:16px;height:16px;accent-color:#1C9A6C;margin-top:2px">
-      My details are accurate. I agree to the house rules, and to the hostel keeping my ID for legal guest-registration needs and deleting it afterwards.</label>
+      My details are accurate. I agree to the house rules, and to the hostel keeping my ID for legal guest-registration needs and deleting it afterwards. <a href="${MARKETING_URL}/privacy.html" target="_blank" rel="noopener" style="font-weight:700">How data is handled</a></label>
     <div class="ns-error" id="err" role="alert" hidden></div>`;
   footer.innerHTML = '<button type="button" class="ns-btn ns-btn-lg" id="go">Complete check-in</button>';
   reveal();

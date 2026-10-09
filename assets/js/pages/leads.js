@@ -63,7 +63,9 @@ adminPage(async (ctx) => {
       body: `${field('Status', `<select class="ns-input" name="status">${options(STATUS.map(([v, lbl]) => [v, lbl]), l.status)}</select>`)}
         ${field('Notes (only you see these)', `<textarea class="ns-input" name="notes" maxlength="2000" placeholder="Called on Monday, wants a demo next week…">${esc(l.notes || '')}</textarea>`)}
         ${l.message ? `<div class="ns-help" style="font-size:12.5px"><b>Their message:</b> ${esc(l.message)}</div>` : ''}
-        ${l.source ? `<div class="ns-help">Came from: ${esc(l.source)}</div>` : ''}`,
+        ${l.source ? `<div class="ns-help">Came from: ${esc(l.source)}</div>` : ''}
+        ${l.property_id ? '<div class="ns-pill green" style="align-self:flex-start">Converted to a property ✓</div>'
+          : `<a class="ns-btn-ghost" style="align-self:flex-start" href="admin.html?addprop=1&lead=${encodeURIComponent(l.id)}&pname=${encodeURIComponent(l.property_name || '')}&ptype=${encodeURIComponent(l.property_type || '')}&city=${encodeURIComponent(l.city || '')}&owner=${encodeURIComponent(l.name || '')}&phone=${encodeURIComponent(l.phone || '')}&email=${encodeURIComponent(l.email || '')}">🏨 Create property from this lead</a>`}`,
       actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: async (el) => {
         await rpc('update_lead', { p_id: l.id, p_status: el.querySelector('[name=status]').value, p_notes: el.querySelector('[name=notes]').value });
         toast('Lead updated.'); chips(); load(true);
