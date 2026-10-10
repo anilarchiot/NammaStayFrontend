@@ -118,6 +118,34 @@
   .phone-pair .phone{position:static;width:44%;max-width:230px}
   .phone-pair .phone:nth-child(2){margin-top:48px}
 
+  /* Form C product preview */
+  .formc-preview{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(14,27,61,.16);overflow:hidden;min-width:0}
+  .formc-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+  .formc-title{font:800 17px 'Sora',sans-serif}
+  .formc-meta{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .formc-open{flex-shrink:0;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:11px;font-weight:800;color:var(--ink)}
+  .formc-body{padding:18px;display:flex;flex-direction:column;gap:12px}
+  .formc-intro{display:flex;gap:10px;align-items:flex-start;background:#F1F8F4;border:1px solid #CDE7D8;border-radius:11px;padding:11px 13px;color:#315D4B;font-size:11.5px;line-height:1.5}
+  .formc-intro svg{flex:0 0 auto;margin-top:1px}
+  .formc-tabs{display:flex;gap:7px;overflow:hidden}
+  .formc-tab{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;color:var(--muted);font-size:10.5px;font-weight:800}
+  .formc-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .formc-row{display:grid;grid-template-columns:minmax(0,1.2fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .formc-guest{display:flex;align-items:center;gap:9px;min-width:0}
+  .formc-avatar{width:35px;height:35px;border-radius:50%;background:#E9F5EE;color:var(--green-d);display:grid;place-items:center;font:800 11px 'Sora',sans-serif;flex:0 0 auto}
+  .formc-name{font-size:11.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .formc-detail{font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .formc-state{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+  .formc-pill{display:inline-flex;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:800;white-space:nowrap}
+  .formc-pill.red{background:#FCE9E9;color:#B23A3A}
+  .formc-pill.amber{background:#FFF3D7;color:#8A5B00}
+  .formc-pill.green{background:#E9F5EE;color:var(--green-d)}
+  .formc-actions{display:flex;gap:5px;justify-content:flex-end}
+  .formc-action{border:1px solid var(--line);border-radius:7px;padding:6px 7px;background:#fff;font-size:9px;font-weight:800;white-space:nowrap}
+  .formc-action.primary{background:var(--green);border-color:var(--green);color:#fff}
+  .formc-foot{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);padding:2px 2px 0}
+  .formc-foot i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(28,154,108,.13)}
+
   /* dark band */
   .dark{background:var(--navy);color:var(--cream)}
   .dark .kicker{color:#5FD3A5}
@@ -223,6 +251,7 @@
     .features,.trust,.steps,.who{grid-template-columns:repeat(2,1fr)}
     .deep,.deep.flip{grid-template-columns:1fr;gap:28px}
     .deep.flip .deep-copy{order:0}
+    .formc-preview{max-width:760px;width:100%;margin:0 auto}
     .nav-links{display:none}
   }
   @media (max-width:640px){
@@ -236,6 +265,12 @@
     .story{grid-template-columns:1fr;padding:26px;text-align:left}
     .cta-box{padding:40px 22px}
     .phone{width:36%}
+    .formc-bar{padding:14px}
+    .formc-body{padding:12px}
+    .formc-open{display:none}
+    .formc-row{grid-template-columns:1fr;gap:9px}
+    .formc-state{flex-direction:row;flex-wrap:wrap}
+    .formc-actions{justify-content:flex-start;flex-wrap:wrap}
   }
 </style>
 </head>
@@ -248,7 +283,7 @@
     <nav class="nav-links" aria-label="Main">
       <a href="#features">Features</a>
       <a href="#payments">UPI payments</a>
-      <a href="#privacy">Privacy</a>
+      <a href="#form-c">Form C</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
@@ -389,7 +424,65 @@
         </div>
       </div>
 
-      <div class="deep flip reveal">
+      <div class="deep flip reveal" id="form-c">
+        <div class="deep-copy">
+          <div class="kicker">Form C &amp; FRRO</div>
+          <h3>Keep every foreign-guest report on time.</h3>
+          <p class="sub">NammaStay turns the details collected at check-in into a clear Form C work queue, so your team knows exactly what is due, what is missing and what has already been filed.</p>
+          <ul class="ticks">
+            <li>24-hour arrival deadline with live overdue and due-soon alerts</li>
+            <li>Passport, visa, India arrival and onward journey details in FRRO portal order</li>
+            <li>Copy-ready filing sheet, with passport and visa photos beside the record</li>
+            <li>Arrival and departure acknowledgement numbers saved against the guest</li>
+          </ul>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:18px">Your team reviews and submits on the official FRRO portal; NammaStay prepares the record and tracks completion.</p>
+        </div>
+        <div class="formc-preview" role="img" aria-label="NammaStay Form C dashboard showing foreign guest arrival reports, deadlines, missing details and filing actions">
+          <div class="formc-bar">
+            <div><div class="formc-title">Form C</div><div class="formc-meta">2 arrival reports due · 1 departure report</div></div>
+            <span class="formc-open">Open FRRO Form C ↗</span>
+          </div>
+          <div class="formc-body">
+            <div class="formc-intro">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Report every foreign guest to FRRO within <b>24 hours of arrival</b>. Review the details, copy them to the official portal, then save the acknowledgement number.</span>
+            </div>
+            <div class="formc-tabs" aria-hidden="true">
+              <span class="formc-tab on">Arrival due (2)</span>
+              <span class="formc-tab">Departure due (1)</span>
+              <span class="formc-tab">Arriving soon (3)</span>
+              <span class="formc-tab">Done (24)</span>
+            </div>
+            <div class="formc-row">
+              <div class="formc-guest">
+                <span class="formc-avatar">ER</span>
+                <div style="min-width:0"><div class="formc-name">Elena Rossi</div><div class="formc-detail">Italy · Female Dorm · Lower B1 · NS-1042</div></div>
+              </div>
+              <div class="formc-state"><span class="formc-pill amber">4h 18m left</span><span class="formc-pill green">Details complete</span></div>
+              <div class="formc-actions"><span class="formc-action">Passport &amp; visa</span><span class="formc-action primary">Copy for FRRO</span></div>
+            </div>
+            <div class="formc-row">
+              <div class="formc-guest">
+                <span class="formc-avatar" style="background:#EEF1FA;color:#43558A">MD</span>
+                <div style="min-width:0"><div class="formc-name">Malik Diallo</div><div class="formc-detail">France · Mixed Dorm · Upper A2 · NS-1045</div></div>
+              </div>
+              <div class="formc-state"><span class="formc-pill red">Overdue by 1h 07m</span><span class="formc-pill amber">2 details missing</span></div>
+              <div class="formc-actions"><span class="formc-action">Complete details</span><span class="formc-action primary">Copy for FRRO</span></div>
+            </div>
+            <div class="formc-row">
+              <div class="formc-guest">
+                <span class="formc-avatar" style="background:#FFF3D7;color:#8A5B00">KM</span>
+                <div style="min-width:0"><div class="formc-name">Kenji Mori</div><div class="formc-detail">Japan · Private Room 2 · NS-1038</div></div>
+              </div>
+              <div class="formc-state"><span class="formc-pill green">Arrival filed ✓</span><span class="formc-pill green">C-2026-18427</span></div>
+              <div class="formc-actions"><span class="formc-action">View record</span></div>
+            </div>
+            <div class="formc-foot"><i></i><span>Deadlines and filing status stay visible to the whole front-desk team.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deep reveal">
         <div class="deep-copy">
           <div class="kicker">Reports</div>
           <h3>Know your numbers without a spreadsheet</h3>
