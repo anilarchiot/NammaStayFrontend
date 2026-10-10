@@ -43,7 +43,7 @@ page('settings', async (ctx) => {
             <div class="ns-h3">Property details</div>
             ${field('Property name', `<input class="ns-input" name="name" value="${esc(p.name)}">`)}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              ${field('Type', `<select class="ns-input" name="kind">${options([['hostel', 'Hostel'], ['hotel', 'Hotel'], ['homestay', 'Homestay']], p.kind)}</select>`)}
+              ${field('Type', `<select class="ns-input" name="kind">${options([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay']], ctx.isPg ? 'pg' : p.kind)}</select>`)}
               ${field('Timezone', '<input class="ns-input" value="Asia/Kolkata (GMT+5:30)" disabled>')}
               ${field('Area / address', `<input class="ns-input" name="address" value="${esc(p.address || '')}">`)}
               ${field('City', `<input class="ns-input" name="city" value="${esc(p.city || '')}">`)}
@@ -75,8 +75,13 @@ page('settings', async (ctx) => {
         const v = Object.fromEntries($$('#prop [name], #prop2 [name]').map((i) => [i.name, i.value.trim() || null]));
         v.id_doc_retention_days = parseInt(v.id_doc_retention_days, 10) || 180;
         if (!v.name) return toast('Property name can’t be empty.', { error: true });
+        const pgNow = v.kind === 'pg'; if (pgNow) v.kind = 'hostel';            // a PG is saved as a bed property + the PG switch (031)
         e.target.disabled = true;
-        try { await q(sb.from('properties').update(v).eq('id', ctx.property_id)); toast('Saved.'); }
+        try {
+          await q(sb.from('properties').update(v).eq('id', ctx.property_id));
+          if (pgNow !== !!ctx.isPg) { await rpc('pg_set_mode', { p_property: ctx.property_id, p_on: pgNow }); toast(pgNow ? 'Saved — Tenants & rent is now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
+          else toast('Saved.');
+        }
         catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
         finally { e.target.disabled = false; }
       };
@@ -549,7 +554,7 @@ async function razorpayCard(ctx) {
 }
 
 function moreCards(ctx, p) {
-  razorpayCard(ctx);
+  razorpayCard(ctx).then(() => apiKeysCard(ctx));
   const offers = p.offers || { enabled: false, tiers: [{ from_stay: 2, pct: 5 }, { from_stay: 5, pct: 10 }] };
   const tiers = [...(offers.tiers || []), { from_stay: '', pct: '' }, { from_stay: '', pct: '' }].slice(0, 3);
   document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
@@ -717,5 +722,71 @@ async function priceRulesCard(ctx) {
       if (season) boxes.forEach((b) => { b.checked = false; });                       // a season covers every night unless you pick some
       else if (!boxes.some((b) => b.checked)) boxes.forEach((b) => { b.checked = ['5', '6'].includes(b.value); });
     }));
+  }
+}
+
+// ---------------------------------------------------------------- API keys (owner) — 029_public_api.sql + the "api" function
+async function apiKeysCard(ctx) {
+  if (ctx.role !== 'owner') return;
+  const keys = await rpc('api_key_list', { p_property: ctx.property_id }).catch(() => null);
+  if (keys === null) return;                                          // database not updated yet (029)
+  const base = `${FUNCTIONS_URL}/api/v1`;
+  const when = (t) => (t ? fmtDayTime(t) : '—');
+  const row = (k) => `<tr${k.revoked_at ? ' style="opacity:.55"' : ''}>
+      <td><b>${esc(k.name)}</b><div class="ns-muted" style="font-size:12px;font-family:ui-monospace,monospace">${esc(k.prefix)}…</div></td>
+      <td>${k.scopes.includes('bookings') ? pill('Rooms, availability & bookings', 'green') : pill('Read rooms & availability', 'blue')}</td>
+      <td style="font-size:13px">${when(k.created_at)}</td>
+      <td style="font-size:13px">${k.revoked_at ? 'Revoked' : when(k.last_used_at)}${!k.revoked_at && k.calls_24h ? `<div class="ns-muted" style="font-size:12px">${k.calls_24h} calls today</div>` : ''}</td>
+      <td style="text-align:right">${k.revoked_at ? '' : `<button type="button" class="ns-btn-ghost" data-revoke="${k.id}" data-name="${esc(k.name)}" style="height:34px;padding:0 12px;font-size:13px">Revoke</button>`}</td></tr>`;
+  document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `
+  <div class="ns-card" style="padding:0;overflow:hidden;margin-top:20px" id="api-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 20px">
+      <div><div class="ns-h3">🔌 API keys</div>
+        <div class="ns-muted" style="font-size:13px;margin-top:4px;max-width:640px">Let other software use your NammaStay data — e.g. a booking form on your own website, a partner, or a script. Each key works only for this property.</div></div>
+      <button type="button" class="ns-btn" id="api-new">+ Create API key</button>
+    </div>
+    <div style="padding:0 20px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px">
+      <span class="ns-muted">API address</span>
+      <code id="api-base" style="background:#F4EFE0;border-radius:6px;padding:4px 8px;font-size:12.5px;word-break:break-all">${esc(base)}</code>
+      <button type="button" class="ns-btn-ghost" id="api-copy-base" style="height:30px;padding:0 10px;font-size:12.5px">Copy</button>
+      <a href="${SITE_URL}/api-docs.html" target="_blank" rel="noopener" style="font-weight:700">Read the API guide →</a>
+    </div>
+    ${keys.length ? `<div style="overflow-x:auto"><table class="ns-table" style="min-width:680px"><thead><tr><th>Name</th><th>Can do</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+      <tbody>${keys.map(row).join('')}</tbody></table></div>`
+      : '<div class="ns-muted" style="padding:0 20px 20px;font-size:13.5px">No API keys yet.</div>'}
+  </div>`);
+  const copy = async (text, msg) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast('Select the text and copy it.'); } };
+  $('#api-copy-base').onclick = () => copy(base, 'API address copied.');
+  $$('#api-card [data-revoke]').forEach((b) => b.addEventListener('click', async () => {
+    if (!await confirmDialog('Revoke API key', `"${b.dataset.name}" stops working immediately. Anything using it will get an error. This can’t be undone — you can create a new key instead.`, { confirmLabel: 'Revoke key', danger: true })) return;
+    try { await rpc('api_key_revoke', { p_id: b.dataset.revoke }); toast('Key revoked.'); location.replace('settings.html'); } catch (e) { toast(e.message, { error: true }); }
+  }));
+  $('#api-new').onclick = () => modal({
+    title: 'Create API key', width: 480,
+    body: `<div style="display:flex;flex-direction:column;gap:14px">
+      ${field('Name', '<input class="ns-input" name="api_name" placeholder="e.g. Website booking form" maxlength="60">', 'So you remember where it’s used.')}
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+        <label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" checked disabled style="margin-top:3px"> <span><b>Read</b> property, rooms, prices & availability</span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" name="api_bk" style="margin-top:3px"> <span><b>Bookings</b> — see guests’ bookings, create and cancel bookings<br><span class="ns-muted" style="font-size:12.5px">Includes guest names and phone numbers. Only give this to software you trust.</span></span></label>
+      </div></div>`,
+    actions: [{ label: 'Cancel' }, { label: 'Create key', kind: 'primary', onClick: async (ov) => {
+      const name = ov.querySelector('[name=api_name]').value.trim();
+      if (name.length < 2) throw new Error('Give the key a name.');
+      const r = await rpc('api_key_create', { p_property: ctx.property_id, p_name: name, p_bookings: ov.querySelector('[name=api_bk]').checked });
+      setTimeout(() => showKey(r.key), 0);
+    } }],
+  });
+  function showKey(key) {
+    const m = modal({
+      title: 'Your new API key', width: 520,
+      body: `<div style="display:flex;flex-direction:column;gap:12px">
+        <div class="ns-demo-hint" style="margin:0"><b>Copy it now.</b> For your safety NammaStay shows this key only once. If you lose it, revoke it and create a new one.</div>
+        <code id="api-key-val" style="display:block;background:#0E1B3D;color:#FBF3DE;border-radius:10px;padding:14px;font-size:13px;word-break:break-all;user-select:all">${esc(key)}</code>
+        <div class="ns-muted" style="font-size:12.5px">Keep it secret like a password — put it on your server, not in a public web page. Send it in the <code>X-Api-Key</code> header.</div>
+      </div>`,
+      actions: [{ label: 'Copy key', kind: 'primary', onClick: async () => { await copy(key, 'API key copied.'); return false; } },
+                { label: 'Done', onClick: () => { location.replace('settings.html'); } }],
+    });
+    m.el.querySelector('.ns-x').addEventListener('click', () => location.replace('settings.html'));
   }
 }
