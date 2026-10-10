@@ -3,6 +3,7 @@ import {
   modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, viewIdDocs, param, uuidOk,
   SITE_URL, titleCase,
 } from '../core.js';
+import { mountBookingGuests } from './booking-guests.js';   // add-on: other guests in the booking (030)
 
 const ACTIVITY = {
   created: () => 'Booking created',
@@ -123,6 +124,7 @@ page(null, async (ctx) => {
     </div>`;
 
   const val = (n) => dlg.querySelector(`[name="${n}"]`)?.value;
+  mountBookingGuests({ ctx, booking: b, anchor: dlg.querySelector('.ns-guestbox') }).catch(() => {});
   $('#wa-details')?.addEventListener('click', () => sendBookingWhatsApp(b.id).catch((e) => toast(e.message, { error: true })));
   if (staff && param('new')) {                                   // just created → offer to send details
     history.replaceState(null, '', 'booking-detail.html?id=' + b.id);

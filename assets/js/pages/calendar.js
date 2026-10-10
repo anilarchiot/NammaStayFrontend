@@ -3,22 +3,37 @@
 import { otaOf, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, $, $$ } from '../core.js';
 
-const DAYS = 9;
+let DAYS = 9;                                     // 9 days (week view) or the days of the month (month view)
+const WEEK_DAYS = 9;
+// Month view — for PG / monthly stays. Remembered per device; the 9-day view stays the default.
+let VIEW = (() => { try { return localStorage.getItem('ns.cal.view') === 'month' ? 'month' : 'week'; } catch { return 'week'; } })();
+const monthStart = (d) => d.slice(0, 8) + '01';
+const monthDays = (d) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate();
+const shiftMonth = (d, n) => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1 + n, 1)); return x.toISOString().slice(0, 10); };
 const LIVE = ['pending', 'confirmed', 'checked_in'];
 const TIP = () => `<b style="color:#157A56">Tip:</b> drag across a ${W.unit}’s free nights to book them — on a phone, tap the first night, then the last.`;
 
 page('calendar', async (ctx) => {
   const staff = ctx.can('owner', 'manager', 'front_desk');
-  let from = addDays(ymd(), -2);
+  let from = VIEW === 'month' ? monthStart(ymd()) : addDays(ymd(), -2);
   let data = null;
   const head = headerActions();
-  head.innerHTML = `<button type="button" class="ns-btn-ghost" id="prev" aria-label="Previous week">‹ Prev</button>
+  head.innerHTML = `<div class="cal-viewtog" role="group" aria-label="Calendar view">
+      <button type="button" data-view="week" aria-pressed="${VIEW === 'week'}">9 days</button><button type="button" data-view="month" aria-pressed="${VIEW === 'month'}">Month</button></div>
+    <button type="button" class="ns-btn-ghost" id="prev" aria-label="Previous">‹ Prev</button>
     <button type="button" class="ns-btn-ghost" id="today">Today</button>
     <button type="button" class="ns-btn-ghost" id="next" aria-label="Next week">Next ›</button>
     ${staff ? '<a href="check-in.html?new=1" class="ns-btn">+ New booking</a>' : ''}`;
-  $('#prev').onclick = () => { from = addDays(from, -7); draw(); };
-  $('#next').onclick = () => { from = addDays(from, 7); draw(); };
-  $('#today').onclick = () => { from = addDays(ymd(), -2); draw(); };
+  $('#prev').onclick = () => { from = VIEW === 'month' ? shiftMonth(from, -1) : addDays(from, -7); draw(); };
+  $('#next').onclick = () => { from = VIEW === 'month' ? shiftMonth(from, 1) : addDays(from, 7); draw(); };
+  $('#today').onclick = () => { from = VIEW === 'month' ? monthStart(ymd()) : addDays(ymd(), -2); draw(); };
+  head.querySelectorAll('.cal-viewtog button').forEach((btn) => btn.addEventListener('click', () => {
+    if (btn.dataset.view === VIEW) return;
+    VIEW = btn.dataset.view; try { localStorage.setItem('ns.cal.view', VIEW); } catch { /* ignore */ }
+    head.querySelectorAll('.cal-viewtog button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.view === VIEW)));
+    from = VIEW === 'month' ? monthStart(from > ymd() || addDays(from, WEEK_DAYS) < ymd() ? from : ymd()) : (from.slice(0, 7) === ymd().slice(0, 7) ? addDays(ymd(), -2) : from);
+    draw();
+  }));
 
   const today = ymd();
   const earliest = addDays(today, -1);            // bookings can start at most yesterday
@@ -27,10 +42,15 @@ page('calendar', async (ctx) => {
 
   async function draw() {
     sel = null;
+    const month = VIEW === 'month';
+    DAYS = month ? monthDays(from) : WEEK_DAYS;
     data = await rpc('calendar_range', { p_property: ctx.property_id, p_from: from, p_days: DAYS });
     const d = data;
     const to = addDays(from, DAYS - 1);
-    setSubtitle(`${fmtDay(from + 'T12:00:00+05:30')} – ${fmtDay(to + 'T12:00:00+05:30')} · ${ctx.property_name}`);
+    setSubtitle(month
+      ? `${new Date(from + 'T12:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · ${ctx.property_name}`
+      : `${fmtDay(from + 'T12:00:00+05:30')} – ${fmtDay(to + 'T12:00:00+05:30')} · ${ctx.property_name}`);
+    const cols = `grid-template-columns:repeat(${DAYS},minmax(0,1fr))`;
     days = Array.from({ length: DAYS }, (_, i) => addDays(from, i));
     // A stay fills the nights it covers: check-in day up to the day before check-out.
     const nights = (startIso, endIso) => { const out = []; let x = ymd(startIso); const last = addDays(ymd(endIso), -1);
@@ -64,31 +84,31 @@ page('calendar', async (ctx) => {
         ...d.bookings.filter((b) => b.bed_id === bed.id).map((b) => { const p = span(b.check_in_at, b.check_out_at);
           const cls = b.status === 'checked_out' ? 'cb-out' : b.status === 'checked_in' ? 'cb-in' : b.status === 'pending' ? 'cb-pend' : b.balance_paise > 0 ? 'cb-due' : 'cb-conf';
           const span_ = p.e - p.s; const parts = String(b.guest || '').trim().split(/\s+/);
-          const short = span_ <= 1 ? parts[0] : parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
+          const short = span_ <= (month ? 3 : 1) ? parts[0] : parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
           const nights = Math.max(1, Math.round((new Date(ymd(b.check_out_at)) - new Date(ymd(b.check_in_at))) / 864e5));
           const tag = b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
             : b.balance_paise > 0 ? `<span class="cb-tag" title="${rupees(b.balance_paise)} due">₹</span>` : b.status !== 'pending' ? '<span class="cb-tag" title="Paid">✓</span>' : '';
           const label = { 'cb-in': 'In house', 'cb-conf': 'Confirmed · paid', 'cb-due': 'Balance due', 'cb-pend': 'Pending', 'cb-out': 'Checked out' }[cls];
           return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}" href="booking-detail.html?id=${esc(b.id)}" style="grid-column:${p.s}/${p.e}"
             title="${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}">
-            ${guestFace(b.guest, 24)}<span class="cb-name">${esc(short)}</span>${span_ > 1 ? `<span class="cb-n">${nights}n</span>` : ''}${tag}</a>`; }),
+            ${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}</a>`; }),
       ].join('');
       return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
           <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
-          <div class="row cal-row" style="position:relative">${days.map((x, i) => `<div class="cal-cell${x === today ? ' is-today' : ''}${[0, 6].includes(new Date(x + 'T12:00:00Z').getUTCDay()) ? ' is-weekend' : ''}${staff && x >= earliest && !taken.get(bed.id).has(x) ? ' is-free' : ''}"
+          <div class="row cal-row" style="position:relative;${cols}">${days.map((x, i) => `<div class="cal-cell${x === today ? ' is-today' : ''}${[0, 6].includes(new Date(x + 'T12:00:00Z').getUTCDay()) ? ' is-weekend' : ''}${staff && x >= earliest && !taken.get(bed.id).has(x) ? ' is-free' : ''}"
             data-bed="${esc(bed.id)}" data-i="${i}" style="grid-row:1;grid-column:${i + 1}"></div>`).join('')}${bars}</div></div>`;
     }).join('');
 
     content(`
-      <div class="ns-card" style="padding:18px 20px;overflow-x:auto">
+      <div class="ns-card${month ? ' cal-month' : ''}" style="padding:18px 20px;overflow-x:auto">
         ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP()}</div>` : ''}
-        <div style="min-width:760px">
+        <div style="min-width:${month ? 140 + DAYS * 28 : 760}px">
           <div style="display:grid;grid-template-columns:140px 1fr"><div></div>
-            <div class="row cal-head" style="height:auto">${days.map((x) => {
+            <div class="row cal-head" style="height:auto;${cols}">${days.map((x) => {
               const dt = new Date(x + 'T12:00:00Z'); const occ = occByDay[x] || 0; const pct = totalUnits ? Math.round((occ / totalUnits) * 100) : 0;
               const wk = [0, 6].includes(dt.getUTCDay());
               return `<div class="cal-day${x === today ? ' is-today' : ''}${wk ? ' is-weekend' : ''}">
-                <div class="cal-wd">${x === today ? 'Today' : dt.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' })}</div>
+                <div class="cal-wd">${x === today && !month ? 'Today' : dt.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }).slice(0, month ? 2 : 3)}</div>
                 <div class="cal-dn">${dt.getUTCDate()}</div>
                 <div class="cal-mo">${dt.toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' }).replace('Sept', 'Sep')}</div>
                 <div class="cal-occ" title="${occ} of ${totalUnits} ${W.units} booked"><span style="width:${pct}%;background:${pct >= 90 ? '#B23A3A' : pct >= 60 ? '#1C9A6C' : '#E2A03F'}"></span></div>

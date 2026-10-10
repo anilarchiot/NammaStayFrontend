@@ -53,13 +53,14 @@ const DEMO_KIND = 'ns.demo.kind';
 const DEMO_PROPS = {
   hostel: { name: 'Social Backpackers Hostel', address: 'Little Mount', city: 'Chennai', owner: 'Hostel Owner', upi: 'socialbackpackers@okaxis', mail: 'socialbackpackers.in' },
   hotel: { name: 'Hotel Marina Residency', address: 'Besant Nagar', city: 'Chennai', owner: 'Hotel Owner', upi: 'marinaresidency@okhdfc', mail: 'marinaresidency.in' },
+  pg: { name: 'Namma Co-Living', address: 'Velachery', city: 'Chennai', owner: 'PG Owner', upi: 'nammacoliving@okaxis', mail: 'nammacoliving.in' },
   homestay: { name: 'Green Leaf Homestay', address: 'Lake Road', city: 'Kodaikanal', owner: 'Homestay Host', upi: 'greenleaf@okaxis', mail: 'greenleaf.in' },
 };
 export function demoKind() { return localStorage.getItem(DEMO_KIND) || 'hostel'; }
 export function setDemoKind(k) { localStorage.setItem(DEMO_KIND, k); resetDemo(); }
 
 function seed() {
-  const kind = demoKind(); const PR = DEMO_PROPS[kind] || DEMO_PROPS.hostel;
+  const kind = demoKind() === 'pg' ? 'hostel' : demoKind(); const PR = DEMO_PROPS[demoKind()] || DEMO_PROPS.hostel;   // a PG is a bed property + PG switch
   const r = rng(20260923);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const today = ymd();
@@ -489,6 +490,8 @@ function load() {
   if (!DB.feeds) DB.feeds = [];
   if (!DB.expenses) DB.expenses = seedExpenses();
   if (!DB.paylinks) DB.paylinks = [];
+  if (!DB.bguests) DB.bguests = [];                               // other guests in a booking (030)
+  if (!DB.tenancies) { DB.tenancies = []; DB.rentDues = []; DB.rentPays = []; DB.seq.rc = DB.seq.rc || 1001; DB.pgMode = demoKind() === 'pg'; DB.pgSeed = DB.pgMode; }   // PG tenants (031)
   if (!DB.invset) DB.invset = { legal_name: 'Namma Groups', gstin: '33AAKFN1234C1Z8', address: 'Little Mount, Saidapet, Chennai 600015', state_code: '33', sac: '998314', gst_rate: 18, invoice_prefix: 'NS' };
   if (!DB.pinv) {
     DB.pinv = []; const now = Date.now();
@@ -586,6 +589,114 @@ function checkDob(dob) {
 }
 
 // ---------------------------------------------------------------- the database functions
+
+// ---------------------------------------------------------------- PG / co-living tenants (mirrors 031_pg_tenants.sql)
+const PG_LIVE = ['pending', 'confirmed', 'checked_in'];
+const pgAddMonths = (day, k) => {
+  const [y, m, d] = day.split('-').map(Number); const tm = m - 1 + k; const yy = y + Math.floor(tm / 12); const mm = ((tm % 12) + 12) % 12;
+  const last = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(yy, mm, Math.min(d, last))).toISOString().slice(0, 10);
+};
+const pgDays = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5);
+const pgAt = (day, out) => new Date(`${day}T${out ? '11:00' : '14:00'}:00+05:30`).toISOString();
+const pgMon = (day) => new Date(day + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }).replace('Sept', 'Sep');
+function pgHold(t, from, to, status, inAt) {
+  const a = inAt || pgAt(from, false); let z = pgAt(to, true); if (T(z) <= T(a)) z = new Date(T(a) + DAY).toISOString();
+  const clash = DB.bookings.filter((b) => b.bed_id === t.bed_id && PG_LIVE.includes(b.status) && !t.booking_ids.includes(b.id) && T(b.check_in_at) < T(z) && T(b.check_out_at) > T(a))
+    .sort((x, y) => T(x.check_in_at) - T(y.check_in_at))[0];
+  if (clash) {
+    if (T(clash.check_in_at) > Math.max(T(a), Date.now()) + DAY) z = clash.check_in_at;       // hold up to the next booking; the page warns
+    else fail(`This bed is taken from ${ymd(clash.check_in_at)} (${clash.code}). Choose another bed.`);
+  }
+  const b = { id: uuid(), property_id: P, code: 'BK-' + DB.seq.bk++, guest_id: t.guest_id, bed_id: t.bed_id, visitors: 1, children: 0, extra_paise: 0,
+    discount_pct: 0, discount_paise: 0, charges_paise: 0, check_in_at: a, check_out_at: z, nights: Math.max(1, Math.min(366, Math.ceil((T(z) - T(a)) / DAY))),
+    rate_paise: 0, total_paise: 0, paid_paise: 0, status, source: 'direct', note: 'PG tenant — rent is in Tenants & rent', send_confirmation: false,
+    self_checkin_token: uuid(), self_checkin_at: null, self_checkin_count: 0, arrived_at: status === 'checked_in' ? new Date().toISOString() : null,
+    departed_at: null, cancelled_at: null, created_by: ME, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  DB.bookings.push(b); return b.id;
+}
+function pgSetEnd(bid, to) {
+  const b = DB.bookings.find((x) => x.id === bid); if (!b) return;
+  let z = pgAt(to, true); if (T(z) < T(b.check_in_at) + DAY) z = new Date(T(b.check_in_at) + DAY).toISOString();
+  if (T(z) > T(b.check_in_at) + 366 * DAY) z = new Date(T(b.check_in_at) + 366 * DAY).toISOString();
+  b.check_out_at = z; b.nights = Math.max(1, Math.min(366, Math.ceil((T(z) - T(b.check_in_at)) / DAY)));
+}
+function pgDue(t, kind, ps, pe, label, due, amount) {
+  const x = DB.rentDues.find((d) => d.tenancy_id === t.id && d.kind === kind && d.period_start === ps);
+  if (!x) { DB.rentDues.push({ id: uuid(), tenancy_id: t.id, kind, period_start: ps, period_end: pe, label, due_on: due, amount_paise: amount, paid_paise: 0, credit_paise: 0, edited: false, note: null, created_at: new Date().toISOString() }); return; }
+  if (!x.edited && x.period_end !== pe) { x.amount_paise = Math.max(amount, x.paid_paise); x.credit_paise = Math.max(0, x.paid_paise - amount); x.period_end = pe; x.label = label; }
+}
+function pgSync(t) {
+  if (t.status === 'moved_out') return;
+  const today = ymd(); const end = t.move_out_on || '9999-12-31';
+  const b = DB.bookings.find((x) => x.id === t.booking_id);
+  if (b) {
+    if (b.status === 'confirmed' && ymd(b.check_in_at) <= today) { b.status = 'checked_in'; b.arrived_at = b.arrived_at || new Date().toISOString(); }
+    const from = ymd(b.check_out_at);
+    if (from <= addDays(today, 30) && from < end) {
+      try { const id = pgHold(t, from, end < addDays(from, 365) ? end : addDays(from, 365), 'confirmed', b.check_out_at); t.booking_id = id; t.booking_ids.push(id); } catch { /* bed taken later */ }
+    }
+    DB.bookings.filter((x) => t.booking_ids.includes(x.id) && x.id !== t.booking_id && PG_LIVE.includes(x.status) && T(x.check_out_at) <= Date.now())
+      .forEach((x) => { x.status = 'checked_out'; x.departed_at = x.check_out_at; });
+  }
+  for (let k = 0; k < 600; k++) {
+    let ps; let full; let fullDays;
+    if (t.cycle === 'calendar') { ps = k === 0 ? t.start_date : pgAddMonths(t.start_date.slice(0, 8) + '01', k); const m0 = ps.slice(0, 8) + '01'; full = pgAddMonths(m0, 1); fullDays = pgDays(m0, full); }
+    else { ps = pgAddMonths(t.start_date, k); full = pgAddMonths(t.start_date, k + 1); fullDays = pgDays(ps, full); }
+    if (ps > today || ps >= end) break;
+    const pe = full < end ? full : end; const days = pgDays(ps, pe);
+    const lbl = pgMon(ps) + (pe < full || days < fullDays ? ` (${days} days)` : '');
+    if (t.rent_paise > 0) pgDue(t, 'rent', ps, pe, 'Rent · ' + lbl, ps, Math.round(t.rent_paise * days / fullDays));
+    if (t.food_paise > 0) pgDue(t, 'food', ps, pe, 'Food · ' + lbl, ps, Math.round(t.food_paise * days / fullDays));
+  }
+  DB.rentDues = DB.rentDues.filter((d) => !(d.tenancy_id === t.id && ['rent', 'food'].includes(d.kind) && d.period_start >= end && !d.paid_paise && !d.edited));
+  DB.rentDues.filter((d) => d.tenancy_id === t.id && ['rent', 'food'].includes(d.kind) && d.period_start >= end && d.paid_paise > 0 && !d.edited && d.credit_paise !== d.paid_paise)
+    .forEach((d) => { d.amount_paise = d.paid_paise; d.credit_paise = d.paid_paise; d.period_end = d.period_start; d.label = d.label.replace(/ \(.*\)$/, '') + ' (not stayed)'; });
+}
+function pgRow(t) {
+  const today = ymd(); const g = guestOf(DB, t); const bd = bedOf(t.bed_id); const r = roomOf(bd.room_id);
+  const dues = DB.rentDues.filter((d) => d.tenancy_id === t.id); const open = (f) => dues.filter(f).reduce((s, d) => s + d.amount_paise - d.paid_paise, 0);
+  const bk = DB.bookings.find((x) => x.id === t.booking_id);
+  const holdEnd = bk ? ymd(bk.check_out_at) : null;
+  return { id: t.id, status: t.status, start_date: t.start_date, move_out_on: t.move_out_on, notice_given_on: t.notice_given_on, cycle: t.cycle,
+    rent_paise: t.rent_paise, food_paise: t.food_paise, deposit_paise: t.deposit_paise, notice_days: t.notice_days, note: t.note, settled: t.settled, booking_id: t.booking_id,
+    guest: { id: g.id, full_name: g.full_name, phone: g.phone, id_type: g.id_type, id_number: g.id_number, has_id: !!(g.id_doc_path || g.id_doc_back_path) },
+    bed: { id: bd.id, label: bd.label, room: r.name },
+    due_paise: open((d) => d.due_on <= today), overdue_paise: open((d) => d.due_on < addDays(today, -5)), upcoming_paise: open((d) => d.due_on > today),
+    deposit_held_paise: t.status === 'moved_out' ? 0 : dues.filter((d) => d.kind === 'deposit').reduce((s, d) => s + d.paid_paise, 0),
+    next_due_on: dues.filter((d) => d.amount_paise > d.paid_paise).map((d) => d.due_on).sort()[0] || null,
+    self_checkin_token: bk?.self_checkin_token || null, self_checkin_at: bk?.self_checkin_at || null,
+    held_until: holdEnd,
+    hold_warning: t.status !== 'moved_out' && bk && T(bk.check_out_at) <= Date.now() + 45 * DAY && (t.move_out_on || '9999') > holdEnd
+      && !DB.bookings.some((x) => t.booking_ids.includes(x.id) && x.id !== bk.id && T(x.check_in_at) >= T(bk.check_out_at))
+      ? `Bed is held for this tenant only until ${new Date(holdEnd + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' })} — another guest is booked on it soon after. Drag the tenant to a free bed on the Calendar, or move that booking.` : null };
+}
+const titleCaseDemo = (k) => String(k).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+function pgKeepZero(bid) {
+  const t = (DB.tenancies || []).find((x) => x.booking_ids.includes(bid)); if (!t) return;
+  const b = DB.bookings.find((x) => x.id === bid); if (!b) return;
+  Object.assign(b, { rate_paise: 0, discount_paise: 0, extra_paise: 0, total_paise: b.charges_paise || 0 });
+  if (bid === t.booking_id && b.bed_id !== t.bed_id) t.bed_id = b.bed_id;
+}
+// Demo only: a small "PG rooms (monthly)" block with two tenants, so the page has something to show
+function pgDemoSeed() {
+  if (!DB.beds.some((b) => !b.max_guests || b.max_guests === 1) || DB.properties[0].kind && DB.properties[0].kind !== 'hostel') return;
+  const rid = uuid(); DB.rooms.push({ id: rid, property_id: P, name: 'PG Rooms (monthly)', description: 'Double sharing · Food included', sort: 9 });
+  const beds = ['PG-1A', 'PG-1B', 'PG-2A', 'PG-2B'].map((label, i) => { const b = { id: uuid(), property_id: P, room_id: rid, label, position: null, rate_paise: 50000, is_active: true, sort: i + 1,
+    max_guests: 1, base_guests: 1, extra_guest_paise: 0, ical_token: uuid(), hk_status: 'clean' }; DB.beds.push(b); return b; });
+  const today = ymd();
+  const t1 = RPC.pg_move_in({ p: { guest: { full_name: 'Karthik Raja', phone: '9840011223', nationality: 'India', id_type: 'aadhaar', id_number: '432156781234' }, bed_id: beds[0].id,
+    start_date: addDays(today, -50), rent_paise: 750000, food_paise: 250000, deposit_paise: 1500000, deposit_paid_paise: 1500000, method: 'upi', note: 'Works at Zoho · veg food' } });
+  pgSync(DB.tenancies.find((t) => t.id === t1.id));
+  RPC.pg_pay({ p_tenancy: t1.id, p: { amount_paise: 1000000, method: 'upi', reference: 'UPI 30219' } });
+  const t2 = RPC.pg_move_in({ p: { guest: { full_name: 'Sneha Iyer', phone: '9884022334', nationality: 'India', id_type: 'aadhaar', id_number: '987612340987' }, bed_id: beds[2].id,
+    start_date: addDays(today, -20), rent_paise: 800000, food_paise: 0, deposit_paise: 1600000, deposit_paid_paise: 1600000, method: 'cash', cycle: 'movein' } });
+  const t2o = DB.tenancies.find((t) => t.id === t2.id); pgSync(t2o);
+  RPC.pg_pay({ p_tenancy: t2.id, p: { amount_paise: 800000, method: 'cash' } });
+  RPC.pg_notice({ p_tenancy: t2.id, p_move_out: addDays(today, 18) });
+}
+const pgT = (id) => DB.tenancies.find((x) => x.id === id) || fail('Tenant not found.');
+
 const RPC = {
   my_memberships: () => [{ property_id: P, property_name: DB.properties[0].name, role: DB.viewAs || 'owner', display_name: DB.members[0].display_name }],
   touch_presence: () => null,
@@ -1204,6 +1315,159 @@ const RPC = {
       vendor: p.vendor || null, note: p.note || null, created_by: ME, created_at: new Date().toISOString() };
     DB.expenses.push(x); return x.id;
   },
+  pg_mode: () => !!DB.pgMode,
+  pg_set_mode: ({ p_on }) => {
+    if (p_on && DB.properties[0].kind !== 'hostel') fail('PG / co-living works with beds — set the type to PG / Co-living (not hotel or homestay).');
+    DB.pgMode = !!p_on; return !!p_on;
+  },
+  pg_tenants: () => {
+    if (DB.pgSeed) { DB.pgSeed = false; pgDemoSeed(); }
+    DB.tenancies.forEach(pgSync);
+    const today = ymd(); const live = DB.tenancies.filter((t) => t.status !== 'moved_out'); const liveIds = live.map((t) => t.id);
+    const dueRows = DB.rentDues.filter((d) => liveIds.includes(d.tenancy_id) && d.due_on <= today && d.amount_paise > d.paid_paise);
+    const month = today.slice(0, 8) + '01';
+    return { today, property: { name: DB.properties[0].name, upi_id: DB.properties[0].upi_id, phone: DB.properties[0].phone },
+      tenants: [...DB.tenancies].sort((a, b) => (a.status === 'moved_out') - (b.status === 'moved_out') || (a.start_date < b.start_date ? 1 : -1)).map(pgRow),
+      summary: { active: live.filter((t) => t.status === 'active').length, notice: live.filter((t) => t.status === 'notice').length,
+        rent_roll_paise: live.reduce((s, t) => s + t.rent_paise + t.food_paise, 0),
+        collected_month_paise: DB.rentPays.filter((p) => p.kind === 'payment' && ymd(p.received_at) >= month && DB.rentDues.find((d) => d.id === p.due_id)?.kind !== 'deposit').reduce((s, p) => s + p.amount_paise, 0),
+        due_now_paise: dueRows.reduce((s, d) => s + d.amount_paise - d.paid_paise, 0), tenants_due: new Set(dueRows.map((d) => d.tenancy_id)).size,
+        deposits_held_paise: DB.rentDues.filter((d) => liveIds.includes(d.tenancy_id) && d.kind === 'deposit').reduce((s, d) => s + d.paid_paise, 0) } };
+  },
+  pg_tenant: ({ p_tenancy }) => {
+    const t = pgT(p_tenancy); pgSync(t);
+    return { ...pgRow(t), property: { name: DB.properties[0].name, upi_id: DB.properties[0].upi_id },
+      dues: DB.rentDues.filter((d) => d.tenancy_id === t.id).sort((a, b) => (a.due_on < b.due_on ? 1 : a.due_on > b.due_on ? -1 : 0)),
+      payments: DB.rentPays.filter((p) => p.tenancy_id === t.id).sort((a, b) => (a.received_at < b.received_at ? 1 : -1))
+        .map((p) => ({ ...p, for: DB.rentDues.find((d) => d.id === p.due_id)?.label || null })),
+      bookings: DB.bookings.filter((b) => t.booking_ids.includes(b.id)).map((b) => ({ id: b.id, code: b.code, status: b.status, check_in_at: b.check_in_at, check_out_at: b.check_out_at })) };
+  },
+  pg_move_in: ({ p }) => {
+    if (!DB.pgMode) fail('Tenants & rent is for PG / co-living properties. Set the property type to PG / Co-living in Settings.');
+    const today = ymd(); const start = p.start_date || today;
+    const bed = bedOf(p.bed_id) || fail('Choose a bed.');
+    if (DB.tenancies.some((t) => t.bed_id === bed.id && t.status !== 'moved_out' && (t.move_out_on || '9999') > start)) fail('Another tenant already lives in this bed. Choose another bed.');
+    if (start < addDays(today, -62)) fail('The move-in date can be at most 2 months in the past.');
+    if (!(Number(p.rent_paise) > 0)) fail('Enter the monthly rent.');
+    const G = p.guest || {}; if (!G.full_name || G.full_name.trim().length < 2) fail('Enter the tenant’s full name.');
+    const g = { id: uuid(), property_id: P, full_name: G.full_name.trim(), phone: cleanPhone(G.phone), email: null, dob: null, nationality: G.nationality || null,
+      id_type: G.id_type || null, id_number: G.id_number ? maskId(G.id_type, G.id_number) : null, id_doc_path: G.id_doc_path || null, id_doc_back_path: G.id_doc_back_path || null,
+      notes: null, tags: [], consent_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    const t = { id: uuid(), guest_id: g.id, bed_id: bed.id, booking_id: null, booking_ids: [], start_date: start, move_out_on: null, notice_given_on: null, status: 'active',
+      cycle: p.cycle || 'movein', rent_paise: Number(p.rent_paise), food_paise: Number(p.food_paise) || 0, deposit_paise: Number(p.deposit_paise) || 0,
+      notice_days: Number(p.notice_days) || 30, note: p.note || null, settled: null, created_at: new Date().toISOString() };
+    DB.guests.push(g);
+    try { const bid = pgHold(t, start, addDays(start, 365), start <= today ? 'checked_in' : 'confirmed'); t.booking_id = bid; t.booking_ids = [bid]; }
+    catch (e) { DB.guests = DB.guests.filter((x) => x.id !== g.id); throw e; }
+    DB.tenancies.push(t);
+    if (t.deposit_paise > 0) {
+      const dep = { id: uuid(), tenancy_id: t.id, kind: 'deposit', period_start: start, period_end: null, label: 'Security deposit', due_on: start, amount_paise: t.deposit_paise, paid_paise: 0, credit_paise: 0, edited: false, note: null, created_at: new Date().toISOString() };
+      DB.rentDues.push(dep);
+      const paid = Number(p.deposit_paid_paise) || 0;
+      if (paid > t.deposit_paise) fail('Deposit paid can’t be more than the deposit.');
+      if (paid > 0) { dep.paid_paise = paid; DB.rentPays.push({ id: uuid(), tenancy_id: t.id, due_id: dep.id, code: 'RC-' + DB.seq.rc++, kind: 'payment', amount_paise: paid, method: p.method || 'upi', reference: p.reference || null, note: 'Deposit', received_at: new Date().toISOString() }); }
+    }
+    pgSync(t);
+    return { id: t.id, booking_id: t.booking_id, guest_id: g.id, held_until: ymd(DB.bookings.find((x) => x.id === t.booking_id).check_out_at) };
+  },
+  pg_update: ({ p_tenancy, p }) => {
+    const t = pgT(p_tenancy); if (t.status === 'moved_out') fail('This tenant has moved out.');
+    if (p.rent_paise) t.rent_paise = Number(p.rent_paise); if (p.food_paise != null) t.food_paise = Number(p.food_paise) || 0;
+    if (p.notice_days) t.notice_days = Number(p.notice_days); if ('note' in p) t.note = p.note || null;
+    const dep = Number(p.deposit_paise) || 0;
+    if (dep !== t.deposit_paise) {
+      const d = DB.rentDues.find((x) => x.tenancy_id === t.id && x.kind === 'deposit');
+      if (d) { if (dep < d.paid_paise) fail('More than that was already paid as deposit.'); d.amount_paise = dep; d.edited = true; }
+      else if (dep > 0) DB.rentDues.push({ id: uuid(), tenancy_id: t.id, kind: 'deposit', period_start: t.start_date, period_end: null, label: 'Security deposit', due_on: ymd(), amount_paise: dep, paid_paise: 0, credit_paise: 0, edited: false, note: null, created_at: new Date().toISOString() });
+      t.deposit_paise = dep;
+    }
+    return null;
+  },
+  pg_add_charge: ({ p_tenancy, p }) => {
+    const t = pgT(p_tenancy); if (!(Number(p.amount_paise) > 0)) fail('Enter the amount.');
+    const x = { id: uuid(), tenancy_id: t.id, kind: p.kind || 'other', period_start: null, period_end: null, label: (p.label || titleCaseDemo(p.kind || 'other')).slice(0, 80),
+      due_on: p.due_on || ymd(), amount_paise: Number(p.amount_paise), paid_paise: 0, credit_paise: 0, edited: true, note: p.note || null, created_at: new Date().toISOString() };
+    DB.rentDues.push(x); return x.id;
+  },
+  pg_edit_due: ({ p_due, p_amount_paise, p_note }) => {
+    const d = DB.rentDues.find((x) => x.id === p_due) || fail('Not found.');
+    if (p_amount_paise < d.paid_paise) fail('That is less than what was already paid.');
+    if (p_amount_paise === 0 && !d.paid_paise && !['rent', 'food'].includes(d.kind)) { DB.rentDues = DB.rentDues.filter((x) => x.id !== d.id); return null; }
+    d.amount_paise = p_amount_paise; d.edited = true; if (p_note) d.note = p_note; return null;
+  },
+  pg_pay: ({ p_tenancy, p }) => {
+    const t = pgT(p_tenancy); let left = Number(p.amount_paise) || 0; if (left <= 0) fail('Enter the amount received.');
+    const open = DB.rentDues.filter((d) => d.tenancy_id === t.id && d.amount_paise > d.paid_paise && (!p.due_id || d.id === p.due_id))
+      .sort((a, b) => (a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : (a.kind === 'deposit' ? -1 : b.kind === 'deposit' ? 1 : 0)));
+    const total = open.reduce((s, d) => s + d.amount_paise - d.paid_paise, 0);
+    if (left > total) fail(`Only ₹${(total / 100).toLocaleString('en-IN')} is due. Add a charge first, or enter a smaller amount.`);
+    const codes = [];
+    for (const d of open) { if (left <= 0) break; const part = Math.min(left, d.amount_paise - d.paid_paise); d.paid_paise += part; left -= part;
+      const code = 'RC-' + DB.seq.rc++; codes.push(code);
+      DB.rentPays.push({ id: uuid(), tenancy_id: t.id, due_id: d.id, code, kind: 'payment', amount_paise: part, method: p.method || 'upi', reference: p.reference || null, note: p.note || null, received_at: new Date().toISOString() }); }
+    const today = ymd();
+    return { receipts: codes, balance_paise: DB.rentDues.filter((d) => d.tenancy_id === t.id && d.due_on <= today).reduce((s, d) => s + d.amount_paise - d.paid_paise, 0) };
+  },
+  pg_notice: ({ p_tenancy, p_move_out }) => {
+    const t = pgT(p_tenancy); if (t.status === 'moved_out') fail('This tenant has already moved out.');
+    const b = DB.bookings.find((x) => x.id === t.booking_id);
+    if (!p_move_out) { t.status = 'active'; t.move_out_on = null; t.notice_given_on = null; if (b) pgSetEnd(b.id, addDays(ymd(b.check_in_at), 365)); }
+    else {
+      if (p_move_out < t.start_date) fail('Move-out can’t be before the move-in date.');
+      t.status = 'notice'; t.move_out_on = p_move_out; t.notice_given_on = t.notice_given_on || ymd();
+      if (b && T(b.check_out_at) > T(pgAt(p_move_out, true))) pgSetEnd(b.id, p_move_out);
+    }
+    pgSync(t); return null;
+  },
+  pg_move_out: ({ p_tenancy, p }) => {
+    const t = pgT(p_tenancy); if (t.status === 'moved_out') fail('This tenant has already moved out.');
+    const day = p.move_out_on || t.move_out_on || ymd(); if (day < t.start_date) fail('Move-out can’t be before the move-in date.');
+    t.move_out_on = day; pgSync(t);
+    const ded = Number(p.deductions_paise) || 0;
+    if (ded > 0) DB.rentDues.push({ id: uuid(), tenancy_id: t.id, kind: 'damage', period_start: null, period_end: null, label: 'Deductions at move-out', due_on: day, amount_paise: ded, paid_paise: 0, credit_paise: 0, edited: true, note: p.deduction_note || null, created_at: new Date().toISOString() });
+    const mine = DB.rentDues.filter((d) => d.tenancy_id === t.id);
+    const credit = mine.reduce((s, d) => s + (d.credit_paise || 0), 0);
+    const held = mine.filter((d) => d.kind === 'deposit').reduce((s, d) => s + d.paid_paise, 0) + credit;
+    const open = mine.filter((d) => d.kind !== 'deposit').reduce((s, d) => s + d.amount_paise - d.paid_paise, 0);
+    const use = Math.min(held, open); let left = use;
+    for (const d of mine.filter((x) => x.kind !== 'deposit' && x.amount_paise > x.paid_paise).sort((a, b) => (a.due_on < b.due_on ? -1 : 1))) {
+      if (left <= 0) break; const part = Math.min(left, d.amount_paise - d.paid_paise); d.paid_paise += part; left -= part;
+      DB.rentPays.push({ id: uuid(), tenancy_id: t.id, due_id: d.id, code: 'RC-' + DB.seq.rc++, kind: 'deposit_adjust', amount_paise: part, method: 'deposit', reference: null, note: 'Taken from deposit / advance at move-out', received_at: new Date().toISOString() });
+    }
+    const refund = held - use;
+    if (refund > 0) DB.rentPays.push({ id: uuid(), tenancy_id: t.id, due_id: null, code: 'RC-' + DB.seq.rc++, kind: 'refund', amount_paise: refund, method: p.refund_method || 'upi', reference: p.refund_reference || null, note: credit ? 'Deposit + advance refund' : 'Deposit refund', received_at: new Date().toISOString() });
+    t.settled = { move_out_on: day, deposit_paid_paise: held - credit, advance_paise: credit, used_for_dues_paise: use, deductions_paise: ded, refund_paise: refund, still_due_paise: open - use, settled_at: new Date().toISOString() };
+    t.status = 'moved_out'; t.notice_given_on = t.notice_given_on || day;
+    const b = DB.bookings.find((x) => x.id === t.booking_id);
+    if (b) { pgSetEnd(b.id, day); if (PG_LIVE.includes(b.status)) { b.status = 'checked_out'; b.departed_at = new Date().toISOString(); const bd = bedOf(b.bed_id); if (bd) bd.hk_status = 'dirty'; } }
+    return t.settled;
+  },
+  pg_delete: ({ p_tenancy }) => {
+    const t = DB.tenancies.find((x) => x.id === p_tenancy); if (!t) return null;
+    if (DB.rentPays.some((p) => p.tenancy_id === t.id)) fail('This tenant has payments. Use Move out instead.');
+    DB.tenancies = DB.tenancies.filter((x) => x.id !== t.id); DB.rentDues = DB.rentDues.filter((d) => d.tenancy_id !== t.id);
+    DB.bookings = DB.bookings.filter((b) => !t.booking_ids.includes(b.id)); return null;
+  },
+  booking_guests_list: ({ p_booking }) => (DB.bguests || []).filter((g) => g.booking_id === p_booking),
+  booking_guest_save: ({ p_booking, p }) => {
+    DB.bguests ||= [];
+    if (String(p.full_name || '').trim().length < 2) fail('Enter the guest’s full name.');
+    const phone = String(p.phone || '').replace(/[^0-9+]/g, '') || null;
+    if (phone && !/^\+?[0-9]{8,15}$/.test(phone)) fail('Check the phone number.');
+    const vals = { full_name: p.full_name.trim(), phone, gender: p.gender || null, age: p.age === '' || p.age == null ? null : Number(p.age),
+      relation: p.relation || null, nationality: p.nationality || null, id_type: p.id_type || null };
+    if (p.id) {
+      const x = DB.bguests.find((g) => g.id === p.id) || fail('Guest not found.');
+      if (p.id_number !== x.id_number) vals.id_number = p.id_number ? maskId(p.id_type, p.id_number) : null;
+      Object.assign(x, vals, p.id_doc_path ? { id_doc_path: p.id_doc_path } : {}, p.id_doc_back_path ? { id_doc_back_path: p.id_doc_back_path } : {});
+      return x;
+    }
+    if (DB.bguests.filter((g) => g.booking_id === p_booking).length >= 19) fail('A booking can have up to 20 guests.');
+    const x = { id: uuid(), booking_id: p_booking, ...vals, id_number: p.id_number ? maskId(p.id_type, p.id_number) : null,
+      id_doc_path: p.id_doc_path || null, id_doc_back_path: p.id_doc_back_path || null, created_at: new Date().toISOString() };
+    DB.bguests.push(x); return x;
+  },
+  booking_guest_delete: ({ p_id }) => { DB.bguests = (DB.bguests || []).filter((g) => g.id !== p_id); return null; },
   delete_expense: ({ p_id }) => { DB.expenses = DB.expenses.filter((x) => x.id !== p_id); return null; },
   profit_summary: ({ p_from, p_to }) => profitSummary(p_from, p_to),
   razorpay_status: () => (DB.rzp ? { connected: true, mode: DB.rzp.key_id.startsWith('rzp_live') ? 'live' : 'test', key_hint: DB.rzp.key_id.slice(0, 9) + '…' + DB.rzp.key_id.slice(-4), webhook: !!DB.rzp.hook }
@@ -1317,6 +1581,17 @@ const RPC = {
     if (ex) Object.assign(ex, row); else DB.rateRules.push({ id: uuid(), property_id: P, created_at: new Date().toISOString(), ...row });
     return ex ? ex.id : DB.rateRules[DB.rateRules.length - 1].id;
   },
+  api_key_list: () => (DB.apiKeys || []).slice().sort((a, b) => (!!a.revoked_at - !!b.revoked_at) || (a.created_at < b.created_at ? 1 : -1)),
+  api_key_create: ({ p_name, p_bookings }) => {
+    if (!p_name || p_name.trim().length < 2) throw new Error('Give the key a name, e.g. "Website booking form".');
+    DB.apiKeys = DB.apiKeys || [];
+    if (DB.apiKeys.filter((k) => !k.revoked_at).length >= 10) throw new Error('You already have 10 active API keys. Revoke one you no longer use first.');
+    const hex = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const key = 'ns_live_' + hex; const id = crypto.randomUUID();
+    DB.apiKeys.push({ id, name: p_name.trim().slice(0, 60), prefix: key.slice(0, 14), scopes: p_bookings ? ['read', 'bookings'] : ['read'], created_at: new Date().toISOString(), last_used_at: null, revoked_at: null, calls_24h: 0 });
+    save(); return { id, key, prefix: key.slice(0, 14) };
+  },
+  api_key_revoke: ({ p_id }) => { const k = (DB.apiKeys || []).find((x) => x.id === p_id); if (!k) throw new Error('API key not found.'); k.revoked_at = k.revoked_at || new Date().toISOString(); save(); return null; },
   rate_rule_delete: ({ p_id }) => { DB.rateRules = DB.rateRules.filter((x) => x.id !== p_id); return null; },
   rate_preview: ({ p_bed, p_from, p_days }) => { const bed = bedOf(p_bed); const out = []; for (let i = 0; i < (p_days || 14); i++) { const d = addDays(p_from, i); out.push({ day: d, rate_paise: nightRate(bed, bed.rate_paise, d) }); } return out; },
   hk_board: () => DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id && b.is_active).sort((a, b) => a.sort - b.sort).map((b) => {
@@ -1354,6 +1629,9 @@ const RPC = {
     return b ? b.self_checkin_token : null;
   },
 };
+// Tenant bed bookings stay at ₹0 when edited or moved (031)
+{ const ub = RPC.update_booking; RPC.update_booking = (args) => { const r = ub(args); pgKeepZero(args.p_booking); const b = DB.bookings.find((x) => x.id === args.p_booking);
+  return r && typeof r === 'object' && b ? { ...r, total_paise: b.total_paise, rate_paise: b.rate_paise } : r; }; }
 
 // ---------------------------------------------------------------- table access (the few direct reads/writes pages make)
 const TABLES = { properties: 'properties', rooms: 'rooms', beds: 'beds', guests: 'guests', notifications: 'notifications', bed_blocks: 'blocks', bookings: 'bookings', extra_items: 'extras', booking_charges: 'charges', expenses: 'expenses', payment_links: 'paylinks', form_c: 'formc', guest_foreign: 'gforeign', rate_rules: 'rateRules' };
