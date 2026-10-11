@@ -790,6 +790,7 @@ var NS_SITE = {
   var nav = document.getElementById('nav');
   var onScroll = function () { nav.classList.toggle('is-scrolled', window.scrollY > 8); };
   window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
