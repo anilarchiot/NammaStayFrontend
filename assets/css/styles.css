@@ -21,6 +21,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   width:var(--sidebar-w);flex-shrink:0;height:100vh;position:sticky;top:0;
   background:var(--navy);padding:24px 16px;display:flex;flex-direction:column;overflow-y:auto;z-index:40;
 }
+html:not(.ns-chrome-ready) .ns-sidebar .ns-nav,
+html:not(.ns-chrome-ready) .ns-sidebar .ns-sidebar-foot{visibility:hidden}
 .ns-brand{display:flex;align-items:center;gap:10px;padding:8px 8px 24px 8px}
 .ns-brand img,.ns-mobile-brand img{background:var(--cream);border-radius:8px;padding:3px;object-fit:contain}
 .ns-brand > span,.ns-mobile-brand > span{font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:var(--cream)}
