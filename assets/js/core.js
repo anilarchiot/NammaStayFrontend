@@ -494,6 +494,7 @@ function applyChrome(ctx) {
       ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
+  document.documentElement.classList.add('ns-chrome-ready');
 }
 
 // Trial / expiry banner at the top of every screen
@@ -525,7 +526,7 @@ function accessBanner(ctx) {
 
 const __PATH = () => location.pathname;
 
-// ---------------------------------------------------------------- instant app shell (see shell.js)
+// ---------------------------------------------------------------- instant app shell
 const SHELL_KEYS = ['ns.shell', 'ns.shell.admin'];
 export function clearShell() { try { SHELL_KEYS.forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ } }
 function saveShell(admin) {
@@ -535,7 +536,11 @@ function saveShell(admin) {
     if (!nav) return;
     nav.querySelectorAll('.is-active').forEach((a) => { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
     const banner = $('.ns-main > .ns-access-banner');
-    const data = { nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin };
+    const data = {
+      nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin,
+      area: admin ? 'admin' : 'app',
+      property: admin ? '' : localStorage.getItem('ns.property') || '',
+    };
     if (admin) {
       data.brand = side.querySelector('.ns-brand')?.outerHTML || '';
       data.foot = side.querySelector('.ns-sidebar-foot')?.outerHTML || '';

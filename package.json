@@ -6,7 +6,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "node scripts/build-production.cjs"
+    "build": "node scripts/build-production.cjs",
+    "validate:production": "node scripts/validate-production.cjs",
+    "test": "npm run build && npm run validate:production"
   },
   "devDependencies": {
     "clean-css": "^5.3.3",
