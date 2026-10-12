@@ -33,9 +33,11 @@ async function copyAssets(sourceDir, destinationDir) {
     if (!entry.isFile() || /\.map$/i.test(entry.name)) continue;
     const extension = path.extname(entry.name).toLowerCase();
     if (extension === '.js' || extension === '.mjs') {
+      const assetPath = path.relative(path.join(root, 'assets'), source).replaceAll(path.sep, '/');
+      const isModule = assetPath === 'js/core.js' || assetPath.startsWith('js/pages/') || extension === '.mjs';
       const result = await minifyJs(fs.readFileSync(source, 'utf8'), {
         ecma: 2022,
-        module: true,
+        module: isModule,
         compress: { passes: 2 },
         format: { comments: false },
         sourceMap: false,
@@ -76,6 +78,7 @@ async function build() {
 
   const assets = path.join(root, 'assets');
   if (fs.existsSync(assets)) await copyAssets(assets, path.join(output, 'assets'));
+  fs.writeFileSync(path.join(output, '.nojekyll'), '');
 
   const sourceMaps = [];
   function findSourceMaps(dir) {
