@@ -166,31 +166,52 @@ const LANG_IX = { ta: 0, kn: 1, te: 2, ml: 3 };
 export function getLang() { try { const l = localStorage.getItem('ns.lang'); return LANG_IX[l] !== undefined ? l : 'en'; } catch { return 'en'; } }
 export function setLang(l) { try { localStorage.setItem('ns.lang', l); } catch { /* ignore */ } location.reload(); }
 export function tr(text) { const l = getLang(); if (l === 'en') return text; const r = I18N[text]; return r ? r[LANG_IX[l]] : text; }
+const I18N_ATTRIBUTES = ['aria-label', 'aria-description', 'placeholder', 'title', 'alt'];
+function translatable(el) {
+  return !!el && !el.closest('textarea, [data-no-tr], script, style, code, pre');
+}
 function translateTree(root) {
-  const l = getLang(); if (l === 'en' || !root) return;
+  const l = getLang();
+  if (!root) return;
+  const translate = (text) => {
+    const key = text?.trim();
+    const value = key && I18N[key];
+    return value && l !== 'en' ? text.replace(key, value[LANG_IX[l]]) : text;
+  };
+  if (root.nodeType === Node.ELEMENT_NODE && translatable(root)) {
+    for (const name of I18N_ATTRIBUTES) {
+      if (root.hasAttribute(name)) root.setAttribute(name, translate(root.getAttribute(name)));
+    }
+    if (root.matches('input[type="button"], input[type="submit"]') && root.hasAttribute('value')) {
+      root.value = translate(root.value);
+    }
+  }
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-    const v = n.nodeValue; const k = v && v.trim();
-    if (k && I18N[k] && !n.parentElement?.closest('textarea, [data-no-tr]')) n.nodeValue = v.replace(k, I18N[k][LANG_IX[l]]);
+    if (translatable(n.parentElement)) n.nodeValue = translate(n.nodeValue);
   }
 }
 export function langPicker(extraStyle = '') {
   const sel = document.createElement('select');
-  sel.className = 'ns-lang'; sel.setAttribute('aria-label', 'Language'); sel.style.cssText = extraStyle;
+  sel.className = 'ns-lang'; sel.setAttribute('aria-label', tr('Language')); sel.style.cssText = extraStyle;
   sel.innerHTML = LANGS.map(([v, n]) => `<option value="${v}"${v === getLang() ? ' selected' : ''}>${n}</option>`).join('');
   sel.addEventListener('change', () => setLang(sel.value));
   return sel;
 }
 (function startI18n() {
-  if (getLang() === 'en' || typeof document === 'undefined' || !document.body) return;
+  if (typeof document === 'undefined' || !document.body) return;
   document.documentElement.lang = getLang();
   translateTree(document.body);
   new MutationObserver((ms) => {
     for (const m of ms) {
       if (m.type === 'characterData') translateTree(m.target.parentElement);
+      else if (m.type === 'attributes') translateTree(m.target);
       else m.addedNodes.forEach((nd) => (nd.nodeType === 3 ? translateTree(nd.parentElement) : nd.nodeType === 1 && translateTree(nd)));
     }
-  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  }).observe(document.body, {
+    childList: true, subtree: true, characterData: true, attributes: true,
+    attributeFilter: [...I18N_ATTRIBUTES, 'value'],
+  });
 })();
 
 
