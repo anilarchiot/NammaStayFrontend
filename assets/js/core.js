@@ -348,6 +348,7 @@ function adminChrome(user, hasProperty) {
   if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
   const so = $('.ns-sidebar .ns-signout');
   if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
+  window.nsMarkActiveNav?.();
 }
 /** Admin screens: their own login, their own menu, no property needed. */
 export function adminPage(fn) {
@@ -551,6 +552,7 @@ function applyChrome(ctx) {
       ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
+  window.nsMarkActiveNav?.();
   document.documentElement.classList.add('ns-chrome-ready');
 }
 
@@ -591,7 +593,8 @@ function saveShell(admin) {
     const side = $('.ns-sidebar'); if (!side) return;
     const nav = side.querySelector('.ns-nav')?.cloneNode(true);
     if (!nav) return;
-    nav.querySelectorAll('.is-active').forEach((a) => { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
+    const unmark = (root) => root.querySelectorAll('.is-active').forEach((a) => { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
+    unmark(nav);
     const banner = $('.ns-main > .ns-access-banner');
     const data = {
       nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin, lang: getLang(),
@@ -600,11 +603,12 @@ function saveShell(admin) {
     };
     if (admin) {
       data.brand = side.querySelector('.ns-brand')?.outerHTML || '';
-      data.foot = side.querySelector('.ns-sidebar-foot')?.outerHTML || '';
+      const foot = side.querySelector('.ns-sidebar-foot')?.cloneNode(true);
+      if (foot) { unmark(foot); data.foot = foot.outerHTML; }
     } else {
       data.name = $('.ns-user-name')?.textContent || ''; data.sub = $('.ns-user-sub')?.textContent || ''; data.av = $('.ns-avatar')?.textContent || '';
       const foot = side.querySelector('.ns-sidebar-foot')?.cloneNode(true);
-      if (foot) { foot.querySelectorAll('.ns-bell').forEach((e) => e.remove()); data.foot = foot.outerHTML; }
+      if (foot) { unmark(foot); foot.querySelectorAll('.ns-bell').forEach((e) => e.remove()); data.foot = foot.outerHTML; }
     }
     localStorage.setItem(admin ? 'ns.shell.admin' : 'ns.shell', JSON.stringify(data));
   } catch { /* storage full or blocked: pages still work, just without the instant menu */ }

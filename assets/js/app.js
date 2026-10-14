@@ -4,43 +4,6 @@
   var scrim = document.querySelector('.ns-scrim');
   var openBtn = document.querySelector('[data-nav-open]');
 
-  // Show the finished menu from the previous page straight away (core.js saves it once the login is
-  // checked), so the sidebar doesn't jump from this page's placeholder menu to the real one.
-  (function restoreChrome() {
-    var nav = sidebar && sidebar.querySelector('.ns-nav');
-    if (!nav) return;
-    var file = location.pathname.split('/').pop() || 'index.html';
-    var area = ['admin.html', 'subscribers.html', 'revenue.html', 'leads.html', 'activity.html'].indexOf(file) >= 0 ? 'admin' : 'app';
-    var saved = null;
-    try { saved = JSON.parse(localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell') || 'null'); } catch (e) { saved = null; }
-    if (!saved || saved.area !== area || !saved.nav) return;
-    var lang = 'en'; try { lang = localStorage.getItem('ns.lang') || 'en'; } catch (e) { /* ignore */ }
-    if ((saved.lang || 'en') !== lang) return;   // menu was saved in another language
-    var prop = ''; try { prop = localStorage.getItem('ns.property') || ''; } catch (e) { /* ignore */ }
-    if (area === 'app' && saved.property !== prop) return;
-
-    var brand = sidebar.querySelector('.ns-brand');
-    var foot = sidebar.querySelector('.ns-sidebar-foot');
-    var active = nav.querySelector('.ns-nav-link.is-active');
-    var activeHref = active ? active.getAttribute('href') : file;
-
-    nav.innerHTML = saved.nav;
-    nav.querySelectorAll('.ns-nav-link').forEach(function (a) {
-      if (a.getAttribute('href') === activeHref) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-    });
-    if (foot && saved.foot) {
-      var holder = document.createElement('div');
-      holder.innerHTML = saved.foot;
-      var restoredFoot = holder.firstElementChild;
-      if (restoredFoot) foot.replaceWith(restoredFoot);
-    }
-    if (area === 'admin') {
-      document.body.classList.add('ns-admin-area');
-      if (brand && saved.brand) brand.replaceWith(new DOMParser().parseFromString(saved.brand, 'text/html').body.firstElementChild);
-    }
-    document.documentElement.classList.add('ns-chrome-ready');
-  })();
-
   // Language picker: works even before core.js has finished loading (e.g. a picker restored with the
   // cached menu), so a language change is never silently ignored.
   document.addEventListener('change', function (e) {

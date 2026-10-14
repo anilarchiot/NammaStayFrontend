@@ -23,6 +23,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 }
 html:not(.ns-chrome-ready) .ns-sidebar .ns-nav,
 html:not(.ns-chrome-ready) .ns-sidebar .ns-sidebar-foot{visibility:hidden}
+/* Page changes: the sidebar stays put (no flash); only the page content cross-fades. */
+@view-transition{navigation:auto}
+.ns-sidebar{view-transition-name:ns-sidebar}
+::view-transition-group(ns-sidebar){animation:none}
+::view-transition-old(ns-sidebar){display:none}
+::view-transition-new(ns-sidebar){animation:none}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.12s}
+@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}
 .ns-brand{display:flex;align-items:center;gap:10px;padding:8px 8px 24px 8px}
 .ns-brand img,.ns-mobile-brand img{background:var(--cream);border-radius:8px;padding:3px;object-fit:contain}
 .ns-brand > span,.ns-mobile-brand > span{font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:var(--cream)}
