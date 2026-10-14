@@ -14,6 +14,8 @@
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell') || 'null'); } catch (e) { saved = null; }
     if (!saved || saved.area !== area || !saved.nav) return;
+    var lang = 'en'; try { lang = localStorage.getItem('ns.lang') || 'en'; } catch (e) { /* ignore */ }
+    if ((saved.lang || 'en') !== lang) return;   // menu was saved in another language
     var prop = ''; try { prop = localStorage.getItem('ns.property') || ''; } catch (e) { /* ignore */ }
     if (area === 'app' && saved.property !== prop) return;
 
@@ -38,6 +40,20 @@
     }
     document.documentElement.classList.add('ns-chrome-ready');
   })();
+
+  // Language picker: works even before core.js has finished loading (e.g. a picker restored with the
+  // cached menu), so a language change is never silently ignored.
+  document.addEventListener('change', function (e) {
+    var sel = e.target;
+    if (e.nsLangHandled || !sel || !sel.classList || !sel.classList.contains('ns-lang')) return;
+    var langs = ['en', 'ta', 'kn', 'te', 'ml'];
+    var l = langs.indexOf(sel.value) >= 0 ? sel.value : 'en';
+    try {
+      localStorage.setItem('ns.lang', l);
+      localStorage.removeItem('ns.shell'); localStorage.removeItem('ns.shell.admin');
+    } catch (err) { /* ignore */ }
+    location.reload();
+  });
 
   function setNav(open) {
     if (!sidebar) return;

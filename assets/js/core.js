@@ -173,7 +173,23 @@ const I18N = {"Dashboard": ["டாஷ்போர்டு", "ಡ್ಯಾಶ�
 export const LANGS = [['en', 'English'], ['ta', 'தமிழ்'], ['kn', 'ಕನ್ನಡ'], ['te', 'తెలుగు'], ['ml', 'മലയാളം']];
 const LANG_IX = { ta: 0, kn: 1, te: 2, ml: 3 };
 export function getLang() { try { const l = localStorage.getItem('ns.lang'); return LANG_IX[l] !== undefined ? l : 'en'; } catch { return 'en'; } }
-export function setLang(l) { try { localStorage.setItem('ns.lang', l); } catch { /* ignore */ } location.reload(); }
+export function setLang(l) {
+  if (LANG_IX[l] === undefined) l = 'en';
+  try {
+    localStorage.setItem('ns.lang', l);
+    ['ns.shell', 'ns.shell.admin'].forEach((k) => localStorage.removeItem(k));   // cached menu holds the old language
+  } catch { /* ignore */ }
+  location.reload();
+}
+// Maps text in any supported language back to its English key, so already-translated text
+// (restored menus, previously translated nodes) can be translated into the newly chosen language.
+const I18N_SOURCE = new Map();
+for (const [en, list] of Object.entries(I18N)) {
+  I18N_SOURCE.set(en, en);
+  for (const t of list) if (t && !I18N_SOURCE.has(t)) I18N_SOURCE.set(t, en);
+}
+const I18N_IN_LANG = { en: new Set(Object.keys(I18N)) };
+for (const [l, ix] of Object.entries(LANG_IX)) I18N_IN_LANG[l] = new Set(Object.values(I18N).map((v) => v[ix]));
 export function tr(text) { const l = getLang(); if (l === 'en') return text; const r = I18N[text]; return r ? r[LANG_IX[l]] : text; }
 const I18N_ATTRIBUTES = ['aria-label', 'aria-description', 'placeholder', 'title', 'alt'];
 function translatable(el) {
@@ -184,27 +200,38 @@ function translateTree(root) {
   if (!root) return;
   const translate = (text) => {
     const key = text?.trim();
-    const value = key && I18N[key];
-    return value && l !== 'en' ? text.replace(key, value[LANG_IX[l]]) : text;
+    if (!key || I18N_IN_LANG[l].has(key)) return text;   // already in the chosen language
+    const en = I18N_SOURCE.get(key);
+    if (!en) return text;
+    const target = l === 'en' ? en : I18N[en][LANG_IX[l]];
+    return target && target !== key ? text.replace(key, target) : text;
   };
   if (root.nodeType === Node.ELEMENT_NODE && translatable(root)) {
     for (const name of I18N_ATTRIBUTES) {
-      if (root.hasAttribute(name)) root.setAttribute(name, translate(root.getAttribute(name)));
+      if (root.hasAttribute(name)) {
+        const value = root.getAttribute(name);
+        const translated = translate(value);
+        if (translated !== value) root.setAttribute(name, translated);
+      }
     }
     if (root.matches('input[type="button"], input[type="submit"]') && root.hasAttribute('value')) {
-      root.value = translate(root.value);
+      const translated = translate(root.value);
+      if (translated !== root.value) root.value = translated;
     }
   }
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-    if (translatable(n.parentElement)) n.nodeValue = translate(n.nodeValue);
+    if (translatable(n.parentElement)) {
+      const translated = translate(n.nodeValue);
+      if (translated !== n.nodeValue) n.nodeValue = translated;
+    }
   }
 }
 export function langPicker(extraStyle = '') {
   const sel = document.createElement('select');
   sel.className = 'ns-lang'; sel.setAttribute('aria-label', tr('Language')); sel.style.cssText = extraStyle;
   sel.innerHTML = LANGS.map(([v, n]) => `<option value="${v}"${v === getLang() ? ' selected' : ''}>${n}</option>`).join('');
-  sel.addEventListener('change', () => setLang(sel.value));
+  sel.addEventListener('change', (e) => { e.nsLangHandled = true; setLang(sel.value); });
   return sel;
 }
 (function startI18n() {
@@ -567,7 +594,7 @@ function saveShell(admin) {
     nav.querySelectorAll('.is-active').forEach((a) => { a.classList.remove('is-active'); a.removeAttribute('aria-current'); });
     const banner = $('.ns-main > .ns-access-banner');
     const data = {
-      nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin,
+      nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin, lang: getLang(),
       area: admin ? 'admin' : 'app',
       property: admin ? '' : localStorage.getItem('ns.property') || '',
     };
