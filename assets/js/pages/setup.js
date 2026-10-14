@@ -100,7 +100,7 @@ page('setup', async (ctx) => {
     wire(async () => {
       const u = $('#su-body [name=upi]').value.trim().replace(/\s+/g, '');
       if (!u) return true;
-      if (!/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(u)) throw new Error('That UPI ID doesn’t look right — e.g. name@okaxis or 9840012345@ybl.');
+      if (!/^[A-Za-z0-9._-]{2,255}@[A-Za-z]{2,64}$/.test(u)) throw new Error('That UPI ID doesn’t look right — e.g. name@okaxis or 9840012345@ybl.');
       await q(sb.from('properties').update({ upi_id: u }).eq('id', ctx.property_id)); pr.upi_id = u;
     });
   }

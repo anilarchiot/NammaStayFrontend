@@ -90,7 +90,7 @@ page('settings', async (ctx) => {
       upiIn.addEventListener('input', () => { $('#upi-state').textContent = upiIn.value.trim() === (p.upi_id || '') ? (p.upi_id ? '✓ Saved' : 'Not set yet') : 'Not saved yet'; });
       $('#save-upi').onclick = async (e) => {
         const upi = upiIn.value.trim().replace(/\s+/g, '');
-        if (upi && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(upi)) return toast('That UPI ID doesn’t look right — it looks like name@okaxis or 9840012345@ybl.', { error: true });
+        if (upi && !/^[A-Za-z0-9._-]{2,255}@[A-Za-z]{2,64}$/.test(upi)) return toast('That UPI ID doesn’t look right — it looks like name@okaxis or 9840012345@ybl.', { error: true });
         e.target.disabled = true;
         try { await q(sb.from('properties').update({ upi_id: upi || null }).eq('id', ctx.property_id)); p.upi_id = upi || null; upiIn.value = upi;
           $('#upi-state').textContent = upi ? '✓ Saved' : 'Not set yet'; toast(upi ? `UPI ID saved — guests will pay to ${upi}.` : 'UPI ID removed.'); }

@@ -118,7 +118,7 @@ adminPage(async (ctx) => {
         min_units: el.querySelector('[name=min_units]').value, max_units: el.querySelector('[name=max_units]').value }));
       if (plans.some((p) => 'price_paise' in p && !(p.price_paise >= 0))) return toast('Check the prices.', { error: true });
       if (plans.some((p) => p.min_units && p.max_units && Number(p.min_units) > Number(p.max_units))) return toast('“From rooms” can’t be more than “Up to rooms”.', { error: true });
-      if (v('upi_id') && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(v('upi_id'))) return toast('That UPI ID doesn’t look right (e.g. name@okaxis).', { error: true });
+      if (v('upi_id') && !/^[A-Za-z0-9._-]{2,255}@[A-Za-z]{2,64}$/.test(v('upi_id'))) return toast('That UPI ID doesn’t look right (e.g. name@okaxis).', { error: true });
       e.target.disabled = true;
       try {
         await rpc('admin_save_billing_settings', { p: { upi_id: v('upi_id'), payee_name: v('payee_name'), trial_days: v('trial_days'), grace_days: v('grace_days'),

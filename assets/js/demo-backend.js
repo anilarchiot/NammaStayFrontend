@@ -1653,7 +1653,7 @@ function table(name) {
         rows.push(...list); data = list;
       } else if (st.op === 'update') {
         const v = st.payload;
-        if (name === 'properties' && v.upi_id && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z]{2,64}$/.test(v.upi_id)) fail('new row violates check constraint "properties_upi_id_check"');
+        if (name === 'properties' && v.upi_id && !/^[A-Za-z0-9._-]{2,255}@[A-Za-z]{2,64}$/.test(v.upi_id)) fail('new row violates check constraint "properties_upi_id_check"');
         if (name === 'properties' && v.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)) fail('Please check the email address.');
         if (name === 'beds' && 'rate_paise' in v && !(v.rate_paise >= 0)) fail('Check the rates.');
         if ('name' in v && !String(v.name || '').trim()) fail('Name can’t be empty.');
