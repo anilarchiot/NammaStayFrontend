@@ -694,6 +694,22 @@ var NS_SITE = {
     form.innerHTML = '<div class="form-done full"><i>✓</i><h3></h3><p></p></div>';
     form.querySelector('h3').textContent = title; form.querySelector('p').textContent = text;
   }
+  function showExistsPopup(email) {
+    var ov = document.createElement('div');
+    ov.setAttribute('style', 'position:fixed;inset:0;background:rgba(14,27,61,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000');
+    ov.innerHTML = '<div role="alertdialog" aria-modal="true" aria-labelledby="ex-t" style="background:#fff;border-radius:18px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(14,27,61,.3)">'
+      + '<h3 id="ex-t" style="margin:0 0 10px;font-size:20px">Email already registered</h3>'
+      + '<p style="margin:0 0 20px;color:#6B7280;line-height:1.6"></p>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" class="btn" data-x>Close</button><a class="btn btn-primary" href="login.html">Sign in</a></div></div>';
+    ov.querySelector('p').textContent = email + ' is already linked to a NammaStay account that has a property. Please sign in instead, or use a different email.';
+    function close() { ov.remove(); document.removeEventListener('keydown', esc); }
+    function esc(e) { if (e.key === 'Escape') close(); }
+    ov.querySelector('[data-x]').addEventListener('click', close);
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    document.addEventListener('keydown', esc);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-x]').focus();
+  }
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     err.hidden = true;
@@ -708,12 +724,23 @@ var NS_SITE = {
 
     var cfg = window.NAMMASTAY_CONFIG || {};
     if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
-      fetch(cfg.supabaseUrl.replace(/\/$/, '') + '/rest/v1/rpc/submit_lead', {
-        method: 'POST',
-        headers: Object.assign({ apikey: cfg.supabaseAnonKey, 'Content-Type': 'application/json' },
-          /^eyJ/.test(cfg.supabaseAnonKey) ? { Authorization: 'Bearer ' + cfg.supabaseAnonKey } : {}),   // legacy anon key or new publishable key
-        body: JSON.stringify({ p: d })
+      var base = cfg.supabaseUrl.replace(/\/$/, '') + '/rest/v1/rpc/';
+      var headers = Object.assign({ apikey: cfg.supabaseAnonKey, 'Content-Type': 'application/json' },
+        /^eyJ/.test(cfg.supabaseAnonKey) ? { Authorization: 'Bearer ' + cfg.supabaseAnonKey } : {});   // legacy anon key or new publishable key
+      var exists = d.email
+        ? fetch(base + 'email_has_property', { method: 'POST', headers: headers, body: JSON.stringify({ p_email: d.email }) })
+          .then(function (r) { return r.ok ? r.json() : false; }).catch(function () { return false; })
+        : Promise.resolve(false);
+      exists.then(function (has) {
+        if (has === true) {
+          fail('');
+          err.hidden = true;
+          showExistsPopup(d.email);
+          return null;
+        }
+        return fetch(base + 'submit_lead', { method: 'POST', headers: headers, body: JSON.stringify({ p: d }) });
       }).then(function (r) {
+        if (!r) return;
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (!r.ok) throw new Error(j.message || 'Something went wrong. Please try again.');
           done('Thanks, ' + d.name.split(' ')[0] + '!', 'We’ve got your request and will contact you shortly.');
