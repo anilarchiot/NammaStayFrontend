@@ -1,5 +1,7 @@
 import { langPicker, DEMO, NOT_CONNECTED, markBrowserSession, esc, sb, $, modal, toast, reveal, SITE_URL, param } from '../core.js';
+import { loadPropertyCount } from '../core.js';
 
+loadPropertyCount();
 init();
 
 async function init() {
@@ -13,7 +15,7 @@ async function init() {
   email.type = 'email'; email.autocomplete = 'username'; email.placeholder = 'you@example.com';
   pw.autocomplete = 'current-password';
   if (setup) {
-    setup.parentElement.innerHTML = 'New property? <a href="signup.html" style="font-weight:700">Start a 15-day free trial</a><br>'
+    setup.parentElement.innerHTML = 'New property? <a href="signup.html" style="font-weight:700">Start a 7-day free trial</a><br>'
       + '<span style="font-size:12.5px">Staff: ask your property owner to invite you.</span>';
   }
   { // language switch, top-right of the sign-in panel

@@ -190,7 +190,7 @@ function addPropertyDialog() {
         ${field('Owner’s phone / WhatsApp', '<input class="ns-input" name="phone" type="tel" maxlength="20" placeholder="+91 98400 12233">')}
         <div style="grid-column:1/-1">${field('Owner’s email *', '<input class="ns-input" name="owner_email" type="email">', 'They sign in with this email. If they already use NammaStay, the property is added to their account right away.')}</div>
         ${field('Access', `<select class="ns-input" name="access">${options([['trial', 'Free trial'], ['comp', 'Complimentary (free forever)']], 'trial')}</select>`)}
-        <div id="trial-days">${field('Trial days', '<input class="ns-input" name="trial_days" type="number" min="0" max="365" value="15">')}</div>
+        <div id="trial-days">${field('Trial days', '<input class="ns-input" name="trial_days" type="number" min="0" max="365" value="7">')}</div>
         <label style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600">
           <input type="checkbox" name="add_me" checked style="margin-top:2px"> Add me as manager, so I can set up their rooms, beds and rates</label>
         <div style="grid-column:1/-1">${field('Private note (optional)', '<input class="ns-input" name="admin_note" maxlength="300" placeholder="e.g. Met at travel expo; agreed ₹1,650/month">')}</div>

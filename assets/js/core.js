@@ -90,6 +90,15 @@ function friendly(error) {
   if (/subscription has ended|account is suspended/i.test(m)) return m;
   return m || 'Something went wrong. Please try again.';
 }
+export async function loadPropertyCount() {
+  const els = document.querySelectorAll('[data-prop-count]');
+  if (!els.length) return;
+  try {
+    const n = await rpc('public_property_count');
+    if (Number.isFinite(+n) && +n > 0) els.forEach((e) => { e.textContent = String(n); });
+  } catch { /* keep default */ }
+}
+
 export async function rpc(fn, args = {}) {
   const { data, error } = await sb.rpc(fn, args);
   if (error) throw new Error(friendly(error));

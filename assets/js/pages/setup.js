@@ -125,7 +125,7 @@ page('setup', async (ctx) => {
     await rpc('setup_finish', { p_property: ctx.property_id, p_done: true }).catch(() => {});
     const prog = await rpc('setup_progress', { p_property: ctx.property_id }).catch(() => ({}));
     const item = (ok, label, href, cta) => `<div class="su-done-row${ok ? ' is-ok' : ''}"><span>${ok ? '✅' : '⬜'} ${label}</span>${ok ? '' : `<a class="ns-btn-ghost" href="${href}">${cta}</a>`}</div>`;
-    body(`<div class="su-h">🎉 You’re ready</div><div class="ns-muted su-sub">Your 15-day free trial is running. Here’s what’s left — or come back to it any time from the dashboard.</div>
+    body(`<div class="su-h">🎉 You’re ready</div><div class="ns-muted su-sub">Your 7-day free trial is running. Here’s what’s left — or come back to it any time from the dashboard.</div>
       ${item(prog.details, 'Property details', 'setup.html', 'Add')}
       ${item(prog.rooms, hostel ? 'Dorms & beds' : 'Rooms', 'rooms.html', 'Add')}
       ${item(prog.upi, 'UPI ID for payments', 'settings.html', 'Add')}

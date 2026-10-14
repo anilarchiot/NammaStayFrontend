@@ -1,5 +1,6 @@
-// Self sign-up: 1) create account → 2) create property → 15-day free trial starts.
+// Self sign-up: 1) create account → 2) create property → 7-day free trial starts.
 import { MARKETING_URL, DEMO, NOT_CONNECTED, sb, $, esc, rpc, reveal, param, SITE_URL } from '../core.js';
+import { loadPropertyCount } from '../core.js';
 
 const box = $('.ns-login-main > div');
 const brand = box.querySelector('.ns-login-brand').outerHTML;
@@ -12,6 +13,7 @@ const render = (title, sub, body) => {
 const errBox = '<div class="ns-error" id="err" role="alert" hidden></div>';
 const fail = (m) => { const e = $('#err'); e.textContent = m; e.hidden = false; const b = $('#go'); if (b) b.disabled = false; };
 
+loadPropertyCount();
 init();
 
 async function init() {
@@ -38,7 +40,7 @@ async function init() {
 }
 
 function accountStep() {
-  render('Start your 15-day free trial', 'No card needed. Takes about 2 minutes.', `
+  render('Start your 7-day free trial', 'No card needed. Takes about 2 minutes.', `
     <div style="display:flex;flex-direction:column;gap:16px">
       ${input('name', 'Your name', 'autocomplete="name" maxlength="80"')}
       ${input('email', 'Email', `type="email" autocomplete="email" value="${esc(param('email') || '')}"`)}
@@ -70,7 +72,7 @@ function accountStep() {
 
 function propertyStep(session) {
   const name = session.user.user_metadata?.name || '';
-  render('Set up your property', 'Your 15-day free trial starts now.', `
+  render('Set up your property', 'Your 7-day free trial starts now.', `
     <div style="display:flex;flex-direction:column;gap:16px">
       ${input('pname', 'Property name', 'maxlength="120" placeholder="e.g. Blue Door Hostel"')}
       <div class="ns-field"><label for="kind">Type</label><select class="ns-input" id="kind">

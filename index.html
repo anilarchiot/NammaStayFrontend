@@ -304,7 +304,7 @@
         <h1>Run your hostel from your phone. <em>Bed by bed.</em></h1>
         <p class="lead">NammaStay handles bookings, check-ins, guest IDs and UPI payments in one simple app. Built and tested behind the front desk of a working backpacker hostel.</p>
         <div class="hero-ctas">
-          <a class="btn btn-primary" href="signup.html">Start 15-day free trial
+          <a class="btn btn-primary" href="signup.html">Start 7-day free trial
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           <a class="btn btn-light" href="#early-access" data-walkthrough>Book a free walkthrough</a>
         </div>
@@ -559,7 +559,7 @@
         <button type="button" role="tab" data-kind="homestay" aria-selected="false">Homestay</button>
         <button type="button" role="tab" data-kind="hotel" aria-selected="false">Hotel</button>
       </div>
-      <p class="sub center" style="text-align:center">Every feature, unlimited staff and unlimited bookings. Start with 15 days free — no card needed. Pay by UPI when you’re ready.</p>
+      <p class="sub center" style="text-align:center">Every feature, unlimited staff and unlimited bookings. Start with 7 days free — no card needed. Pay by UPI when you’re ready.</p>
       <div class="price-grid" id="price-grid"></div>
       <ul class="price-incl">
         <li>Bed-level bookings &amp; calendar</li><li>Airbnb &amp; Booking.com calendar sync</li><li>Guest online check-in</li><li>Form C for foreign guests</li><li>UPI QR payments, no gateway fees</li>
@@ -612,7 +612,7 @@
         <details><summary>Does it sync with Airbnb and Booking.com?</summary><p>Yes — by calendar sync (iCal). Each bed or room gets its own NammaStay calendar link to paste into Airbnb, Booking.com, Agoda or Vrbo, and their calendar links come back into NammaStay, checked every 30 minutes. Nights booked on one side close on the other, and you get an alert if two bookings clash. Calendar sync shares dates only (not prices), and each OTA refreshes on its own schedule. Hostelworld and MakeMyTrip need a channel-manager connection, which we’re working on.</p></details>
         <details><summary>How much does it cost?</summary><p>One flat monthly price per property, based on its type and size — see Pricing above. Every feature and unlimited staff are included. There are no per-booking or per-guest fees.</p></details>
         <details><summary>What happens after the free trial?</summary><p>Pay for a month or a year by UPI from the Billing tab in Settings and enter the transaction ID — we confirm it and your access continues. If you don’t renew, your data stays safe and visible; only new bookings pause until you do.</p></details>
-        <details><summary>Can I try it before paying?</summary><p>Yes — the 15-day free trial has every feature and needs no card. Prefer a guided tour first? Book a free 15-minute walkthrough and we’ll show you around on WhatsApp or a video call.</p></details>
+        <details><summary>Can I try it before paying?</summary><p>Yes — the 7-day free trial has every feature and needs no card. Prefer a guided tour first? Book a free 15-minute walkthrough and we’ll show you around on WhatsApp or a video call.</p></details>
       </div>
     </div>
   </section>
@@ -624,7 +624,7 @@
         <h2>Ready to retire the register?</h2>
         <p>Start your free trial in two minutes, or book a free 15-minute walkthrough and we’ll show you around.</p>
         <div class="hero-ctas">
-          <a class="btn btn-primary" href="signup.html">Start 15-day free trial</a>
+          <a class="btn btn-primary" href="signup.html">Start 7-day free trial</a>
           <a class="btn btn-ghost-dark" href="#early-access" data-walkthrough>Book a free walkthrough</a>
         </div>
       </div>
@@ -774,7 +774,7 @@ var NS_SITE = {
         return '<div class="price-card' + (isBest ? ' best' : '') + '">' + (isBest ? '<span class="tag">Best value</span>' : '') +
           '<h3>' + esc(p.name) + '</h3><div class="amt">' + inr(p.price_paise) + ' <small>/ ' + per + '</small></div>' +
           '<p>' + esc(p.description || '') + '</p>' + (p.period_months > 1 ? '<p>≈ ' + inr(p.price_paise / p.period_months) + ' per month</p>' : '') +
-          '<a class="btn ' + (isBest ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a></div>';
+          '<a class="btn ' + (isBest ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 7-day free trial</a></div>';
       });
     } else {                                                   // sizes: one card per size
       cards = order.map(function (k, i) {
@@ -786,7 +786,7 @@ var NS_SITE = {
         return '<div class="price-card' + (mid ? ' best' : '') + '">' + (mid ? '<span class="tag">Most popular</span>' : '') + '<h3>' + size + '</h3>' +
           (q ? '<div class="amt" style="font-size:32px">Custom</div><p>' + esc(q.description || 'Priced for your hotel') + '</p><a class="btn btn-light" href="#early-access">Talk to us</a>'
              : '<div class="amt">' + inr(m.price_paise) + ' <small>/ month</small></div>' + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — save ' + inr(m.price_paise * 12 - y.price_paise) + '</p>' : '') +
-               '<a class="btn ' + (mid ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 15-day free trial</a>') + '</div>';
+               '<a class="btn ' + (mid ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 7-day free trial</a>') + '</div>';
       });
     }
     grid.innerHTML = cards.join('');
