@@ -252,7 +252,7 @@ function seedBilling() {
     paid_until: state === 'active' ? D(20) : state === 'grace' ? D(-1) : state === 'expired' ? D(-30) : null,
     plan_id: ['active', 'grace', 'expired'].includes(state) ? 'monthly' : null, is_complimentary: false, last_booking_at: D(-1) });
   return {
-    settings: { upi_id: 'nammastay@okaxis', payee_name: 'NammaStay', trial_days: 15, grace_days: 3, support_whatsapp: '919840000000', support_email: 'hello@thenammastay.com' },
+    settings: { upi_id: 'nammastay@okaxis', payee_name: 'NammaStay', trial_days: 7, grace_days: 3, support_whatsapp: '919840000000', support_email: 'hello@thenammastay.com' },
     plans: DEFAULT_PLANS.map((x) => ({ ...x })),
     // the demo hostel itself is in its free trial so the Billing tab has something to show
     mine: { trial_ends_at: D(11), paid_until: null, plan_id: null, is_complimentary: false },
