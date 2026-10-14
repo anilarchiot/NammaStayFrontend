@@ -2,7 +2,7 @@
 
 How to take NammaStay from a clickable demo to a real system holding lakhs of bookings, with the checks to run before you trust it with guests.
 
-**Stack:** the website stays on GitHub Pages (free). The backend is **Supabase** — a hosted Postgres database with login, file storage, live updates and small server functions. There is no server for you to maintain.
+**Stack:** the website is hosted on **Cloudflare Pages** (free; see [DEPLOY-CLOUDFLARE.md](./DEPLOY-CLOUDFLARE.md) for moving from GitHub Pages and for scaling to many properties). The backend is **Supabase** — a hosted Postgres database with login, file storage, live updates and small server functions. There is no server for you to maintain.
 
 ```
 Browser (thenammastay.in)  ──►  Supabase
@@ -106,11 +106,11 @@ Also open **Advisors → Security Advisor** and **Performance Advisor** in Supab
    supabaseAnonKey: 'eyJhbGciOi...',
    ```
    The anon key is meant to be public; RLS protects the data. **Never** put the `service_role` key in the website.
-3. Upload everything to GitHub (repo root, same as before). Pages redeploys in 1–2 minutes.
+3. Push to the `main` branch on GitHub. Cloudflare Pages builds (`npm test` → `dist/`) and redeploys in 1–2 minutes (set-up: [DEPLOY-CLOUDFLARE.md](./DEPLOY-CLOUDFLARE.md)).
 4. Open `https://thenammastay.in/login.html`, sign in, and you should see an empty live dashboard with 9 beds.
    (`https://thenammastay.in` itself is the marketing homepage — `index.html`.)
 
-> The repo also contains `supabase/` and `docs/`. GitHub Pages will serve them too; they hold no secrets, so that's fine.
+> Only the built `dist/` folder is published; `supabase/` and `docs/` are not served.
 
 ## 7. Booking emails (Resend)
 
@@ -169,7 +169,7 @@ There is no gateway, so the app can't see the money arrive by itself. The rule f
 ## 11. Load test (proves "lakhs of data")
 
 1. Create a **second, throwaway** Supabase project (free plan allows 2).
-2. Run 001–003 there, create a test login, put its email in `supabase/tests/02_load_test.sql`, run it.
+2. Run 001–003 there, create a test login (**Authentication → Users → Add user**, e.g. `loadtest@example.com`, tick Auto Confirm), put its email in `supabase/tests/02_load_test.sql`, run it. The error `Create the test login … first.` means that login doesn't exist in this project yet — nothing was changed; create it and re-run.
 3. It creates ~1.5 lakh bookings (1 lakh in one property), then prints the time each screen's query takes. Target: under ~300 ms each. The final EXPLAIN should show index scans, not `Seq Scan` on bookings.
 4. Delete the test project afterwards.
 
@@ -221,14 +221,14 @@ At 9 beds you'll add roughly 2,000–3,000 bookings a year, so the database itse
 
 - **Monitoring:** Supabase → Reports (API, database) and Logs; Edge Function logs for email failures.
 - **Changes to the database:** write a new numbered file (`006_...sql`), try it on the test project first, then run on live, then re-run the security checks.
-- **Updating the site:** edit files → upload to GitHub. Hard-refresh (Ctrl+Shift+R) to see changes.
+- **Updating the site:** edit files → push to `main` → Cloudflare Pages deploys. Hard-refresh (Ctrl+Shift+R) to see changes. Roll back from Cloudflare → Deployments.
 - **If something breaks:** the website itself can't lose data; all data is in Supabase. Worst case, restore yesterday's backup.
 
 ## Monthly cost at launch
 
 | Item | Cost |
 |---|---|
-| GitHub Pages | Free (public repo) |
+| Cloudflare Pages + DNS | Free |
 | Domain | What you already pay |
 | Supabase | Free while testing; Pro ≈ US$25/month for live guest data |
 | Resend email | Has a free tier; check its current limits against your booking volume |

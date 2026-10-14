@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker name shown in the Cloudflare dashboard
+  "name": "nammastayfrontend",
+  "compatibility_date": "2026-10-01",
+  // Publish only the minified production build (created by `npm test`), never the repo root
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
