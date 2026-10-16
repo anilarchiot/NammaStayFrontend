@@ -3,6 +3,7 @@
   // Must match the Worker name shown in the Cloudflare dashboard
   "name": "nammastayfrontend",
   "compatibility_date": "2026-10-01",
+  "previews": {},
   // Publish only the minified production build (created by `npm test`), never the repo root
   "assets": {
     "directory": "./dist",
