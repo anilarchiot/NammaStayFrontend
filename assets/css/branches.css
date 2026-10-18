@@ -1,0 +1,96 @@
+/* NammaStay — Branches page (043). Only br-* classes; styles.css is not changed. */
+.br-seg{display:flex;background:#fff;border:1px solid #E2DAC4;border-radius:10px;padding:3px}
+.br-seg button{min-height:36px;padding:0 14px;border:0;border-radius:7px;background:transparent;color:#101A3D;font:800 13px Manrope,sans-serif;cursor:pointer}
+.br-seg button[aria-pressed="true"]{background:#101A3D;color:#fff}
+.br-seg button:focus-visible,.br-role:focus-visible{outline:3px solid #2D5FA6;outline-offset:2px}
+.br-sm{min-height:38px !important;height:auto !important;font-size:13px !important;padding:0 12px !important;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.br-muted{font-size:13px;color:#4F5B78;font-weight:600;margin:0}
+.br-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* totals */
+.br-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.br-tile{background:#fff;border:1px solid #E7DFC7;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.br-tile span{font-size:12.5px;color:#4F5B78;font-weight:700}
+.br-tile b{font:800 24px Sora,sans-serif;color:#101A3D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br-tile small{font-size:12px;color:#4F5B78;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br-tile.is-dark{background:#101A3D;border-color:#101A3D}
+.br-tile.is-dark span,.br-tile.is-dark small{color:#B9C3E2}.br-tile.is-dark b{color:#FBF3DE}
+.br-tile.is-red b{color:#9A2A14}
+/* intro (one property) */
+.br-intro{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:#101A3D;color:#fff;border-radius:18px;padding:20px 22px}
+.br-intro div{flex:1 1 360px;min-width:0}
+.br-intro h2{margin:0 0 6px;font:800 19px Sora,sans-serif}
+.br-intro p{margin:0;font-size:13.5px;line-height:1.55;color:#C9D3EE;font-weight:600;max-width:640px}
+/* full here, free there */
+.br-tips{display:flex;flex-direction:column;gap:10px}
+.br-tip{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#E6F5EE;border:1px solid #BFE5D3;border-radius:16px;padding:14px 16px}
+.br-tip > div:first-child{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.br-tip b{font:700 15px Sora,sans-serif;color:#0B3D2A}
+.br-tip span{font-size:13.5px;color:#24405A;font-weight:600}
+.br-tip-act{display:flex;gap:8px;flex-wrap:wrap}
+/* branch cards */
+.br-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.br-card{display:flex;flex-direction:column;gap:14px;min-width:0}
+.br-card.is-here{border-color:#1C9A6C;box-shadow:0 0 0 1px #1C9A6C inset}
+.br-card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.br-card-t{min-width:0}
+.br-card-t h2{margin:0;font:700 17px Sora,sans-serif;overflow-wrap:anywhere}
+.br-card-t p{margin:2px 0 0;font-size:13px;color:#4F5B78;font-weight:600}
+.br-plan{flex:none;font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.br-plan.is-green{background:#E6F5EE;color:#0A5C40}.br-plan.is-amber{background:#FDF0D2;color:#6B4600}.br-plan.is-red{background:#FBE6E1;color:#8A2410}
+.br-here{align-self:flex-start;font-size:12px;font-weight:800;color:#0A5C40;background:#E6F5EE;border-radius:8px;padding:3px 8px;margin-top:-6px}
+.br-occ{display:flex;flex-direction:column;gap:6px}
+.br-occ-l{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#24304F}
+.br-occ-l b{font:800 15px Sora,sans-serif;color:#101A3D}
+.br-bar{height:8px;border-radius:99px;background:#EFE8D2;overflow:hidden}
+.br-bar i{display:block;height:100%;border-radius:99px;background:#1C9A6C}
+.br-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin:0}
+.br-stats div{min-width:0}
+.br-stats dt{font-size:12.5px;color:#4F5B78;font-weight:600}
+.br-stats dd{margin:0;font-weight:800;font-size:15px;color:#101A3D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br-nights-wrap{display:flex;flex-direction:column;gap:4px}
+.br-nights{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px;align-items:end;height:34px;border-bottom:1px solid #E7DFC7}
+.br-nights i{display:block;background:#BFE5D3;border-radius:3px 3px 0 0}
+.br-nights i.is-full{background:#101A3D}
+.br-nights-k{display:flex;justify-content:space-between;font-size:11.5px;color:#4F5B78;font-weight:700}
+.br-setup{display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:#FBF9F1;border:1px dashed #D9D0B4;border-radius:12px;padding:12px 14px;font-size:13px;color:#24304F}
+.br-setup b{font-size:14px}
+.br-chips{display:flex;flex-wrap:wrap;gap:6px}
+.br-chips span{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:#FDF0D2;color:#6B4600}
+.br-card-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+/* compare + team */
+.br-sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.br-sec-h h2{margin:0;font:700 17px Sora,sans-serif;display:flex;align-items:center;gap:8px}
+.br-sec-h h2 svg{color:#1C9A6C}
+.br-scroll{overflow-x:auto;position:relative}
+.br-table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+.br-table th,.br-table td{padding:10px;text-align:right;border-top:1px solid #EFE8D2;white-space:nowrap}
+.br-table thead th{border-top:0;font-size:12.5px;color:#4F5B78;font-weight:800}
+.br-table th[scope="row"],.br-table thead th:first-child{text-align:left;font-weight:800;white-space:normal}
+.br-table tfoot th,.br-table tfoot td{border-top:2px solid #101A3D;font-weight:800}
+.br-table .is-green{color:#0A5C40;font-weight:800}.br-table .is-red{color:#9A2A14;font-weight:800}
+.br-team-t{min-width:0}
+.br-team-t th,.br-team-t td{text-align:left}
+.br-team-t th[scope="row"] small{display:block;font-size:12px;color:#4F5B78;font-weight:600}
+.br-role{height:38px;border:1px solid #D9D0B4;border-radius:9px;background:#fff;font:700 13px Manrope,sans-serif;color:#101A3D;padding:0 8px;min-width:130px}
+.br-team .br-muted{margin-bottom:6px}
+/* add dialog */
+.br-form{display:flex;flex-direction:column;gap:4px}
+.br-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.br-copy{border:1px solid #EFE8D2;border-radius:12px;padding:10px 14px 12px;margin:6px 0 8px}
+.br-copy legend{font-size:13px;font-weight:800;padding:0 4px}
+.br-copy-list,.br-team-pick{display:flex;flex-direction:column;gap:2px}
+.br-team-pick{margin-top:8px}.br-team-pick b{font-size:13px}
+.br-check{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;font-weight:600;min-height:36px;padding:6px 0;cursor:pointer}
+.br-check input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:#1C9A6C}
+.br-check input:disabled + span{color:#8A92A6}
+.br-note{font-size:13px;background:#FBF3DE;color:#24304F;border-radius:10px;padding:10px 12px;margin:6px 0 0;line-height:1.5;font-weight:600}
+.br-note.is-amber{background:#FDF0D2;color:#6B4600;margin:0 0 4px}
+@media (max-width:1100px){.br-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){
+  .br-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .br-tiles .br-tile:last-child{grid-column:1 / -1}
+  .br-tile b{font-size:20px}
+  .br-grid{grid-template-columns:1fr}
+  .br-two{grid-template-columns:1fr;gap:0}
+  .br-tip-act,.br-tip-act .br-sm{width:100%;justify-content:center}
+}
