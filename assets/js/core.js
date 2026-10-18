@@ -119,6 +119,8 @@ const PAGE_ROLES = {
   housekeeping: ['owner', 'manager', 'front_desk'],
   setup: ['owner', 'manager'],
   expenses: ['owner', 'manager', 'accountant'],
+  investment: ['owner'],                                      // My business (was My investment): owner only (036, 039)
+  health: ['owner', 'manager'],                               // Business health (037)
   tenants: ['owner', 'manager', 'front_desk', 'accountant'],   // PG / co-living: monthly tenants & rent (031)
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
@@ -329,6 +331,7 @@ const ADMIN_NAV = [
   ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
   ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
+  ['company.html', 'Company', '<path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-5h6v5"></path><path d="M9 10h.01M15 10h.01"></path>'],   // NammaStay's own business (040)
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
 ];
@@ -349,6 +352,7 @@ function adminChrome(user, hasProperty) {
   const so = $('.ns-sidebar .ns-signout');
   if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
   window.nsMarkActiveNav?.();
+  rpc('company_badge').then((n) => { const a = n > 0 && $('.ns-sidebar a[href="company.html"]'); if (a) a.insertAdjacentHTML('beforeend', `<b class="ns-nav-count" title="Filings or renewals due">${n}</b>`); }).catch(() => {});   // Company (040): due within 7 days
 }
 /** Admin screens: their own login, their own menu, no property needed. */
 export function adminPage(fn) {
@@ -515,6 +519,26 @@ function applyChrome(ctx) {
       rp.insertAdjacentElement('afterend', a);
     }
   }
+  if (!['owner', 'manager'].includes(ctx.role)) $$('.ns-sidebar a[href="health.html"]').forEach((a) => a.remove());
+  else if (!$('.ns-sidebar a[href="health.html"]')) {   // Business health (037) — owner and managers, with the reports
+    const after = $('.ns-sidebar .ns-nav-link[href="reports.html"]') || $('.ns-sidebar .ns-nav-link[href="payments.html"]') || $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
+    if (after) {
+      const a = document.createElement('a'); a.href = 'health.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span>Business health</span>';
+      if (/health\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      after.insertAdjacentElement('afterend', a);
+    }
+  }
+  if (ctx.role !== 'owner') $$('.ns-sidebar a[href="investment.html"]').forEach((a) => a.remove());   // a menu remembered from an owner login
+  else if (!$('.ns-sidebar a[href="investment.html"]')) {   // My investment (036) — owner only
+    const after = $('.ns-sidebar a[href="expenses.html"]') || $('.ns-sidebar .ns-nav-link[href="reports.html"]');
+    if (after) {
+      const a = document.createElement('a'); a.href = 'investment.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg><span>My business</span>';
+      if (/investment\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      after.insertAdjacentElement('afterend', a);
+    }
+  }
   if (ctx.isAdmin && !$('.ns-sidebar a[data-admin-link]')) {   // NammaStay admins only: admin pages right in the menu
     const nav = $('.ns-sidebar .ns-nav');
     if (nav) {
@@ -552,8 +576,42 @@ function applyChrome(ctx) {
       ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
+  branchMenu(ctx);                                    // Branches (043)
   window.nsMarkActiveNav?.();
   document.documentElement.classList.add('ns-chrome-ready');
+}
+
+// Branches (043): owners get "Branches" in the menu; anyone with 2+ properties gets a switcher at the top of the menu
+function branchMenu(ctx) {
+  $$('.ns-sidebar [data-branch-switch]').forEach((e) => e.remove());
+  const owner = ctx.role === 'owner';
+  if (!owner) $$('.ns-sidebar a[href="branches.html"]').forEach((a) => a.remove());
+  else if (!$('.ns-sidebar a[href="branches.html"]')) {
+    const d = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
+    if (d) {
+      const a = document.createElement('a'); a.href = 'branches.html'; a.className = 'ns-nav-link';
+      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V9l5-4 5 4v12"></path><path d="M15 21v-8l3-2 3 2v8"></path><path d="M9 21v-4h2v4"></path></svg><span>Branches</span>';
+      if (/branches\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+      d.insertAdjacentElement('afterend', a);
+    }
+  }
+  const nav = $('.ns-sidebar .ns-nav');
+  if (!nav || ctx.memberships.length < 2) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.branchSwitch = '1'; b.setAttribute('aria-haspopup', 'dialog');
+  b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:calc(100% - 16px);margin:0 8px 10px;min-height:50px;padding:7px 12px;border-radius:12px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:700 13.5px Manrope,sans-serif;text-align:left;cursor:pointer';
+  b.innerHTML = `<span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:11px;font-weight:800;letter-spacing:.05em;color:#A9B4D6">${ctx.memberships.length} PROPERTIES · VIEWING</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(ctx.property_name)}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`;
+  b.addEventListener('click', () => {
+    const list = ctx.memberships.map((m) => ({ label: `${m.property_id === ctx.property_id ? '✓ ' : ''}${m.property_name}${m.role === 'owner' ? '' : ` (${ROLE_LABEL[m.role]})`}`, value: m.property_id }));
+    if (owner) list.push({ label: 'All branches together', value: '#all' }, { label: '+ Add a branch', value: '#add' });
+    choose('Switch branch', list).then((v) => {
+      if (!v || v === ctx.property_id) return;
+      if (v === '#all' || v === '#add') { location.href = v === '#add' ? 'branches.html?add=1' : 'branches.html'; return; }
+      localStorage.setItem('ns.property', v);
+      location.href = location.search ? 'dashboard.html' : (location.pathname.split('/').pop() || 'dashboard.html');   // same screen, other branch
+    });
+  });
+  nav.insertAdjacentElement('beforebegin', b);
 }
 
 // Trial / expiry banner at the top of every screen

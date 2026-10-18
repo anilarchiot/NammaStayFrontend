@@ -1,3 +1,4 @@
+import { bizDemo, BIZ_FUNCTIONS } from './demo-business.js';
 // NammaStay — in-browser demo backend.
 // Used automatically when assets/js/config.js has no Supabase keys.
 // It mimics the Supabase client (auth, rpc, from, storage, channel) and
@@ -473,6 +474,200 @@ function accessOf(x) {
 }
 
 let DB;
+// ---------------------------------------------------------------- My investment (036) — demo
+function seedInvest() {
+  const t = ymd(); const [y, m] = t.split('-').map(Number);
+  const mon = (k) => new Date(Date.UTC(y, m - 1 - k, 1)).toISOString().slice(0, 7);
+  const firstPay = (DB.payments || []).map((x) => x.received_at.slice(0, 7)).sort()[0] || mon(0);
+  const opened = mon(19) + '-01';
+  const r = rng(36); const history = {};
+  for (let k = 19; k >= 0; k--) {                                   // sample months before the demo's own bookings
+    const mm = mon(k); if (mm >= firstPay) continue;
+    const age = 19 - k;
+    history[mm] = { revenue_paise: Math.round((52000 + age * 3300 + r() * 9000)) * 100, expenses_paise: Math.round(36000 + r() * 6000) * 100, guests: 38 + age * 3 };
+  }
+  const day = (k, d = 5) => `${mon(k)}-${String(d).padStart(2, '0')}`;
+  const plus = (n) => ymd(Date.now() + n * 864e5);
+  const items = [['Interiors & furniture', 'Painting, flooring, common area', 65000000, day(20, 10)], ['Rental deposit', 'Refundable at end of lease', 30000000, day(20, 2)],
+    ['Beds, mattresses & lockers', '9 beds', 24000000, day(20, 20)], ['Kitchen & appliances', null, 11000000, day(19, 1)], ['Two ACs', 'Added later', 20000000, day(9, 12)]]
+    .map(([title, note, amount_paise, invested_on]) => ({ id: uuid(), title, note, amount_paise, invested_on, created_at: new Date().toISOString() }));
+  const docs = [['fire_noc', 'Fire NOC', 'FS/2025/1182', plus(16)], ['trade_licence', 'Trade licence', 'TL-CHN-48211', plus(29)], ['insurance', 'Property insurance', 'POL 7712 0091', plus(83)],
+    ['fssai', 'FSSAI registration', '22426138000412', plus(168)], ['rental_agreement', 'Rental agreement', null, plus(502)], ['gst', 'GST certificate', '33AAKFN1234C1Z8', null]]
+    .map(([doc_type, title, doc_number, expires_on]) => ({ id: uuid(), doc_type, title, doc_number, issued_on: null, expires_on, note: null, file_path: null, file_name: null, file_size: null, reminded_level: 0 }));
+  return { opened_on: opened, opened_set: true, history, items, docs };
+}
+function invMonths() {
+  const I = DB.inv; const t = ymd(); const out = [];
+  const tz = (iso) => ymd(iso);
+  let d = new Date(I.opened_on.slice(0, 7) + '-01T00:00:00Z');
+  while (d.toISOString().slice(0, 7) <= t.slice(0, 7)) {
+    const mm = d.toISOString().slice(0, 7); const h = I.history[mm];
+    const rev = h ? h.revenue_paise : DB.payments.filter((x) => tz(x.received_at).startsWith(mm) && tz(x.received_at) >= I.opened_on).reduce((a, x) => a + net(x), 0)
+      + (DB.rentPays || []).filter((x) => tz(x.received_at).startsWith(mm)).reduce((a, x) => a + (x.kind === 'refund' ? -x.amount_paise : x.amount_paise), 0);
+    const exp = h ? h.expenses_paise : DB.expenses.filter((x) => x.spent_on.startsWith(mm) && x.spent_on >= I.opened_on).reduce((a, x) => a + x.amount_paise, 0);
+    out.push({ month: mm, revenue_paise: rev, expenses_paise: exp, guests: h ? h.guests : DB.guests.filter((g) => (g.created_at || '').startsWith(mm)).length });
+    d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+  }
+  return out;
+}
+function invOwner() { if ((DB.viewAs || 'owner') !== 'owner') fail('You don’t have permission to do this.'); }
+function invDocsNotify() {
+  const t = ymd(); let n = 0;
+  DB.inv.docs.forEach((d) => {
+    if (!d.expires_on) return;
+    const left = Math.round((T(d.expires_on) - T(t)) / 864e5);
+    const lvl = left < 0 ? -1 : left <= 3 ? 3 : left <= 15 ? 15 : left <= 30 ? 30 : 0;
+    if (lvl && lvl !== d.reminded_level && (d.reminded_level === 0 || lvl === -1 || lvl < d.reminded_level)) {
+      DB.notifications.push({ id: uuid(), property_id: P, user_id: ME, kind: 'legal_doc', booking_id: null, read_at: null, created_at: new Date().toISOString(),
+        title: left < 0 ? `${d.title} has expired` : left === 0 ? `${d.title} expires today` : `${d.title} expires in ${left} day${left === 1 ? '' : 's'}`,
+        body: 'Renew it and update the date in My investment → Legal documents.' });
+      d.reminded_level = lvl; n++;
+    }
+  });
+  return n;
+}
+function investSummary() {
+  invOwner(); invDocsNotify();
+  const I = DB.inv; const t = ymd(); const total = I.items.reduce((a, x) => a + x.amount_paise, 0);
+  const ms = invMonths(); let cum = 0; let firstProfit = null; let lakh = null; const hit = [null, null, null, null, null]; const pcts = [10, 25, 50, 75, 100];
+  let guests = 0; let g100 = null; let g1000 = null;
+  const months = ms.map((x) => {
+    const profit = x.revenue_paise - x.expenses_paise; cum += profit;
+    if (!firstProfit && profit > 0) firstProfit = x.month + '-01';
+    if (!lakh && x.revenue_paise >= 10000000) lakh = x.month + '-01';
+    if (total > 0) pcts.forEach((p, i) => { if (!hit[i] && cum * 100 >= total * p) hit[i] = x.month + '-01'; });
+    guests += x.guests; if (!g100 && guests >= 100) g100 = x.month + '-15'; if (!g1000 && guests >= 1000) g1000 = x.month + '-15';
+    return { month: x.month, revenue_paise: x.revenue_paise, expenses_paise: x.expenses_paise, profit_paise: profit, cumulative_paise: cum };
+  });
+  const done3 = months.filter((x) => x.month < t.slice(0, 7)).slice(-3);
+  const avg = done3.length ? Math.round(done3.reduce((a, x) => a + x.profit_paise, 0) / done3.length) : null;
+  const left = Math.max(total - cum, 0); let mleft = null; let est = null;
+  if (total > 0 && left > 0 && avg > 0) { mleft = Math.ceil(left / avg); const [y, m] = t.split('-').map(Number); est = new Date(Date.UTC(y, m - 1 + mleft, 1)).toISOString().slice(0, 7); }
+  const best = [...months].sort((a, b) => b.profit_paise - a.profit_paise)[0];
+  const next = total > 0 ? (pcts.map((p, i) => (hit[i] ? null : 'p' + p)).find(Boolean) || null) : null;
+  const M = (key, title, achieved_on, pct) => ({ key, title, achieved_on, ...(pct ? { pct } : {}) });
+  return {
+    opened_on: I.opened_on, opened_set: I.opened_set, today: t, invested_paise: total, recovered_paise: cum, remaining_paise: left,
+    pct: total > 0 ? Math.round(Math.max(cum, 0) * 1000 / total) / 10 : null, avg3_paise: avg, months_left: mleft,
+    breakeven_month: total > 0 && left === 0 ? hit[4]?.slice(0, 7) : est,
+    best_month: best && best.profit_paise > 0 ? { month: best.month, profit_paise: best.profit_paise } : null,
+    months,
+    milestones: [M('first_booking', 'First booking', I.opened_on), M('first_profit', 'First month in profit', firstProfit), M('lakh_month', 'First ₹1 lakh month', lakh),
+      M('p10', '10% paid back', hit[0], 10), M('p25', '25% paid back', hit[1], 25), M('guests_100', '100 guests', g100), M('p50', 'Half way: 50% paid back', hit[2], 50),
+      M('guests_1000', '1,000 guests', g1000), M('p75', '75% paid back', hit[3], 75), M('p100', 'Break-even!', hit[4], 100)],
+    next, next_needed_paise: next ? Math.max(Math.ceil(total * Number(next.slice(1)) / 100) - cum, 0) : null,
+    expenses_this_month: DB.expenses.some((x) => x.spent_on >= t.slice(0, 7) + '-01'),
+    items: [...I.items].sort((a, b) => a.invested_on.localeCompare(b.invested_on)),
+  };
+}
+function legalChecklistState() { if (!DB.inv.checklist) DB.inv.checklist = { state_code: '33', kind: null, marks: {} }; return DB.inv.checklist; }
+function legalChecklist() {
+  const c = legalChecklistState();
+  return { state_code: c.state_code, kind: c.kind, marks: { ...c.marks }, doc_types: [...new Set(DB.inv.docs.map((d) => d.doc_type))] };
+}
+function legalDocsList() {
+  invOwner(); invDocsNotify(); const t = ymd();
+  return [...DB.inv.docs].map((d) => {
+    const left = d.expires_on ? Math.round((T(d.expires_on) - T(t)) / 864e5) : null;
+    return { ...d, days_left: left, status: !d.expires_on ? 'no_expiry' : left < 0 ? 'expired' : left <= 30 ? 'due' : 'valid' };
+  }).sort((a, b) => (a.expires_on ? 0 : 1) - (b.expires_on ? 0 : 1) || String(a.expires_on).localeCompare(String(b.expires_on)) || a.title.localeCompare(b.title));
+}
+// ---------------------------------------------------------------- Business health (037) — demo mirror of business_health()
+function businessHealth() {
+  const role = DB.viewAs || 'owner'; if (!['owner', 'manager'].includes(role)) fail('You don’t have permission to do this.');
+  const owner = role === 'owner'; const today = ymd(); const day = (n) => ymd(T(today) + n * 864e5 + 6 * 3600e3);
+  const beds = DB.beds.filter((b) => b.is_active !== false); const units = beds.length;
+  const occ = (from, to) => {
+    let occupied = 0; let full = 0; let ota = 0; let direct = 0;
+    for (let d = from; d <= to; d = day((T(d) - T(today)) / 864e5 + 1)) {
+      const used = new Map();
+      DB.bookings.forEach((b) => { if (['confirmed', 'checked_in', 'checked_out'].includes(b.status) && ymd(b.check_in_at) <= d && d < ymd(b.check_out_at)) used.set(b.bed_id, b.source === 'ota' ? 'ota' : 'direct'); });
+      DB.blocks.forEach((k) => { if (k.feed_id && ymd(k.starts_at) <= d && d < ymd(k.ends_at) && !used.has(k.bed_id)) used.set(k.bed_id, 'ota'); });
+      (DB.tenancies || []).forEach((t) => { if (t.status !== 'moved_out' && t.start_date <= d && (!t.move_out_on || d < t.move_out_on) && !used.has(t.bed_id)) used.set(t.bed_id, 'direct'); });
+      occupied += used.size; if (units && used.size >= Math.max(1, Math.ceil(units * 0.95))) full++;
+      used.forEach((v) => { if (v === 'ota') ota++; else direct++; });
+    }
+    const nights = Math.round((T(to) - T(from)) / 864e5) + 1;
+    return { available: units * nights, occupied, full, ota, direct };
+  };
+  const income = (from, to) => DB.payments.filter((x) => ymd(x.received_at) >= from && ymd(x.received_at) <= to).reduce((a, x) => a + net(x), 0)
+    + (DB.rentPays || []).filter((x) => ymd(x.received_at) >= from && ymd(x.received_at) <= to).reduce((a, x) => a + (x.kind === 'refund' ? -x.amount_paise : x.amount_paise), 0);
+  const R = (p) => '₹' + Math.round(p / 100).toLocaleString('en-IN');
+  const A = (key, title, status, value, detail, how, tip, weight) => ({ key, title, status, value, detail, how, tip: ['amber', 'red', 'unknown'].includes(status) ? tip : null, weight });
+  const from = day(-29); const pfrom = day(-59); const pto = day(-30);
+  const o = occ(from, today); const op = occ(pfrom, pto); const areas = [];
+  const occP = o.available ? Math.round(o.occupied * 1000 / o.available) / 10 : null; const pP = op.available ? Math.round(op.occupied * 1000 / op.available) / 10 : null;
+  if (occP == null) areas.push(A('occupancy', 'Occupancy', 'unknown', '—', 'No rooms or beds set up', 'Needs rooms / beds.', 'Add your rooms or beds in Setup.', 20));
+  else areas.push(A('occupancy', 'Occupancy', occP >= 65 || (pP != null && occP >= pP + 5) ? 'green' : occP < 40 && (pP == null || occP <= pP) ? 'red' : 'amber', occP + '%',
+    `Last 30 days${pP != null ? ' · previous 30 days ' + pP + '%' : ''}`, `Nights sold ÷ nights available (${units} units × 30 nights), incl. OTA calendar blocks.`,
+    pP != null && occP < pP ? 'Occupancy is falling: run a weekday offer, refresh OTA photos and ask past guests to come back.' : 'Fill empty nights: open more OTAs, add weekday / long-stay discounts and share your booking link on WhatsApp.', 20));
+  const inc = income(from, today); const pinc = income(pfrom, pto);
+  if (owner) {
+    if (o.available && (inc > 0 || pinc > 0)) {
+      const rn = inc / o.available; const pn = op.available ? pinc / op.available : null;
+      let st = !pn ? (inc > 0 ? 'amber' : 'unknown') : rn >= pn * 1.03 ? 'green' : rn >= pn * 0.95 ? 'amber' : 'red'; if (o.full >= 4 && st === 'green') st = 'amber';
+      areas.push(A('pricing', 'Pricing', st, R(rn) + ' / night', `Money received per available unit-night${pn ? ', was ' + R(pn) : ''} · ${o.full} full nights in 30 days`, 'Money received in the last 30 days ÷ nights available.',
+        o.full >= 4 ? `You were full on ${o.full} nights — raise prices on those days (weekends, holidays).` : 'Earnings per night are slipping: check you aren’t discounting too much and add extras (breakfast, tours).', 10));
+    } else areas.push(A('pricing', 'Pricing', 'unknown', '—', 'No payments recorded yet', 'Needs payments.', 'Record payments in NammaStay so earnings per night can be tracked.', 10));
+    const ex = DB.expenses.filter((x) => x.spent_on >= from && x.spent_on <= today); const exp = ex.reduce((a, x) => a + x.amount_paise, 0);
+    if (!ex.length || inc <= 0) areas.push(A('profit', 'Profit', 'unknown', '—', !ex.length ? 'No expenses recorded in the last 30 days' : 'No income in the last 30 days', 'Money received − expenses, last 30 days.', 'Add rent, salaries and bills in Expenses & profit — without them profit can’t be measured.', 20));
+    else { const m = (inc - exp) * 100 / inc; areas.push(A('profit', 'Profit', m >= 25 ? 'green' : m >= 10 ? 'amber' : 'red', Math.round(m) + '% margin', `${R(inc - exp)} profit on ${R(inc)} received (30 days)`, '(Money received − expenses) ÷ money received, last 30 days.', 'Margin is thin: look at your biggest expense categories and OTA commission; small price rises help most.', 20)); }
+  }
+  const owing = DB.bookings.filter((b) => ['checked_in', 'checked_out'].includes(b.status) && balance(b) > 0);
+  let due = owing.reduce((a, b) => a + balance(b), 0); let old = owing.filter((b) => b.status === 'checked_out' && T(b.check_out_at) < Date.now() - 7 * 864e5).reduce((a, b) => a + balance(b), 0);
+  const pgDue = (DB.rentDues || []).filter((d) => d.amount_paise > d.paid_paise + (d.credit_paise || 0) && d.due_on < day(-7)).reduce((a, d) => a + d.amount_paise - d.paid_paise - (d.credit_paise || 0), 0);
+  due += pgDue; old += pgDue; const guestsOwing = new Set(owing.map((b) => b.guest_id)).size;
+  areas.push(A('cash', 'Unpaid dues', old === 0 ? 'green' : old * 20 <= Math.max(inc, 1) ? 'amber' : 'red', R(due),
+    `${old > 0 ? R(old) + ' overdue more than 7 days' : 'Nothing overdue'}${guestsOwing ? ` · ${guestsOwing} guest${guestsOwing > 1 ? 's' : ''} owe money` : ''}`,
+    'Balances of checked-in / checked-out bookings (and PG rent overdue 7+ days).', 'Send WhatsApp payment reminders today and take advance payments at booking.', 15));
+  const m90 = occ(day(-89), today);
+  if (m90.ota + m90.direct) {
+    const share = Math.round(m90.ota * 100 / (m90.ota + m90.direct)); const inc90 = income(day(-89), today);
+    const comm = DB.expenses.filter((x) => x.category === 'ota_commission' && x.spent_on >= day(-89)).reduce((a, x) => a + x.amount_paise, 0);
+    areas.push(A('mix', 'Direct vs OTA', share <= 40 ? 'green' : share <= 65 ? 'amber' : 'red', share + '% OTA', `${100 - share}% direct / walk-in nights (90 days)${owner && comm && inc90 ? ' · OTA commission ' + Math.round(comm * 100 / inc90) + '% of income' : ''}`,
+      'OTA nights (OTA bookings + OTA calendar blocks) ÷ all sold nights, last 90 days.', 'Most guests come through OTAs: give returning guests a direct-booking discount, add your WhatsApp / booking link to your Google profile.', 10));
+  } else areas.push(A('mix', 'Direct vs OTA', 'unknown', '—', 'No stays in the last 90 days', 'Needs bookings.', 'Add bookings or connect your OTA calendars.', 10));
+  const made = DB.bookings.filter((b) => T(b.created_at || b.check_in_at) >= Date.now() - 90 * 864e5 && b.status !== 'pending');
+  if (made.length >= 5) {
+    const bad = made.filter((b) => ['cancelled', 'no_show'].includes(b.status)).length; const stayed = made.filter((b) => ['confirmed', 'checked_in', 'checked_out'].includes(b.status));
+    const gids = [...new Set(stayed.map((b) => b.guest_id))]; const rep = gids.filter((g) => DB.bookings.filter((b) => b.guest_id === g && ['confirmed', 'checked_in', 'checked_out'].includes(b.status)).length > 1).length;
+    areas.push(A('guests', 'Cancellations & repeat guests', bad * 100 <= made.length * 10 ? 'green' : bad * 100 <= made.length * 20 ? 'amber' : 'red', Math.round(bad * 100 / made.length) + '% cancelled / no-show',
+      `${bad} of ${made.length} bookings (90 days)${gids.length ? ' · ' + Math.round(rep * 100 / gids.length) + '% repeat guests' : ''}`, 'Cancelled + no-show ÷ bookings made in the last 90 days; repeat = guests who stayed before.',
+      'Many cancellations: take a small advance, confirm 24 hours before arrival on WhatsApp.', 10));
+  } else areas.push(A('guests', 'Cancellations & repeat guests', 'unknown', '—', 'Fewer than 5 bookings in 90 days', 'Needs more bookings.', null, 10));
+  if (owner && DB.inv) {
+    const docs = DB.inv.docs; const exp = docs.filter((d) => d.expires_on && d.expires_on < today).length; const soon = docs.filter((d) => d.expires_on && d.expires_on >= today && d.expires_on <= day(30)).length;
+    if (!docs.length) areas.push(A('compliance', 'Licences & documents', 'unknown', '—', 'No documents added', 'Documents in My investment → Legal documents.', 'Add your licences with expiry dates (My investment → Legal documents) and go through the Licences checklist.', 10));
+    else areas.push(A('compliance', 'Licences & documents', exp ? 'red' : soon ? 'amber' : 'green', exp ? exp + ' expired' : soon ? soon + ' due soon' : 'All valid',
+      `${docs.length} documents stored${soon ? ' · ' + soon + ' expire within 30 days' : ''}`, 'Expiry dates of documents in My investment → Legal documents.', 'Renew expiring licences now — operating with an expired licence or fire NOC can bring fines or closure.', 10));
+    const v = investSummary();
+    if (v.invested_paise > 0) {
+      const st = v.remaining_paise === 0 ? 'green' : !v.breakeven_month ? 'red' : v.months_left <= 36 ? 'green' : 'amber';
+      const [by, bm] = (v.breakeven_month || '').split('-');
+      areas.push(A('payback', 'Payback', st, (v.pct != null ? Math.floor(v.pct) : '—') + '% paid back', v.remaining_paise === 0 ? 'Investment fully recovered' : v.breakeven_month ? `Break-even estimated ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][bm - 1]} ${by}` : 'No break-even estimate yet (needs monthly profit)',
+        'Profit since opening ÷ money invested (My investment).', 'Payback is slow: improving occupancy, prices and dues above brings your break-even date closer.', 5));
+    }
+  }
+  let ws = 0; let sum = 0; areas.forEach((a) => { if (a.status !== 'unknown') { ws += a.weight; sum += a.weight * ({ green: 100, amber: 60, red: 25 })[a.status]; } });
+  let score = ws ? Math.round(sum / ws) : null; if (!(m90.ota + m90.direct) && !inc) score = null;
+  const actions = areas.filter((a) => a.tip).sort((a, b) => ({ red: 0, amber: 1, unknown: 2 })[a.status] - ({ red: 0, amber: 1, unknown: 2 })[b.status] || b.weight - a.weight)
+    .slice(0, 3).map((a) => ({ area: a.key, status: a.status, text: a.tip }));
+  const wk = (() => { const d = new Date(today + 'T00:00:00Z'); const k = (d.getUTCDay() + 6) % 7; return ymd(T(today) - k * 864e5 + 6 * 3600e3); })();
+  if (!DB.health) {                                                      // demo: a few earlier weeks so the trend has a shape
+    DB.health = { snaps: {}, notified: null };
+    if (score != null) [-6, -5, -4, -3, -2, -1].forEach((n, i) => { DB.health.snaps[ymd(T(wk) + n * 7 * 864e5 + 6 * 3600e3)] = Math.max(30, Math.min(95, score - 12 + i * 2 + (i % 2 ? 3 : -1))); });
+  }
+  if (owner && score != null) {
+    DB.health.snaps[wk] = score;
+    if (DB.health.notified !== wk) {
+      DB.health.notified = wk;
+      DB.notifications.push({ id: uuid(), property_id: P, user_id: ME, kind: 'health_weekly', booking_id: null, read_at: null, created_at: new Date().toISOString(),
+        title: `Business health this week: ${score}/100`, body: actions[0] ? 'Top action: ' + actions[0].text : 'All areas look good — keep it up!' });
+    }
+  }
+  const trend = owner ? Object.entries(DB.health.snaps).sort((a, b) => a[0].localeCompare(b[0])).slice(-26).map(([week_start, s]) => ({ week_start, score: s })) : [];
+  return { view: owner ? 'owner' : 'operations', today, from, score, label: score == null ? 'Not enough data' : score >= 75 ? 'Healthy' : score >= 55 ? 'Needs attention' : 'At risk', areas, actions, trend };
+}
 function load() {
   if (DB) return DB;
   try { DB = JSON.parse(localStorage.getItem(KEY)); } catch { DB = null; }
@@ -489,6 +684,7 @@ function load() {
   DB.beds.forEach((b) => { if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 }); if (!b.ical_token) b.ical_token = uuid(); });
   if (!DB.feeds) DB.feeds = [];
   if (!DB.expenses) DB.expenses = seedExpenses();
+  if (!DB.inv) DB.inv = seedInvest();                            // My investment (036)
   if (!DB.paylinks) DB.paylinks = [];
   if (!DB.bguests) DB.bguests = [];                               // other guests in a booking (030)
   if (!DB.tenancies) { DB.tenancies = []; DB.rentDues = []; DB.rentPays = []; DB.seq.rc = DB.seq.rc || 1001; DB.pgMode = demoKind() === 'pg'; DB.pgSeed = DB.pgMode; }   // PG tenants (031)
@@ -1470,6 +1666,51 @@ const RPC = {
   booking_guest_delete: ({ p_id }) => { DB.bguests = (DB.bguests || []).filter((g) => g.id !== p_id); return null; },
   delete_expense: ({ p_id }) => { DB.expenses = DB.expenses.filter((x) => x.id !== p_id); return null; },
   profit_summary: ({ p_from, p_to }) => profitSummary(p_from, p_to),
+  invest_summary: () => investSummary(),
+  business_health: () => businessHealth(),
+  invest_settings_save: ({ p_opened_on }) => { invOwner(); if (!p_opened_on || p_opened_on > ymd()) fail('Choose the date your property opened (not in the future).');
+    DB.inv.opened_on = p_opened_on; DB.inv.opened_set = true; return { opened_on: p_opened_on }; },
+  investment_save: ({ p }) => {
+    invOwner(); const title = String(p.title || '').trim(); const amt = Number(p.amount_paise); const on = p.invested_on || ymd();
+    if (!title) fail('Give the investment a name (e.g. Interiors, Beds).'); if (!(amt > 0)) fail('Enter the amount invested.');
+    if (on > ymd()) fail('The date can’t be in the future.');
+    let it = p.id && DB.inv.items.find((x) => x.id === p.id);
+    if (p.id && !it) fail('Investment not found.');
+    if (!it) { it = { id: uuid(), created_at: new Date().toISOString() }; DB.inv.items.push(it); }
+    Object.assign(it, { title, note: String(p.note || '').trim() || null, amount_paise: amt, invested_on: on }); return it;
+  },
+  investment_delete: ({ p_id }) => { invOwner(); DB.inv.items = DB.inv.items.filter((x) => x.id !== p_id); return null; },
+  legal_docs_list: () => legalDocsList(),
+  legal_checklist_get: () => { invOwner(); return legalChecklist(); },
+  legal_checklist_save: ({ p }) => {
+    invOwner(); const c = legalChecklistState();
+    if ('state_code' in p) { if (p.state_code && !/^[0-9]{2}$/.test(p.state_code)) fail('Choose your state.'); c.state_code = p.state_code || null; }
+    if ('kind' in p) { if (!['hostel', 'homestay', 'pg', 'hotel', 'resort'].includes(p.kind)) fail('Choose the property type.'); c.kind = p.kind; }
+    if (p.item_key) { if (p.status) c.marks[p.item_key] = p.status; else delete c.marks[p.item_key]; }
+    return legalChecklist();
+  },
+  legal_doc_save: ({ p }) => {
+    invOwner(); const title = String(p.title || '').trim(); if (!title) fail('Give the document a name.');
+    if (p.expires_on && p.issued_on && p.expires_on < p.issued_on) fail('The expiry date is before the issue date.');
+    if (p.file_path && !String(p.file_path).startsWith(P + '/')) fail('File not allowed.');
+    let d = p.id && DB.inv.docs.find((x) => x.id === p.id); let old = null;
+    if (p.id && !d) fail('Document not found.');
+    if (!d) { d = { id: uuid(), reminded_level: 0, file_path: null, file_name: null, file_size: null }; DB.inv.docs.push(d); }
+    if ((d.expires_on || null) !== (p.expires_on || null)) d.reminded_level = 0;
+    if ('file_path' in p && p.file_path !== d.file_path) { old = d.file_path; Object.assign(d, { file_path: p.file_path || null, file_name: p.file_name || null, file_size: p.file_size || null }); }
+    Object.assign(d, { doc_type: p.doc_type || d.doc_type || 'other', title, doc_number: String(p.doc_number || '').trim() || null, issued_on: p.issued_on || null,
+      expires_on: p.expires_on || null, note: String(p.note || '').trim() || null });
+    return { id: d.id, old_file_path: old };
+  },
+  legal_doc_delete: ({ p_id }) => { invOwner(); const d = DB.inv.docs.find((x) => x.id === p_id); if (!d) fail('Document not found.');
+    DB.inv.docs = DB.inv.docs.filter((x) => x.id !== p_id); return { file_path: d.file_path }; },
+  legal_docs_alerts: () => {
+    if ((DB.viewAs || 'owner') !== 'owner') return { count: 0, items: [] };
+    invDocsNotify(); const t = ymd();
+    const due = DB.inv.docs.filter((d) => d.expires_on && Math.round((T(d.expires_on) - T(t)) / 864e5) <= 30)
+      .map((d) => ({ title: d.title, expires_on: d.expires_on, days_left: Math.round((T(d.expires_on) - T(t)) / 864e5) })).sort((a, b) => a.expires_on.localeCompare(b.expires_on));
+    return { count: due.length, items: due.slice(0, 3) };
+  },
   razorpay_status: () => (DB.rzp ? { connected: true, mode: DB.rzp.key_id.startsWith('rzp_live') ? 'live' : 'test', key_hint: DB.rzp.key_id.slice(0, 9) + '…' + DB.rzp.key_id.slice(-4), webhook: !!DB.rzp.hook }
     : { connected: false, mode: null, key_hint: null, webhook: false }),
   set_razorpay_keys: ({ p_key_id, p_key_secret, p_webhook_secret }) => {
@@ -1629,6 +1870,8 @@ const RPC = {
     return b ? b.self_checkin_token : null;
   },
 };
+// My business (039) — loans, partners, lease: demo rules in demo-business.js
+BIZ_FUNCTIONS.forEach((n) => { RPC[n] = (a) => bizDemo(n, a, { DB, RPC, fail, uuid, ymd, investSummary }); });
 // Tenant bed bookings stay at ₹0 when edited or moved (031)
 { const ub = RPC.update_booking; RPC.update_booking = (args) => { const r = ub(args); pgKeepZero(args.p_booking); const b = DB.bookings.find((x) => x.id === args.p_booking);
   return r && typeof r === 'object' && b ? { ...r, total_paise: b.total_paise, rate_paise: b.rate_paise } : r; }; }
@@ -1690,6 +1933,9 @@ function table(name) {
   return api;
 }
 
+// Smart pricing (041) — prices follow demand: demo rules in demo-smart.js
+import { smartDemo, SMART_FUNCTIONS } from './demo-smart.js';
+SMART_FUNCTIONS.forEach((n) => { RPC[n] = (a) => smartDemo(n, a, { DB, P, fail, uuid, ymd, addDays, nightRate }); });
 // ---------------------------------------------------------------- files (kept in memory for this tab)
 const files = new Map();
 function sampleIdCard(path) {
@@ -1704,6 +1950,10 @@ function sampleIdCard(path) {
     <text x="56" y="330" font-family="sans-serif" font-size="14" fill="#9AA3B5">${path.replace(/[<&>]/g, '')}</text></svg>`;
   return new Blob([svg], { type: 'image/svg+xml' });
 }
+
+// Branches (043) — owners with several properties: demo rules in demo-branches.js
+import { branchDemo, BRANCH_FUNCTIONS } from './demo-branches.js';
+BRANCH_FUNCTIONS.forEach((n) => { const base = RPC[n]; RPC[n] = (a) => branchDemo(n, a, { DB, P, RPC, fail, uuid, ymd, addDays, base, setDemoKind, demoKind }); });
 
 // ---------------------------------------------------------------- the client
 export function createDemoClient() {
@@ -1753,3 +2003,6 @@ export function createDemoClient() {
     },
   };
 }
+// Company (040) — NammaStay's own business numbers (admin area): demo rules in demo-company.js
+import { companyDemo, COMPANY_FUNCTIONS } from './demo-company.js';
+COMPANY_FUNCTIONS.forEach((n) => { RPC[n] = (a) => companyDemo(n, a, { DB, fail }); });
