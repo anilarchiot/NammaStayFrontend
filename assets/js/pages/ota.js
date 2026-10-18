@@ -136,7 +136,7 @@ async function cxCard(ctx) {
       ${link?.cx_property_id ? `<span class="ns-pill ${link.enabled ? (link.last_error ? 'red' : 'green') : 'grey'}">${link.enabled ? (link.last_error ? 'Needs attention' : 'Connected') : 'Paused'}</span>` : ''}</div>
     ${!link?.cx_property_id ? `
       <ol class="cx-steps"><li><b>Set up</b> — NammaStay creates your ${W.units} and prices on the channel manager.</li><li><b>Connect your OTAs</b> — sign in to Booking.com, MakeMyTrip… once, inside NammaStay.</li><li><b>Done</b> — everything stays in sync automatically.</li></ol>
-      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-setup">Set up channel manager</button>
+      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-setup">Set up channel manager</button>${ctx.isAdmin ? '<a class="ns-btn-ghost" href="channel-manager.html">🔑 Channex key</a>' : ''}
         <details class="cx-adv"><summary>Already have a Channex property?</summary><div style="display:flex;gap:8px;margin-top:6px"><input class="ns-input" id="cx-existing" placeholder="Channex property ID" style="height:36px"><button type="button" class="ns-btn-ghost" id="cx-link" style="height:36px">Link it</button></div></details></div>`
     : `
       <div class="cx-stats"><span>Prices &amp; availability sent <b>${ago(link.last_push_at)}</b></span><span>Bookings checked <b>${ago(link.last_pull_at)}</b></span><span>${mapped.length} ${mapped.length === 1 ? 'room type' : 'room types'} linked</span></div>

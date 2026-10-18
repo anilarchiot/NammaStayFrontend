@@ -11,6 +11,9 @@ page('settings', async (ctx) => {
   if (tabsRow && tabEls.length === 4) {                 // add Billing and My account next to the design's four
     for (const label of ['Billing', 'My account']) { const t = tabEls[0].cloneNode(false); t.textContent = label; tabsRow.appendChild(t); tabEls.push(t); }
   }
+  if (tabsRow && tabEls.length === 6 && !ctx.isPg) {   // Smart pricing (041): one more tab, right after Rooms & prices
+    const t = tabEls[0].cloneNode(false); t.textContent = 'Smart pricing'; tabEls[2].after(t); tabEls.splice(3, 0, t); TABS.splice(3, 0, 'smart');
+  }
   const styles = tabEls.map((t) => t.getAttribute('style') || '');
   const onStyle = styles.find((s) => /#1C9A6C|border-bottom:2px solid #1/i.test(s)) || styles[1] || '';
   const offStyle = styles.find((s) => s !== onStyle) || '';
@@ -413,6 +416,7 @@ page('settings', async (ctx) => {
     },
   };
 
+  VIEWS.smart = async () => (await import('./smart-pricing.js')).smartPricing(ctx);   // Smart pricing (041)
   await show(new URLSearchParams(location.search).get('tab') || 'property');
 });
 
@@ -647,7 +651,7 @@ async function billingExtras(ctx) {
 const DOW = [['5', 'Fri'], ['6', 'Sat'], ['0', 'Sun'], ['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu']];
 async function priceRulesCard(ctx) {
   const [rules, rooms, beds] = await Promise.all([
-    q(sb.from('rate_rules').select('*').eq('property_id', ctx.property_id).order('created_at')).catch(() => null),
+    q(sb.from('rate_rules').select('*').eq('property_id', ctx.property_id).order('created_at')).then((x) => x.filter((r) => r.name !== 'Smart pricing')).catch(() => null),   // Smart pricing's own rules show on its tab (041)
     q(sb.from('rooms').select('id,name,sort').eq('property_id', ctx.property_id).order('sort')),
     q(sb.from('beds').select('id,label,room_id,rate_paise,is_active,sort').eq('property_id', ctx.property_id).eq('is_active', true).order('sort'))]);
   if (rules === null) return;                                         // database not updated yet (026)
