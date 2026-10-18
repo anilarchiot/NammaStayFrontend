@@ -75,6 +75,10 @@ page('dashboard', async (ctx) => {
     if (n > 0) document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<a class="ns-card hk-dash" href="housekeeping.html">
       <span><b>🧺 ${n} ${n > 1 ? W.units : W.unit} to clean</b><br><span class="ns-muted" style="font-size:12.5px">${c.dirty || 0} dirty · ${c.cleaning || 0} being cleaned</span></span><span>Housekeeping →</span></a>`);
   }
+  // ---- Owner / manager: business health card (037)
+  if (ctx.can('owner', 'manager')) import('./health-card.js').then((m) => m.mountHealthCard(ctx)).catch(() => {});
+  // ---- Owner: legal documents expiring soon (036 My investment)
+  if (ctx.role === 'owner') import('./investment-alerts.js').then((m) => m.mountDocAlerts(ctx)).catch(() => {});
   // ---- first-time setup checklist (until finished or hidden)
   if (ctx.can('owner', 'manager')) {
     const pg = await rpc('setup_progress', { p_property: ctx.property_id }).catch(() => null);
