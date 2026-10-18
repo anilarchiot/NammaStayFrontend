@@ -22,7 +22,7 @@ adminPage(async (ctx) => {
 // ------------------------------------------------------------ overview
 async function overview() {
   let filter = ''; let q = '';
-  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn-ghost" href="subscribers.html">Payments & prices</a><button type="button" class="ns-btn" id="add-prop">+ Add property</button>';
+  headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div><a class="ns-btn-ghost" href="subscribers.html">Payments & prices</a><a class="ns-btn-ghost" href="channel-manager.html">Channel manager</a><button type="button" class="ns-btn" id="add-prop">+ Add property</button>';
   $('#add-prop').onclick = () => addPropertyDialog();
   if (param('addprop') === '1') {                                                  // "Create property" from a lead
     const g = (k) => param(k) || '';
