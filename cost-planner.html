@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startup cost planner — NammaStay</title>
+<meta name="description" content="Free planner for starting a hostel, homestay, PG, hotel or resort in India: tick what you need, enter quantities and prices, see your total budget.">
+<meta property="og:title" content="Startup cost planner for hostels, homestays, PGs, hotels and resorts">
+<meta property="og:description" content="Plan your setup budget item by item. Free, no sign-up. By NammaStay.">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" href="assets/img/favicon.png">
+<script src="assets/js/config.js" data-no-boot></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0E1B3D;--ink:#101A3D;--cream:#FBF3DE;--paper:#FFFDF6;--line:#E7DFC7;--green:#1C9A6C;--green-d:#157A56;--amber:#E2A03F;--muted:#5E6678}
+  *{box-sizing:border-box}
+  body{margin:0;font:500 16px/1.55 'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--cream);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  [hidden]{display:none!important}
+  .top{background:var(--navy);color:#fff}
+  .top-in{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font:800 20px 'Sora',sans-serif}
+  .brand img{width:34px;height:34px;border-radius:9px;background:#FDF4E5}
+  .brand span span{color:#3CC48F}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;border-radius:12px;border:0;font:800 14.5px 'Manrope',sans-serif;cursor:pointer;text-decoration:none}
+  .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:var(--green-d)}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font:800 clamp(28px,4vw,42px)/1.1 'Sora',sans-serif;letter-spacing:-.02em;margin:0 0 10px}
+  .lead{color:var(--muted);max-width:720px;margin:0 0 22px}
+  .layout{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+  .main{flex:999 1 560px;min-width:0}
+  .side{flex:1 1 300px;position:sticky;top:16px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .kinds{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .kinds button{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font:700 14px 'Manrope',sans-serif;cursor:pointer;color:var(--ink)}
+  .kinds button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .search{width:100%;height:44px;border-radius:12px;border:1px solid var(--line);padding:0 14px;font:600 15px 'Manrope',sans-serif;background:#fff;margin-bottom:12px}
+  details.g{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:10px}
+  details.g > summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px;padding:14px 16px;font-weight:800}
+  details.g > summary::-webkit-details-marker{display:none}
+  details.g > summary .sub{color:var(--muted);font-weight:700;font-size:14px}
+  .row{display:grid;grid-template-columns:minmax(0,1fr) auto 100px;gap:10px;align-items:center;padding:8px 16px;border-top:1px solid #F3EDDC}
+  .row.on{background:#F2FAF6}
+  .row label{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
+  .row input[type=checkbox]{width:18px;height:18px;accent-color:var(--green)}
+  .in{display:flex;align-items:center;gap:6px}
+  .in input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:600 14px 'Manrope',sans-serif;width:72px;background:#fff}
+  .in input.price{width:120px}
+  .row b{text-align:right;font-size:14px}
+  .add{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid #F3EDDC}
+  .add input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:600 14px 'Manrope',sans-serif;flex:1 1 180px}
+  .total{font:800 34px 'Sora',sans-serif;letter-spacing:-.02em;margin:4px 0 6px}
+  .muted{color:var(--muted);font-size:14px}
+  .cats{list-style:none;margin:12px 0;padding:0;font-size:14px}
+  .cats li{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #F0E9D5}
+  .side .btn{width:100%;margin-top:8px}
+  .cta{margin-top:16px;background:var(--navy);color:#fff;border-radius:18px;padding:18px}
+  .cta h2{font:800 19px 'Sora',sans-serif;margin:0 0 6px}
+  .cta p{margin:0 0 12px;color:#C9D3EE;font-size:14px}
+  .note{font-size:13px;color:var(--muted);margin-top:12px}
+  @media (max-width:640px){.row{grid-template-columns:1fr;gap:6px}.row b{text-align:left}.in{padding-left:28px}.side{position:static}}
+  @media print{.top,.kinds,.search,.side .btn,.cta,.add,.row:not(.on){display:none!important}details.g{break-inside:avoid}body{background:#fff}.side{position:static}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="index.html"><img src="assets/img/logo.png" alt=""><span>Namma<span>Stay</span></span></a>
+  <a class="btn btn-green" href="signup.html">Start free trial</a>
+</div></header>
+<main class="wrap">
+  <h1>Startup cost planner</h1>
+  <p class="lead">Planning a hostel, homestay, PG, hotel or resort? Tick what you need, enter how many and the price you were quoted, and see your total budget by category. Free, no sign-up — your plan stays on this device.</p>
+  <div class="layout">
+    <section class="main" aria-label="Items">
+      <div class="kinds" role="group" aria-label="Property type" id="kinds"></div>
+      <input class="search" id="q" type="search" placeholder="Search items, e.g. beds, AC, CCTV" aria-label="Search items">
+      <div id="groups"></div>
+    </section>
+    <aside class="side" aria-label="Your budget">
+      <div class="card">
+        <div class="muted" id="kind-label"></div>
+        <div class="total" id="total">₹0</div>
+        <div class="muted" id="count">Nothing selected yet</div>
+        <ul class="cats" id="cats"></ul>
+        <button type="button" class="btn btn-ghost" id="csv">Download as spreadsheet (CSV)</button>
+        <button type="button" class="btn btn-ghost" id="print">Print / save as PDF</button>
+        <button type="button" class="btn btn-ghost" id="clear">Clear</button>
+        <p class="note">Prices are yours to enter — costs vary a lot by city and quality. Get 2–3 quotes for big items.</p>
+      </div>
+      <div class="cta">
+        <h2>Opened? Track your payback</h2>
+        <p>NammaStay turns this budget into your investment, shows how much your profit has paid back and when you’ll break even — plus bookings, check-in and UPI payments.</p>
+        <a class="btn btn-green" href="signup.html" style="width:100%">Start your free trial</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<script type="module">
+  import { SETUP_KINDS, setupItems } from './assets/js/pages/setup-items.js';
+  const KEY = 'ns.planner.v1';
+  const rupees = (p) => '₹' + Math.round(p).toLocaleString('en-IN');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  let state = { kind: 'hostel', picks: {}, extra: [] };          // picks: { kind: { name: { qty, price, on } } }
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.kind) state = { ...state, ...s }; } catch { /* no storage */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ } };
+  const picks = () => (state.picks[state.kind] ||= {});
+  const extras = () => state.extra.filter((x) => x.kind === state.kind);
+
+  function renderKinds() {
+    document.getElementById('kinds').innerHTML = SETUP_KINDS.map(([k, l]) => `<button type="button" data-kind="${k}" aria-pressed="${k === state.kind}">${esc(l)}</button>`).join('');
+  }
+  function renderGroups() {
+    const p = picks();
+    const groups = setupItems(state.kind).map((g, gi) => `<details class="g" ${gi < 2 ? 'open' : ''} data-g="${esc(g.title)}"><summary><span>${esc(g.title)}</span><span class="sub" data-sub></span></summary>
+      ${g.items.map((it) => { const x = p[it.name] || {}; return `<div class="row${x.on ? ' on' : ''}" data-name="${esc(it.name)}" data-cat="${esc(g.title)}">
+        <label><input type="checkbox" ${x.on ? 'checked' : ''}> ${esc(it.name)}</label>
+        <span class="in">${it.unit === 'lump sum' ? '' : `<input inputmode="numeric" data-q value="${esc(x.qty || '')}" placeholder="Qty" aria-label="How many ${esc(it.name)}"> ×`}
+          <input class="price" inputmode="decimal" data-p value="${esc(x.price || '')}" placeholder="₹ ${it.unit === 'lump sum' ? 'amount' : 'each'}" aria-label="Price for ${esc(it.name)}"></span>
+        <b data-line></b></div>`; }).join('')}</details>`).join('');
+    const ex = extras();
+    document.getElementById('groups').innerHTML = groups + `<details class="g" open data-g="Your own items"><summary><span>Your own items</span><span class="sub" data-sub></span></summary>
+      ${ex.map((x, i) => `<div class="row on" data-extra="${i}" data-cat="Your own items"><label><input type="checkbox" checked data-del> ${esc(x.name)}</label><span class="in">${x.qty} × ${rupees(x.price)}</span><b>${rupees(x.qty * x.price)}</b></div>`).join('')}
+      <form class="add" id="add"><input name="name" placeholder="Item name" aria-label="Item name" required><input name="qty" inputmode="numeric" placeholder="Qty" aria-label="Quantity" style="flex:0 1 80px">
+        <input name="price" inputmode="decimal" placeholder="₹ each" aria-label="Price each" style="flex:0 1 120px"><button class="btn btn-ghost" type="submit" style="height:38px">Add</button></form></details>`;
+    filter(); totals();
+  }
+  const num = (v) => { const n = parseFloat(String(v || '').replace(/[₹,\s]/g, '')); return Number.isFinite(n) && n > 0 ? n : 0; };
+  function totals() {
+    const p = picks(); let total = 0; let n = 0; const byCat = {};
+    document.querySelectorAll('.row[data-name]').forEach((r) => {
+      const x = p[r.dataset.name] || {}; const line = x.on ? (Math.max(1, Math.round(num(x.qty)) || 1)) * num(x.price) : 0;
+      r.querySelector('[data-line]').textContent = line ? rupees(line) : '';
+      if (x.on) { n++; total += line; byCat[r.dataset.cat] = (byCat[r.dataset.cat] || 0) + line; }
+    });
+    extras().forEach((x) => { n++; total += x.qty * x.price; byCat['Your own items'] = (byCat['Your own items'] || 0) + x.qty * x.price; });
+    document.querySelectorAll('details.g').forEach((g) => { g.querySelector('[data-sub]').textContent = byCat[g.dataset.g] ? rupees(byCat[g.dataset.g]) : ''; });
+    document.getElementById('total').textContent = rupees(total);
+    document.getElementById('count').textContent = n ? `${n} item${n > 1 ? 's' : ''} in your plan` : 'Nothing selected yet';
+    document.getElementById('kind-label').textContent = 'Budget for a ' + Object.fromEntries(SETUP_KINDS)[state.kind].toLowerCase();
+    document.getElementById('cats').innerHTML = Object.entries(byCat).filter(([, v]) => v > 0).map(([k, v]) => `<li><span>${esc(k)}</span><b>${rupees(v)}</b></li>`).join('');
+  }
+  function filter() {
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    document.querySelectorAll('.row[data-name]').forEach((r) => { r.hidden = !!q && !r.dataset.name.toLowerCase().includes(q); });
+    document.querySelectorAll('details.g').forEach((g) => { const rows = g.querySelectorAll('.row[data-name]'); if (!rows.length) return;
+      const any = [...rows].some((r) => !r.hidden); g.hidden = !any; if (q && any) g.open = true; });
+  }
+  document.getElementById('kinds').addEventListener('click', (e) => { const b = e.target.closest('[data-kind]'); if (!b) return; state.kind = b.dataset.kind; save(); renderKinds(); renderGroups(); });
+  document.getElementById('groups').addEventListener('input', (e) => {
+    const r = e.target.closest('.row[data-name]'); if (!r) return; const p = picks(); const x = (p[r.dataset.name] ||= {});
+    if (e.target.matches('[data-q]')) x.qty = e.target.value; if (e.target.matches('[data-p]')) x.price = e.target.value;
+    if (e.target.matches('[data-q],[data-p]') && e.target.value.trim()) { x.on = true; r.querySelector('[type=checkbox]').checked = true; }
+    if (e.target.matches('[type=checkbox]')) x.on = e.target.checked;
+    r.classList.toggle('on', !!x.on); save(); totals();
+  });
+  document.getElementById('groups').addEventListener('change', (e) => {
+    if (e.target.matches('[data-del]')) { const i = Number(e.target.closest('[data-extra]').dataset.extra); const mine = extras()[i]; state.extra = state.extra.filter((x) => x !== mine); save(); renderGroups(); }
+  });
+  document.getElementById('groups').addEventListener('submit', (e) => {
+    e.preventDefault(); const f = e.target; const name = f.name.value.trim(); const price = num(f.price.value); const qty = Math.max(1, Math.round(num(f.qty.value)) || 1);
+    if (!name || !price) { f.price.focus(); return; }
+    state.extra.push({ kind: state.kind, name: name.slice(0, 80), qty, price }); save(); renderGroups();
+  });
+  document.getElementById('q').addEventListener('input', filter);
+  document.getElementById('print').addEventListener('click', () => window.print());
+  document.getElementById('clear').addEventListener('click', () => { if (!confirm('Clear this plan?')) return; state.picks[state.kind] = {}; state.extra = state.extra.filter((x) => x.kind !== state.kind); save(); renderGroups(); });
+  document.getElementById('csv').addEventListener('click', () => {
+    const p = picks(); const lines = [['Category', 'Item', 'Quantity', 'Price each (Rs)', 'Total (Rs)']];
+    setupItems(state.kind).forEach((g) => g.items.forEach((it) => { const x = p[it.name]; if (x?.on) { const q = Math.max(1, Math.round(num(x.qty)) || 1); lines.push([g.title, it.name, q, num(x.price), q * num(x.price)]); } }));
+    extras().forEach((x) => lines.push(['Your own items', x.name, x.qty, x.price, x.qty * x.price]));
+    const csv = lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `nammastay-startup-budget-${state.kind}.csv`; a.click();
+  });
+  renderKinds(); renderGroups();
+</script>
+</body>
+</html>
