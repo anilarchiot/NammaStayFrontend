@@ -1,6 +1,10 @@
-import { W, page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtLong, fmtTime, fmtWeekday, avatar, pill, statusLabel } from '../core.js';
+import { hostExtras, isResort, isHomestay, unitName, W, page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtLong, fmtTime, fmtWeekday, avatar, pill, statusLabel } from '../core.js';
+import { mountResortToday } from './resort.js';      // resorts: today at the resort (034)
+import { pgDashboard } from './pg-dashboard.js';   // PG / co-living dashboard (032)
+import { mountKitchenCard } from './homestay.js';    // homestays: kitchen / meals (033)
 
 page('dashboard', async (ctx) => {
+  if (ctx.isPg) return pgDashboard(ctx);                // PG / co-living accounts get the tenant dashboard
   const d = await rpc('dashboard_summary', { p_property: ctx.property_id });
   setSubtitle(`${fmtLong(d.today + 'T12:00:00+05:30')} · ${ctx.property_name}`);
   headerSearch('Search guests, bookings…', (v, enter) => { if (enter && v) location.href = 'bookings.html?q=' + encodeURIComponent(v); });
@@ -18,7 +22,7 @@ page('dashboard', async (ctx) => {
     <a class="ns-list-row" href="booking-detail.html?id=${esc(b.id)}" style="color:inherit">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">${avatar(b.guest)}
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">${esc(b.guest)}</div>
-        <div class="ns-muted" style="font-size:11px">${esc(b.room)} · ${esc(b.bed)}</div></div></div>${right}</a>`;
+        <div class="ns-muted" style="font-size:11px">${esc(unitName(b.room, b.bed))}</div></div></div>${right}</a>`;
 
   const arriving = d.arriving.length ? d.arriving.map((b) => person(b,
     b.status === 'checked_in' ? pill('Checked-in', 'green')
@@ -80,6 +84,8 @@ page('dashboard', async (ctx) => {
   // ---- Owner: legal documents expiring soon (036 My investment)
   if (ctx.role === 'owner') import('./investment-alerts.js').then((m) => m.mountDocAlerts(ctx)).catch(() => {});
   // ---- first-time setup checklist (until finished or hidden)
+  if (hostExtras()) mountKitchenCard(ctx).catch(() => {});
+  if (isResort()) mountResortToday(ctx).catch(() => {});         // resorts (034)      // homestays with meal plans (033)
   if (ctx.can('owner', 'manager')) {
     const pg = await rpc('setup_progress', { p_property: ctx.property_id }).catch(() => null);
     const keys = [['details', 'Property details', 'setup.html'], ['rooms', W.units === 'beds' ? 'Dorms & beds' : 'Rooms', 'rooms.html'], ['upi', 'UPI ID', 'settings.html'],

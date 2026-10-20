@@ -1,4 +1,4 @@
-import {
+import { unitName,
   W, roomsMode, page, rpc, content, setSubtitle, headerSearch, esc, rupees, fmtDayTime, fmtWeekday, ymd, addDays,
   avatar, statusPill, payPill, param, $,
 } from '../core.js';
@@ -98,7 +98,7 @@ page('bookings', async (ctx) => {
         <div style="font-size:13px;font-weight:700">${esc(b.guest_name)}</div>
         <div class="ns-muted" style="font-size:11px">${esc(b.guest_phone || '')}</div></div></div></td>
       <td style="font-weight:600">${esc(b.code)}</td>
-      <td>${esc(b.room_name)} · ${esc(b.bed_label)}</td>
+      <td>${esc(unitName(b.room_name, b.bed_label))}</td>
       <td>${fmtDayTime(b.check_in_at)}</td>
       <td>${fmtDayTime(b.check_out_at)}</td>
       <td style="font-weight:700">${rupees(b.total_paise)}</td>

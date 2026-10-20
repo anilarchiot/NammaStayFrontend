@@ -24,11 +24,12 @@ export async function mountBookingGuests({ ctx, booking, anchor }) {
   anchor.insertAdjacentElement('afterend', card);
 
   const draw = () => {
-    const missing = Math.max(0, adults - 1 - list.length);
+    const kids = Math.max(0, Number(booking.children) || 0);
+    const missing = Math.max(0, adults - 1 + kids - list.length);          // every extra adult and child
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div><div style="font-size:13.5px;font-weight:800">Other guests in this booking</div>
-          <div class="ns-muted" style="font-size:11.5px">${list.length ? `${list.length + 1} guests in total (main guest + ${list.length})` : 'Only the main guest so far'}${missing ? ` · <b style="color:#B4711A">${missing} more to add</b> (booked for ${adults} adults)` : ''}</div></div>
+          <div class="ns-muted" style="font-size:11.5px">${list.length ? `${list.length + 1} guests in total (main guest + ${list.length})` : 'Only the main guest so far'}${missing ? ` · <b style="color:#B4711A">${missing} more to add</b> (booked for ${adults} adult${adults > 1 ? 's' : ''}${kids ? ` + ${kids} child${kids > 1 ? 'ren' : ''}` : ''})` : ''}</div></div>
         ${staff ? '<button type="button" class="ns-btn-ghost" data-bg-add style="height:32px;font-size:12.5px">+ Add guest</button>' : ''}
       </div>
       ${list.map((g) => `

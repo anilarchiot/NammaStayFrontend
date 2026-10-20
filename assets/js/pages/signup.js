@@ -76,7 +76,7 @@ function propertyStep(session) {
     <div style="display:flex;flex-direction:column;gap:16px">
       ${input('pname', 'Property name', 'maxlength="120" placeholder="e.g. Blue Door Hostel"')}
       <div class="ns-field"><label for="kind">Type</label><select class="ns-input" id="kind">
-        <option value="hostel">Hostel</option><option value="hostel" data-pg>PG / Co-living (beds, monthly rent)</option><option value="homestay">Homestay</option><option value="hotel">Hotel / guest house</option></select></div>
+        <option value="hostel">Hostel</option><option value="hostel" data-pg>PG / Co-living (beds, monthly rent)</option><option value="homestay">Homestay</option><option value="hotel">Hotel / guest house</option><option value="hotel" data-resort>Resort</option></select></div>
       ${input('city', 'City', 'autocomplete="address-level2" maxlength="80"')}
       ${input('phone', 'Phone (optional)', 'type="tel" autocomplete="tel" maxlength="20"')}
       ${input('oname', 'Your name', `value="${esc(name)}" maxlength="80"`)}
@@ -93,6 +93,7 @@ function propertyStep(session) {
         phone: $('#phone').value, owner_name: $('#oname').value } });
       localStorage.setItem('ns.property', r.property_id);
       if ($('#kind').selectedOptions[0]?.hasAttribute('data-pg')) await rpc('pg_set_mode', { p_property: r.property_id, p_on: true }).catch(() => {});   // PG / co-living (031)
+      if ($('#kind').selectedOptions[0]?.hasAttribute('data-resort')) await rpc('resort_set_mode', { p_property: r.property_id, p_on: true }).catch(() => {});   // resort (034)
       location.replace('setup.html');
     } catch (err) { fail(err.message); }
   };

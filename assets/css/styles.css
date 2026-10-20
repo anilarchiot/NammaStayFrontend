@@ -930,3 +930,51 @@ button.ivs-ms:hover{box-shadow:0 0 0 2px #1C9A6C inset}
 .ivs-swatches button i{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--sw) 55%,var(--sw2) 55%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
 .ivs-swatches button[aria-pressed="true"]{border-color:#101A3D;box-shadow:0 0 0 1px #101A3D}
 .ivs-check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600}
+
+/* Check-in: other guests in the room (030) */
+.ci-g-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:420px){.ci-g-grid{grid-template-columns:1fr}}
+
+/* PG / co-living dashboard (032) */
+.pgd-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.pgd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.pgd-beds{display:flex;flex-wrap:wrap;gap:8px;padding-top:4px}
+.pgd-bed{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:10px;border:1px dashed #BFE3CF;background:#F3FAF6;color:#157A56;font-size:12.5px;font-weight:700;text-decoration:none}
+.pgd-bed small{font-weight:600;color:#6B7280;font-size:11px}
+.pgd-bed:hover{background:#E4F3EB}
+@media (max-width:1100px){.pgd-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.pgd-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pgd-grid{grid-template-columns:1fr}}
+.pp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.pp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Homestay add-ons (033): house guide, kitchen card */
+.hs-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.hs-guide-grid{grid-template-columns:1fr}}
+.hs-kitchen{display:flex;flex-direction:column;gap:12px}
+.hs-kitchen-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hs-kitchen-days>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border-radius:12px;background:#FBF9F1;border:1px solid #F0EBDB}
+.hs-day{width:100%;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.05em}
+.hs-chip{display:inline-flex;gap:5px;align-items:baseline;padding:6px 10px;border-radius:20px;background:#E9F5EE;color:#157A56;font-size:12.5px;font-weight:600}
+.hs-chip b{font-size:15px}
+.hs-chip.is-zero{background:#F3EFE1;color:#9CA3AF}
+@media (max-width:640px){.hs-kitchen-days{grid-template-columns:1fr}}
+
+/* Resort add-ons (034): activities, day visitors, groups, booking card, dashboard */
+.rs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.rs-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+.rs-ci{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.rs-group{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:#FFFDF6;border:1px solid #F0EBDB}
+.rs-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.rs-slot{border:1px solid #F0EBDB;border-radius:12px;padding:10px 12px;background:#FFFDF6;display:flex;flex-direction:column;gap:8px;min-width:0}
+.rs-slot-head{display:flex;align-items:center;gap:8px}
+.rs-bk{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;border-top:1px dashed #E7DFC7;padding-top:8px;flex-wrap:wrap}
+.rs-bk>div:first-child{flex:1 1 170px}
+.rs-bk.is-off,.rs-visit.is-off{opacity:.55}
+.rs-visit{display:flex;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid #F3EFE1;flex-wrap:wrap}
+.rs-visit:first-child{border-top:0}
+.rs-visit-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rs-today{display:flex;flex-direction:column;gap:12px}
+.rs-today-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rs-today-grid>div{padding:12px;border-radius:12px;background:#FBF9F1;border:1px solid #F0EBDB;display:flex;flex-direction:column;gap:4px;min-width:0}
+.rs-li{font-size:13px}
+@media (max-width:760px){.rs-today-grid{grid-template-columns:1fr}.rs-visit{padding:12px 14px}}

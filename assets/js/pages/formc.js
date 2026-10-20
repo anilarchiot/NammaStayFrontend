@@ -1,6 +1,6 @@
 // Form C — foreign guests must be reported to FRRO within 24 hours of arrival (and on departure).
 // NammaStay prepares the details in the portal's order, tracks the deadline and records the FRRO number.
-import { page, rpc, content, setSubtitle, headerActions, esc, modal, field, options, toast, guestFace, viewIdDocs, fmtDayTime, $, $$ } from '../core.js';
+import { unitName, page, rpc, content, setSubtitle, headerActions, esc, modal, field, options, toast, guestFace, viewIdDocs, fmtDayTime, $, $$ } from '../core.js';
 
 const FRRO_URL = 'https://indianfrro.gov.in/frro/FormC';
 const FIELDS = [   // details the FRRO form asks for (beyond name, nationality, date of birth)
@@ -45,7 +45,7 @@ page('formc', async (ctx) => {
       ${list.length ? list.map((r) => {
         const miss = missing(r); const dl = left(r.deadline);
         return `<div class="ns-card fc-row">
-          <div class="fc-who">${guestFace(r.guest.full_name, 40)}<div><b>${esc(r.guest.full_name)}</b><div class="ns-muted" style="font-size:12.5px">${esc(r.guest.nationality || '')} · ${esc(r.room)} · ${esc(r.bed)} · ${esc(r.code)}</div>
+          <div class="fc-who">${guestFace(r.guest.full_name, 40)}<div><b>${esc(r.guest.full_name)}</b><div class="ns-muted" style="font-size:12.5px">${esc(r.guest.nationality || '')} · ${esc(unitName(r.room, r.bed))} · ${esc(r.code)}</div>
             <div class="ns-muted" style="font-size:12.5px">${r.status === 'checked_out' ? `Left ${fmtDayTime(r.departed_at || r.check_out_at)}` : `Arrived ${fmtDayTime(r.arrived_at)}`}</div></div></div>
           <div class="fc-state">
             ${r.status === 'checked_in' && !r.arrival_at ? `<span class="ns-pill ${dl[1]}">${dl[0]}</span>` : ''}

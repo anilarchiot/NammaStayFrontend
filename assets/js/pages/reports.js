@@ -1,6 +1,7 @@
 import { W, page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDay, ymd, addDays, downloadCsv, options, $ } from '../core.js';
 
 const SOURCE = { walk_in: 'Walk-in', direct: 'Direct', ota: 'Hostelworld / OTA', referral: 'Referral' };
+const sourceName = (k) => (k === 'ota' && W.kind === 'homestay' ? 'Airbnb / OTA' : SOURCE[k] || k);   // homestays (033)
 
 page('reports', async (ctx) => {
   const t = ymd();
@@ -41,7 +42,7 @@ page('reports', async (ctx) => {
         <div style="display:flex;flex-direction:column;gap:16px">
           <div class="ns-card"><div class="ns-h3" style="margin-bottom:12px">Guest source</div>
             ${Object.entries(r.sources).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div style="margin-bottom:10px">
-              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${esc(SOURCE[k] || k)}</span><b>${Math.round((n / srcTotal) * 100)}%</b></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${esc(sourceName(k))}</span><b>${Math.round((n / srcTotal) * 100)}%</b></div>
               <div class="ns-meter" style="background:#F3EFE1"><span style="width:${(n / srcTotal) * 100}%"></span></div></div>`).join('') || '<div class="ns-muted">No bookings yet.</div>'}</div>
           <div class="ns-card-dark"><div class="ns-h3" style="color:#FBF3DE;margin-bottom:12px">Guest nationality mix</div>
             ${r.nationalities.map((x) => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#AEB6C9">
@@ -56,7 +57,7 @@ page('reports', async (ctx) => {
       ['Revenue (₹)', last.revenue / 100], ['Avg occupancy %', Math.round(last.occupancy * 100)], ['Avg length of stay', last.alos], ['RevPAB (₹)', last.revpab / 100], [],
       ['Week starting', 'UPI+card (₹)', 'Cash (₹)'], ...last.weekly.map((w) => [w.start, w.digital / 100, w.cash / 100]), [],
       ['Room type', 'Beds', 'Occupancy %', 'Revenue (₹)'], ...last.rooms.map((x) => [x.name, x.beds, Math.round(x.occupancy * 100), x.revenue / 100]), [],
-      ['Source', 'Bookings'], ...Object.entries(last.sources).map(([k, n]) => [SOURCE[k] || k, n]), [],
+      ['Source', 'Bookings'], ...Object.entries(last.sources).map(([k, n]) => [sourceName(k), n]), [],
       ['Nationality', 'Bookings'], ...last.nationalities.map((x) => [x.name, x.n])];
     downloadCsv(`report_${last.from}_to_${t}.csv`, rows);
   };

@@ -1,9 +1,11 @@
-import { W, openInvoice, countryOptions, downloadCsv, ymd, deleteGuestDialog, deleteBookingDialog, modal, field, options, ID_TYPES, compressImage, uploadIdDoc, newId, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
+import { unitName, W, openInvoice, countryOptions, downloadCsv, ymd, deleteGuestDialog, deleteBookingDialog, modal, field, options, ID_TYPES, compressImage, uploadIdDoc, newId, page, rpc, q, sb, confirmDialog, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDay, avatar, statusPill, titleCase,
   toast, viewIdDocs, idUploadFields, wireIdPreviews, uploadIdSides, param, uuidOk, $ } from '../core.js';
+import { pgGuestProfile, exportTenantProfiles } from './guest-profile-pg.js';   // PG / co-living only
 
 page('guests', async (ctx) => {
   const id = param('id');
   if (!uuidOk(id)) return guestList(ctx);
+  if (ctx.isPg) return pgGuestProfile(ctx, id, editGuest);                    // PG: tenant profile, no stays / nightly prices
 
   const back = document.querySelector('.ns-main a[href="bookings.html"]');
   if (back) back.setAttribute('href', 'guest-profile.html');
@@ -47,7 +49,7 @@ page('guests', async (ctx) => {
       <div class="ns-card" style="padding:0;overflow:hidden"><div style="padding:18px 20px" class="ns-h3">Stay history</div>
         <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Booking</th><th>${W.Unit}</th><th>Check-in</th><th>Check-out</th><th>Paid</th><th>Status</th><th class="ns-sticky-end"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody>${d.stays.map((s) => `<tr data-href="booking-detail.html?id=${esc(s.id)}" tabindex="0" style="cursor:pointer"><td style="font-weight:700">${esc(s.code)}</td>
-          <td style="white-space:normal;min-width:130px">${esc(s.room)} · ${esc(s.bed)}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
+          <td style="white-space:normal;min-width:130px">${esc(unitName(s.room, s.bed))}</td><td>${fmtDate(s.check_in_at)}</td><td>${fmtDate(s.check_out_at)}</td>
           <td style="font-weight:700">${rupees(s.paid_paise)}</td><td>${statusPill(s.status)}</td>
           <td class="ns-sticky-end" style="width:${canDelete ? 84 : 44}px;text-align:right;white-space:nowrap"><button type="button" class="ns-icon-edit" data-inv="${esc(s.id)}"
             aria-label="Invoice for ${esc(s.code)}" title="Invoice / bill" style="background:none;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"></path><path d="M14 2v6h6"></path><path d="M9 13h6M9 17h6"></path></svg></button>${canDelete ? `<button type="button" class="ns-icon-del" data-del="${esc(s.id)}"
@@ -85,12 +87,12 @@ page('guests', async (ctx) => {
 async function guestList(ctx) {
   document.querySelector('.ns-main a[href="bookings.html"]')?.remove();
   const titleEl = document.querySelector('.ns-main > [style*="height:76px"] [style*="font-size:21px"]');
-  if (titleEl) titleEl.textContent = 'Guests';
+  if (titleEl) titleEl.textContent = ctx.isPg ? 'Tenant profiles' : 'Guests';
   setSubtitle(ctx.property_name);
   const head = headerActions();
   const canDel = ctx.can('owner', 'manager') && ctx.allow('delete_guests');
   head.innerHTML = '<div class="ns-search"><span>Search</span></div>' + (ctx.allow('export_data') ? '<button type="button" class="ns-btn-ghost" id="export-guests">Export CSV</button>' : '');
-  document.getElementById('export-guests')?.addEventListener('click', (e) => exportGuests(ctx, e.target));
+  document.getElementById('export-guests')?.addEventListener('click', (e) => (ctx.isPg ? exportTenantProfiles : exportGuests)(ctx, e.target));
   const recent = await q(sb.from('guests').select('id, full_name, phone, nationality, created_at')
     .eq('property_id', ctx.property_id).order('created_at', { ascending: false }).limit(25));
   const render = (rows, title) => content(`<div class="ns-card" style="padding:0;overflow:hidden">
@@ -103,9 +105,9 @@ async function guestList(ctx) {
           ${canDel ? `<button type="button" class="ns-icon-del" data-del-guest="${esc(g.id)}" aria-label="Delete ${esc(g.full_name)}" title="Delete guest"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button>` : ''}</td></tr>`).join('')
         || '<tr><td colspan="4" class="ns-empty">No guests found.</td></tr>'}
       </tbody></table></div></div>`);
-  render(recent, 'Recently added guests');
+  render(recent, (ctx.isPg ? 'Recently added tenants' : 'Recently added guests'));
   headerSearch('Search name or phone…', async (v) => {
-    if (v.length < 3) return render(recent, 'Recently added guests');
+    if (v.length < 3) return render(recent, (ctx.isPg ? 'Recently added tenants' : 'Recently added guests'));
     render(await rpc('search_guests', { p_property: ctx.property_id, p_q: v }), `Results for “${v}”`);
   });
   document.querySelector('.ns-content').addEventListener('click', (e) => {

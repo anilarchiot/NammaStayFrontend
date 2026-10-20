@@ -1,6 +1,6 @@
 // Calendar — every bed, every night. Drag across a bed's row (or tap the first
 // and last night on a phone) to create a booking for those dates.
-import { otaOf, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
+import { hostExtras, isResort, isHomestay, unitName, otaOf, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, $, $$ } from '../core.js';
 
 let DAYS = 9;                                     // 9 days (week view) or the days of the month (month view)
@@ -11,10 +11,14 @@ const monthStart = (d) => d.slice(0, 8) + '01';
 const monthDays = (d) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate();
 const shiftMonth = (d, n) => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1 + n, 1)); return x.toISOString().slice(0, 10); };
 const LIVE = ['pending', 'confirmed', 'checked_in'];
-const TIP = () => `<b style="color:#157A56">Tip:</b> drag across a ${W.unit}’s free nights to book them — on a phone, tap the first night, then the last.`;
+let IS_PG = false;                                // PG / co-living account (032)
+const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> tap a free bed on the move-in day to move a tenant in. Rent is monthly — set it on the Move-in form.'
+  : `<b style="color:#157A56">Tip:</b> drag across a ${W.unit}’s free nights to book them — on a phone, tap the first night, then the last.`);
 
 page('calendar', async (ctx) => {
   const staff = ctx.can('owner', 'manager', 'front_desk');
+  IS_PG = !!ctx.isPg;
+  if (ctx.isPg) { let saved = null; try { saved = localStorage.getItem('ns.cal.view'); } catch { /* ignore */ } if (!saved) VIEW = 'month'; }   // PG: month view first (032)
   let from = VIEW === 'month' ? monthStart(ymd()) : addDays(ymd(), -2);
   let data = null;
   const head = headerActions();
@@ -23,7 +27,8 @@ page('calendar', async (ctx) => {
     <button type="button" class="ns-btn-ghost" id="prev" aria-label="Previous">‹ Prev</button>
     <button type="button" class="ns-btn-ghost" id="today">Today</button>
     <button type="button" class="ns-btn-ghost" id="next" aria-label="Next week">Next ›</button>
-    ${staff ? '<a href="check-in.html?new=1" class="ns-btn">+ New booking</a>' : ''}`;
+    ${staff && hostExtras() ? `<a href="check-in.html?new=1&whole=1" class="ns-btn-ghost" title="Book many rooms at once — for a family, group or event">${isResort() ? '👥 Group booking' : '🏡 Whole home'}</a>` : ''}
+    ${staff ? (ctx.isPg ? '<a href="tenants.html?movein=1" class="ns-btn">+ Move in tenant</a>' : '<a href="check-in.html?new=1" class="ns-btn">+ New booking</a>') : ''}`;
   $('#prev').onclick = () => { from = VIEW === 'month' ? shiftMonth(from, -1) : addDays(from, -7); draw(); };
   $('#next').onclick = () => { from = VIEW === 'month' ? shiftMonth(from, 1) : addDays(from, 7); draw(); };
   $('#today').onclick = () => { from = VIEW === 'month' ? monthStart(ymd()) : addDays(ymd(), -2); draw(); };
@@ -86,12 +91,14 @@ page('calendar', async (ctx) => {
           const span_ = p.e - p.s; const parts = String(b.guest || '').trim().split(/\s+/);
           const short = span_ <= (month ? 3 : 1) ? parts[0] : parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
           const nights = Math.max(1, Math.round((new Date(ymd(b.check_out_at)) - new Date(ymd(b.check_in_at))) / 864e5));
-          const tag = b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
+          const tag = IS_PG ? (b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="Living here">●</span>' : '')   // PG: rent is on Tenants & rent, not the bar
+            : b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
             : b.balance_paise > 0 ? `<span class="cb-tag" title="${rupees(b.balance_paise)} due">₹</span>` : b.status !== 'pending' ? '<span class="cb-tag" title="Paid">✓</span>' : '';
           const label = { 'cb-in': 'In house', 'cb-conf': 'Confirmed · paid', 'cb-due': 'Balance due', 'cb-pend': 'Pending', 'cb-out': 'Checked out' }[cls];
-          return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}" href="booking-detail.html?id=${esc(b.id)}" style="grid-column:${p.s}/${p.e}"
-            title="${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}">
-            ${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}</a>`; }),
+          return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}" href="${ctx.isPg ? `tenants.html?booking=${esc(b.id)}` : `booking-detail.html?id=${esc(b.id)}`}" style="grid-column:${p.s}/${p.e}"
+            title="${IS_PG ? `${esc(b.guest)} · tenant${b.status === 'confirmed' ? ` · moving in ${fmtDay(b.check_in_at)}` : b.status === 'checked_out' ? ' · moved out' : ' · living here'}`
+              : `${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}`}">
+            ${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}</a>`; }),
       ].join('');
       return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
           <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
@@ -116,9 +123,10 @@ page('calendar', async (ctx) => {
           ${rows || '<div class="ns-empty">No ${W.units} set up yet. Add them in ${W.setup}.</div>'}
         </div>
         <div class="cal-legend">
-          <span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
+          ${IS_PG ? `<span><i class="lg cb-in"></i> Living here</span><span><i class="lg cb-conf"></i> Moving in</span>
+          <span><i class="lg cb-out"></i> Moved out</span><span><i class="lg cb-maint"></i> Maintenance</span>` : `<span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
           <span><i class="lg cb-due"></i> Balance due</span><span><i class="lg cb-pend"></i> Pending</span>
-          <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span><span><i class="lg cb-ota"></i> 🔗 OTA booking</span>
+          <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span><span><i class="lg cb-ota"></i> 🔗 OTA booking</span>`}
           ${staff ? '<span><i class="lg" style="background:#CDEBDC;border:1px solid #1C9A6C"></i> Your selection</span>' : ''}
         </div>
       </div>`);
@@ -150,6 +158,7 @@ page('calendar', async (ctx) => {
     const lo = Math.min(sel.a, sel.b); const hi = Math.max(sel.a, sel.b);
     const problem = rangeProblem(sel.bed, lo, hi);
     if (problem) { toast(problem, { error: true }); clearSel(); return; }
+    if (ctx.isPg) { location.href = `tenants.html?movein=1&bed=${encodeURIComponent(sel.bed)}&start=${days[lo]}`; return; }   // PG: free bed → move a tenant in (032)
     openBookingDialog(data.beds.find((b) => b.id === sel.bed), days[lo], addDays(days[hi], 1));
   }
 
@@ -185,12 +194,13 @@ page('calendar', async (ctx) => {
     modal({
       title: `Move ${b.guest}?`, width: 480,
       body: `<div class="mv-grid">
-          <div class="mv-box"><div class="mv-lbl">From</div><b>${esc(oldBed.room)} · ${esc(oldBed.label)}</b><div>${fmt(b.check_in_at)} → ${fmt(b.check_out_at)}</div></div>
+          <div class="mv-box"><div class="mv-lbl">From</div><b>${esc(oldBed.room)} · ${esc(oldBed.label)}</b><div>${IS_PG ? `since ${fmt(b.check_in_at)}` : `${fmt(b.check_in_at)} → ${fmt(b.check_out_at)}`}</div></div>
           <div class="mv-arrow">→</div>
-          <div class="mv-box is-new"><div class="mv-lbl">To</div><b>${esc(bed.room)} · ${esc(bed.label)}</b><div>${fmt(checkIn)} → ${fmt(checkOut)}</div></div></div>
-        <div class="ns-muted" style="font-size:12.5px">${n} night${n > 1 ? 's' : ''}, same check-in and check-out times.${bedId !== b.bed_id ? ` The price follows ${esc(bed.label)}’s rate.` : ''}</div>`,
+          <div class="mv-box is-new"><div class="mv-lbl">To</div><b>${esc(bed.room)} · ${esc(bed.label)}</b><div>${IS_PG ? 'same dates' : `${fmt(checkIn)} → ${fmt(checkOut)}`}</div></div></div>
+        <div class="ns-muted" style="font-size:12.5px">${IS_PG ? 'The tenant moves to this bed. Their rent, deposit and dues don’t change.'
+          : `${n} night${n > 1 ? 's' : ''}, same check-in and check-out times.${bedId !== b.bed_id ? ` The price follows ${esc(bed.label)}’s rate.` : ''}`}</div>`,
       actions: [{ label: 'Cancel', onClick: () => { paintMove(null); } },
-        { label: 'Move booking', kind: 'primary', onClick: async () => {
+        { label: IS_PG ? 'Move tenant' : 'Move booking', kind: 'primary', onClick: async () => {
           await rpc('update_booking', { p_booking: b.id, p: { check_in_at: checkIn, check_out_at: checkOut, bed_id: bedId } });
           toast(`${b.guest} moved to ${bed.label}, ${fmt(checkIn)}.`); moveMode = null; hint(TIP()); draw();
         } }],
@@ -198,8 +208,9 @@ page('calendar', async (ctx) => {
   }
   function startMoveMode(b) {
     moveMode = { b };
-    hint(`<b>Moving ${esc(b.guest)}</b> — tap the new <b>first night</b> on any ${W.unit}${b.status === 'checked_in' ? ` (checked in: pick a ${W.unit}, dates stay the same)` : ''}.
-      <button type="button" class="ns-btn-ghost" id="mv-cancel" style="height:28px;font-size:12px;margin-left:6px">Cancel</button>`);
+    hint((IS_PG ? `<b>Moving ${esc(b.guest)}</b> — tap the <b>new bed</b> (same dates, same rent).`
+      : `<b>Moving ${esc(b.guest)}</b> — tap the new <b>first night</b> on any ${W.unit}${b.status === 'checked_in' ? ` (checked in: pick a ${W.unit}, dates stay the same)` : ''}.`)
+      + '<button type="button" class="ns-btn-ghost" id="mv-cancel" style="height:28px;font-size:12px;margin-left:6px">Cancel</button>');
     $('#mv-cancel').onclick = (ev) => { ev.stopPropagation(); moveMode = null; paintMove(null); hint(TIP()); };
   }
 
@@ -229,7 +240,7 @@ page('calendar', async (ctx) => {
       const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
       if (!c) { mv.target = null; paintMove(null); return; }
       const bedId = c.dataset.bed;
-      const startIdx = mv.b.status === 'checked_in' ? mv.startIdx : +c.dataset.i - mv.grab;
+      const startIdx = mv.b.status === 'checked_in' || IS_PG ? mv.startIdx : +c.dataset.i - mv.grab;   // PG: a tenant changes bed, never dates
       const bad = moveProblem(mv.b, bedId, startIdx);
       mv.target = { bedId, startIdx, bad }; paintMove(bedId, startIdx, bad);
     });
@@ -246,6 +257,7 @@ page('calendar', async (ctx) => {
     host.addEventListener('pointerdown', (e) => {                       // mouse / pen: drag
       const c = e.target.closest('.cal-cell.is-free');
       if (!c || e.pointerType === 'touch' || e.button !== 0) return;
+      if (moveMode) return;                                              // "Move…" is waiting for a tap on the new bed — not a new selection
       e.preventDefault();
       dragging = true; sel = { bed: c.dataset.bed, a: +c.dataset.i, b: +c.dataset.i, done: true }; paint();
     });
@@ -272,7 +284,7 @@ page('calendar', async (ctx) => {
         const c0 = e.target.closest('.cal-cell') || document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
         if (!c0) return;
         e.preventDefault();
-        const b = moveMode.b; const startIdx = b.status === 'checked_in' ? dayIdx(ymd(b.check_in_at)) : +c0.dataset.i;
+        const b = moveMode.b; const startIdx = b.status === 'checked_in' || IS_PG ? dayIdx(ymd(b.check_in_at)) : +c0.dataset.i;
         const bad = moveProblem(b, c0.dataset.bed, startIdx);
         mv = null; paintMove(c0.dataset.bed, startIdx, bad);
         if (bad) { toast(bad, { error: true }); return; }
@@ -283,6 +295,7 @@ page('calendar', async (ctx) => {
       const i = +c.dataset.i;
       if (sel && !sel.done && c.dataset.bed === sel.bed && i >= sel.a) { sel.b = i; sel.done = true; paint(); finish(); return; }
       if (!c.classList.contains('is-free')) return;
+      if (IS_PG) { location.href = `tenants.html?movein=1&bed=${encodeURIComponent(c.dataset.bed)}&start=${days[i]}`; return; }   // PG: tap a free bed → move in (no nights)
       sel = { bed: c.dataset.bed, a: i, b: i, done: false }; paint();
       const bed = data.beds.find((b) => b.id === sel.bed);
       hint(`<b>${esc(bed.label)}</b> from <b>${esc(fmtDay(days[i] + 'T12:00:00+05:30'))}</b> — now tap the <b>last night</b> (or the same night again for 1 night).
@@ -344,17 +357,20 @@ page('calendar', async (ctx) => {
       title: b.guest, width: 440,
       body: `<div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
           <div>${statusPill(b.status)}</div>
-          <div><span class="ns-muted" style="font-size:13px">Bed</span><br><b>${esc(bed.room)} · ${esc(bed.label)}</b></div>
-          <div><span class="ns-muted" style="font-size:13px">Stay</span><br><b>${fmtDayTime(b.check_in_at)} → ${fmtDayTime(b.check_out_at)}</b></div>
-          <div><span class="ns-muted" style="font-size:13px">Payment</span><br><b>${b.balance_paise > 0 ? `${rupees(b.balance_paise)} due` : 'Fully paid'}</b>${b.paid_paise ? ` · ${rupees(b.paid_paise)} received` : ''}</div>
+          <div><span class="ns-muted" style="font-size:13px">${W.Unit}</span><br><b>${esc(unitName(bed.room, bed.label))}</b></div>
+          ${IS_PG ? `<div><span class="ns-muted" style="font-size:13px">Tenant</span><br><b>${b.status === 'confirmed' ? `Moving in ${fmtDay(b.check_in_at)}` : `Living here since ${fmtDay(b.check_in_at)}`}</b></div>
+          <div class="ns-muted" style="font-size:12.5px">Rent, deposit and payments are on <b>Tenants &amp; rent</b>. <b>Move…</b> puts the tenant on another bed — the rent doesn’t change.</div>`
+          : `<div><span class="ns-muted" style="font-size:13px">Stay</span><br><b>${fmtDayTime(b.check_in_at)} → ${fmtDayTime(b.check_out_at)}</b></div>
+          <div><span class="ns-muted" style="font-size:13px">Payment</span><br><b>${b.balance_paise > 0 ? `${rupees(b.balance_paise)} due` : 'Fully paid'}</b>${b.paid_paise ? ` · ${rupees(b.paid_paise)} received` : ''}</div>`}
         </div>`,
       actions: [
         ...(['pending', 'confirmed', 'checked_in'].includes(b.status) ? [{ label: 'Move…', onClick: () => { setTimeout(() => startMoveMode(b), 30); } }] : []),
-        ...(canDelete ? [{ label: 'Delete booking', kind: 'danger', onClick: () => {
+        ...(canDelete && !IS_PG ? [{ label: 'Delete booking', kind: 'danger', onClick: () => {
           deleteBookingDialog({ ctx, id: b.id, guest: b.guest, room: bed.room, bed: bed.label, checkIn: b.check_in_at, checkOut: b.check_out_at,
             status: b.status, paidPaise: b.paid_paise, onDone: () => draw() });
         } }] : []),
-        { label: 'Open booking', kind: 'primary', onClick: () => { location.href = `booking-detail.html?id=${b.id}`; return false; } },
+        IS_PG ? { label: 'Open tenant', kind: 'primary', onClick: () => { location.href = `tenants.html?booking=${b.id}`; return false; } }   // PG (032)
+          : { label: 'Open booking', kind: 'primary', onClick: () => { location.href = `booking-detail.html?id=${b.id}`; return false; } },
       ],
     });
     return m;
