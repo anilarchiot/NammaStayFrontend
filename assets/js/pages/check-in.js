@@ -1,7 +1,10 @@
-import { guestFace, newId, countryOptions, statusPill, fmtDayTime, fmtDay, headerActions, headerSearch, setSubtitle, confirmDialog, sendBookingWhatsApp, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, uploadIdSides,
+import { hostExtras, isResort, isHomestay, unitName, guestFace, newId, countryOptions, statusPill, fmtDayTime, fmtDay, headerActions, headerSearch, setSubtitle, confirmDialog, sendBookingWhatsApp, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, uploadIdSides,
   page, rpc, q, sb, $, esc, rupees, toPaise, ymd, addDays, daysBetween, fromInputDT, field, options,
   ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content,
 } from '../core.js';
+import { mountCheckinResort } from './resort.js';          // add-on: resorts — stay package, group / event (034)
+import { mountCheckinGuests } from './checkin-guests.js';   // add-on: other guests in the room (030)
+import { mountCheckinHomestay } from './homestay.js';        // add-on: homestays — whole home, meal plan (033)
 
 page('checkin', async (ctx) => {
   // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
@@ -88,6 +91,8 @@ page('checkin', async (ctx) => {
   };
 
   // ---- one or more rooms/beds in this booking
+  let hs = null;                                           // homestay add-on (033)
+  let rs = null;                                           // resort add-on (034)
   const rooms = roomsMode();
   const unitsBox = $('#units');
   const rowHtml = (first) => `<div class="unit-row" style="display:grid;grid-template-columns:${rooms ? '1fr 90px 90px' : '1fr'}${first ? '' : ' 40px'};gap:10px;align-items:end">
@@ -110,7 +115,7 @@ page('checkin', async (ctx) => {
     const cur = keep ?? sel.value;
     const list = state.beds.filter((x) => !chosen.includes(x.id));
     sel.innerHTML = list.length
-      ? `<option value="">Choose a ${W.unit}…</option>` + list.map((x) => `<option value="${esc(x.id)}" ${x.id === cur ? 'selected' : ''}>${esc(x.room_name)} · ${esc(x.label)} — ${rupees(x.rate_paise)}/night${rooms && x.max_guests ? ` · up to ${x.max_guests}` : ''}</option>`).join('')
+      ? `<option value="">Choose a ${W.unit}…</option>` + list.map((x) => `<option value="${esc(x.id)}" ${x.id === cur ? 'selected' : ''}>${esc(unitName(x.room_name, x.label))} — ${rupees(x.rate_paise)}/night${rooms && x.max_guests ? ` · up to ${x.max_guests}` : ''}</option>`).join('')
       : `<option value="">No ${W.units} free for these dates</option>`;
   }
   function summary() {
@@ -119,11 +124,11 @@ page('checkin', async (ctx) => {
     $('#s-lines').innerHTML = rows.filter((r) => r.unit).map((r) => {
       const ex = extraFor(r.unit, r.adults);
       const over = rooms && r.adults + r.children > (r.unit.max_guests || 1);
-      return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#AEB6C9"><span>${esc(r.unit.room_name)} · ${esc(r.unit.label)}${rooms ? `<br><small>${guestsText(r.adults, r.children)}${ex ? ` · +${rupees(ex)} extra guest` : ''}</small>` : ''}
+      return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#AEB6C9"><span>${esc(unitName(r.unit.room_name, r.unit.label))}${rooms ? `<br><small>${guestsText(r.adults, r.children)}${ex ? ` · +${rupees(ex)} extra guest` : ''}</small>` : ''}
         ${over ? `<br><small style="color:#FF9B9B">Fits up to ${r.unit.max_guests}</small>` : ''}</span><span>${rupees(r.unit.rate_paise + ex)} / night</span></div>`;
-    }).join('') || `<div style="font-size:13px;color:#AEB6C9">No ${W.unit} selected</div>`;
+    }).join('') + (hs ? hs.lines(rows, n) : '') + (rs ? rs.lines(rows, n) : '') || `<div style="font-size:13px;color:#AEB6C9">No ${W.unit} selected</div>`;
     $('#s-nights').textContent = n;
-    $('#s-total').textContent = rupees(rows.reduce((t, r) => t + lineTotal(r), 0));
+    $('#s-total').textContent = rupees(rows.reduce((t, r) => t + lineTotal(r), 0) + (hs ? hs.total(rows, n) : 0) + (rs ? rs.total(rows, n) : 0));
     $('#checkin-now').hidden = f('check_in_at').value.slice(0, 10) !== today;
     $('#add-unit').hidden = !state.beds.length || rows.length >= Math.min(10, state.beds.length);
   }
@@ -142,6 +147,9 @@ page('checkin', async (ctx) => {
   unitsBox.addEventListener('click', (e) => { const b = e.target.closest('[data-remove]'); if (b) { b.closest('.unit-row').remove(); unitsBox.querySelectorAll('[name=unit]').forEach((x) => fillSelect(x)); summary(); } });
   $('#add-unit').addEventListener('click', () => addRow(false));
   addRow(true);
+  const others = await mountCheckinGuests({ ctx, unitsBox, after: unitsBox.closest('.ns-card') }).catch(() => null);   // other guests (030)
+  if (hostExtras()) hs = await mountCheckinHomestay({ ctx, unitsBox, addRow, units: () => state.beds, refresh: summary }).catch(() => null);   // (033)
+  if (isResort()) rs = await mountCheckinResort({ ctx, unitsBox, refresh: summary }).catch(() => null);   // (034)
 
   ['check_in_at', 'check_out_at'].forEach((n) => f(n).addEventListener('change', loadBeds));
 
@@ -255,6 +263,11 @@ page('checkin', async (ctx) => {
         } });
         guestId = guestId || res.guest_id; made.push(res);
       }
+      const og = others ? await others.save(made).catch(() => ({ saved: 0, failed: 1 })) : null;   // other guests (030)
+      if (og?.failed) toast(`Booking saved, but ${og.failed} other guest${og.failed > 1 ? 's' : ''} couldn’t be saved — add them on the booking page.`, { error: true });
+      const ml = hs ? await hs.save(made).catch(() => ({ failed: 1 })) : null;   // meal plan (033)
+      if (ml?.failed) toast('Booking saved, but the meal plan couldn’t be added — choose it on the booking page.', { error: true });
+      if (rs) await rs.save(made).catch(() => null);                // stay package + group (034)
       toast(made.length > 1 ? `${made.length} ${W.units} booked: ${made.map((x) => x.code).join(', ')}` : `${made[0].code} saved.`);
       location.href = `booking-detail.html?id=${made[0].id}&new=1`;
     } catch (e) {
@@ -266,6 +279,7 @@ page('checkin', async (ctx) => {
   $('#save-confirmed').addEventListener('click', (e) => submit('confirmed', e.currentTarget));
 
   await loadBeds();
+  if (hs && param('whole')) hs.wholeHome();                      // "Book the whole home" from the calendar (033)
 });
 
 // ------------------------------------------------------------ arrivals list (default view)

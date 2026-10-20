@@ -34,7 +34,7 @@ page('rooms', async (ctx) => {
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
               <div><div class="ns-h3">${esc(r.name)}</div><div class="ns-muted">${r.beds.length} ${r.beds.length === 1 ? W.unit : W.units}${r.description ? ' · ' + esc(r.description) : ''}</div></div>
               ${manage ? `<button type="button" class="ns-btn-ghost" style="height:32px" data-edit="${esc(r.id)}">Edit</button>` : ''}</div>
-            <div class="ns-muted">From ${rates.map(rupees).join(' / ')} per night</div>
+            <div class="ns-muted">From ${rates.map(rupees).join(' / ')} ${ctx.isPg ? 'a month' : 'per night'}</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
               ${r.beds.map((b) => { const [l, bg, fg] = STATE[state(b)];
                 const who = b.block ? esc(b.block) : b.booking ? esc(b.booking.guest) : '—';
@@ -74,14 +74,14 @@ page('rooms', async (ctx) => {
             ${field('Guests included in the rate', `<input class="ns-input" name="base" type="number" min="1" max="20" value="${f0.base_guests || 2}">`)}
             ${field('Extra adult ₹ / night', `<input class="ns-input" name="extra" inputmode="decimal" value="${(f0.extra_guest_paise || 0) / 100}">`, 'Children stay free.')}</div>` : ''}
         <div style="display:grid;grid-template-columns:${R ? '1fr 100px 90px 90px' : '1fr 110px 100px'};gap:8px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">
-          <span>${W.Unit}</span><span>₹ / night</span>${R ? '<span>Max guests</span>' : ''}<span>In use</span></div>
+          <span>${W.Unit}</span><span>${ctx.isPg ? '₹ rent / month' : '₹ / night'}</span>${R ? '<span>Max guests</span>' : ''}<span>In use</span></div>
         <div style="display:flex;flex-direction:column;gap:8px">
         ${units.map((b) => `<div style="display:grid;grid-template-columns:${R ? '1fr 100px 90px 90px' : '1fr 110px 100px'};gap:8px;align-items:center" data-row="${esc(b.id)}">
             <input class="ns-input" name="label" value="${esc(b.label)}" aria-label="${W.Unit} name">
-            <input class="ns-input" name="rate" inputmode="decimal" value="${b.rate_paise / 100}" aria-label="Rate per night (₹)">
+            <input class="ns-input" name="rate" inputmode="decimal" value="${b.rate_paise / 100}" aria-label="${ctx.isPg ? 'Monthly rent (₹)' : 'Rate per night (₹)'}">
             ${R ? `<input class="ns-input" name="max" type="number" min="1" max="20" value="${b.max_guests || 2}" aria-label="Max guests">` : ''}
             <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" name="active" ${b.is_active ? 'checked' : ''}> In use</label></div>`).join('')}
-        </div><div class="ns-help">Rate changes apply to new bookings only.</div>`,
+        </div><div class="ns-help">${ctx.isPg ? 'Used as the rent when you move a new tenant in — tenants already living here keep their rent.' : 'Rate changes apply to new bookings only.'}</div>`,
       actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: async (el) => {
         const base = R ? parseInt(el.querySelector('[name=base]').value, 10) : 1;
         const extra = R ? toPaise(el.querySelector('[name=extra]').value || '0') : 0;
@@ -153,7 +153,7 @@ page('rooms', async (ctx) => {
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
             ${field('Beds', '<input class="ns-input" name="count" type="number" min="1" max="40" value="4">')}
             ${field('Type', `<select class="ns-input" name="position">${options([['lower', 'Lower'], ['upper', 'Upper'], ['single', 'Single']], 'lower')}</select>`)}
-            ${field('Rate/night (₹)', '<input class="ns-input" name="rate" inputmode="decimal" value="700">')}</div>
+            ${field(ctx.isPg ? 'Rent / month (₹)' : 'Rate/night (₹)', `<input class="ns-input" name="rate" inputmode="decimal" value="${ctx.isPg ? 8000 : 700}">`)}</div>
           ${field('Bed name prefix', '<input class="ns-input" name="prefix" value="Bed ">', 'Beds are named prefix + number, e.g. “Bed 1”. Rename them later.')}`,
       actions: [{ label: 'Cancel' }, { label: 'Add', kind: 'primary', onClick: async (el) => {
         const v = (n) => el.querySelector(`[name=${n}]`)?.value ?? '';

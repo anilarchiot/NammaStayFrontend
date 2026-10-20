@@ -1,5 +1,5 @@
 // Expenses & profit — money received minus money spent, by period, month and category.
-import { page, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, fmtDate, ymd, addDays, modal, field, options,
+import { isResort, page, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, fmtDate, ymd, addDays, modal, field, options,
   toast, confirmDialog, downloadCsv, DEMO, $, $$ } from '../core.js';
 
 export const EXP_CATS = [['rent', 'Rent'], ['salaries', 'Salaries'], ['electricity', 'Electricity'], ['water', 'Water'], ['internet', 'Internet & phone'],
@@ -31,13 +31,31 @@ page('expenses', async (ctx) => {
       rpc('profit_summary', { p_property: ctx.property_id, p_from: from, p_to: to }),
       q(sb.from('expenses').select('*').eq('property_id', ctx.property_id).gte('spent_on', from).lte('spent_on', to).order('spent_on', { ascending: false }).order('created_at', { ascending: false })),
     ]);
+    if (ctx.isPg) {                                       // PG / co-living: rent & charges received are income too (032)
+      const inc = await rpc('pg_income', { p_property: ctx.property_id, p_from: from, p_to: to }).catch(() => null);
+      if (inc) {
+        sum.revenue_paise += inc.total_paise;
+        sum.months.forEach((m) => { m.revenue_paise += (inc.months.find((x) => x.month === m.month)?.income_paise || 0); });
+        sum.profit_paise = sum.revenue_paise - sum.expenses_paise;
+        sum.margin = sum.revenue_paise > 0 ? Math.round((sum.profit_paise / sum.revenue_paise) * 1000) / 10 : null;
+      }
+    }
+    if (isResort()) {                                     // resorts: day-visitor payments are income too (034)
+      const ri = await rpc('resort_income', { p_property: ctx.property_id, p_from: from, p_to: to }).catch(() => null);
+      if (ri && ri.total_paise) {
+        sum.revenue_paise += ri.total_paise;
+        sum.months.forEach((m) => { m.revenue_paise += (ri.months.find((x) => x.month === m.month)?.income_paise || 0); });
+        sum.profit_paise = sum.revenue_paise - sum.expenses_paise;
+        sum.margin = sum.revenue_paise > 0 ? Math.round((sum.profit_paise / sum.revenue_paise) * 1000) / 10 : null;
+      }
+    }
     setSubtitle(`${fmtDate(from + 'T12:00:00+05:30')} – ${fmtDate(to + 'T12:00:00+05:30')} · ${list.length} expense${list.length === 1 ? '' : 's'}`);
     const max = Math.max(1, ...sum.months.map((m) => Math.max(m.revenue_paise, m.expenses_paise)));
     const catMax = Math.max(1, ...sum.by_category.map((c) => c.total_paise));
     const profitUp = sum.profit_paise >= 0;
     content(`
       <div class="pf-kpis">
-        <div class="ns-card pf-kpi"><div class="pf-lbl">Money received</div><div class="pf-num">${rupees(sum.revenue_paise)}</div><div class="pf-sub">payments − refunds</div></div>
+        <div class="ns-card pf-kpi"><div class="pf-lbl">Money received</div><div class="pf-num">${rupees(sum.revenue_paise)}</div><div class="pf-sub">${ctx.isPg ? 'rent, food & charges' : 'payments − refunds'}</div></div>
         <div class="ns-card pf-kpi"><div class="pf-lbl">Expenses</div><div class="pf-num">${rupees(sum.expenses_paise)}</div><div class="pf-sub">${list.length} entr${list.length === 1 ? 'y' : 'ies'}</div></div>
         <div class="ns-card pf-kpi pf-profit ${profitUp ? 'is-up' : 'is-down'}"><div class="pf-lbl">${profitUp ? 'Profit' : 'Loss'}</div><div class="pf-num">${rupees(Math.abs(sum.profit_paise))}</div>
           <div class="pf-sub">${sum.margin != null ? `${sum.margin}% margin` : 'no money received yet'}</div></div>

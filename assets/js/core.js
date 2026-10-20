@@ -88,6 +88,14 @@ function friendly(error) {
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No connection. Check your internet and try again.';
   if (/JWT|session|refresh token/i.test(m)) return 'Your session expired. Please sign in again.';
   if (/subscription has ended|account is suspended/i.test(m)) return m;
+  const fn = (/Could not find the function (?:public\.)?(\w+)|function public\.(\w+)\(.*\) does not exist/i.exec(m) || []).slice(1).find(Boolean);
+  if (fn) {                                                     // the website is newer than the database: an SQL update hasn't been run yet
+    const upd = /^(booking_guest)/.test(fn) ? '030_booking_guests.sql' : /^pg_(dashboard|payments|report|income|selfcheckin_info)$/.test(fn) ? '032_pg_app.sql'
+      : /^(resort_|activit|dayout_|day_visit|stay_package|booking_package|booking_extra_beds|booking_resort|group_|groups_)/.test(fn) ? '034_resort.sql'
+      : /^(meal_plan|booking_meal|kitchen_list|guide_)/.test(fn) ? '033_homestay.sql'
+      : /^(pg_|_pg_)/.test(fn) ? '031_pg_tenants.sql' : 'the latest SQL update';
+    return `This needs a database update that isn’t installed yet (${upd}). Ask your developer to run it in Supabase → SQL Editor, then try again.`;
+  }
   return m || 'Something went wrong. Please try again.';
 }
 export async function loadPropertyCount() {
@@ -122,6 +130,8 @@ const PAGE_ROLES = {
   investment: ['owner'],                                      // My business (was My investment): owner only (036, 039)
   health: ['owner', 'manager'],                               // Business health (037)
   tenants: ['owner', 'manager', 'front_desk', 'accountant'],   // PG / co-living: monthly tenants & rent (031)
+  activities: ['owner', 'manager', 'front_desk', 'accountant'], dayvisits: ['owner', 'manager', 'front_desk', 'accountant'], groups: ['owner', 'manager', 'front_desk', 'accountant'],   // resorts (034)
+  pgpayments: ['owner', 'manager', 'front_desk', 'accountant'], pgreport: ['owner', 'manager', 'accountant'],   // PG (032)
   checkin: ['owner', 'manager', 'front_desk'],
   reports: ['owner', 'manager', 'accountant'],
   settings: ['owner', 'manager'],
@@ -135,12 +145,25 @@ const WORDS = {
     perf: 'RevPAB', perfLong: 'Revenue per available bed per night', example: '“6-Bed Mixed Dorm” with 6 beds at ₹700' },
   hotel: { kind: 'hotel', unit: 'room', Unit: 'Room', units: 'rooms', Units: 'Rooms', setup: 'Rooms', group: 'Room type', groups: 'room types',
     perf: 'RevPAR', perfLong: 'Revenue per available room per night', example: '“Deluxe Double” with 4 rooms (101–104) at ₹2,500' },
+  resort: { kind: 'resort', unit: 'room', Unit: 'Room', units: 'rooms', Units: 'Rooms', setup: 'Rooms & cottages', group: 'Room type', groups: 'room types',
+    perf: 'RevPAR', perfLong: 'Revenue per available room per night', example: '“Pool Villa” with 4 villas at ₹9,500' },
   homestay: { kind: 'homestay', unit: 'room', Unit: 'Room', units: 'rooms', Units: 'Rooms', setup: 'Rooms', group: 'Room type', groups: 'room types',
     perf: 'RevPAR', perfLong: 'Revenue per available room per night', example: '“Garden Room” at ₹1,800 for 2 guests' },
 };
 export let W = WORDS.hostel;
 const W_ = { get unit() { return W.unit; } };
-export const setKind = (k) => { W = WORDS[k] || WORDS.hostel; return W; };
+export const setKind = (k) => { W = WORDS[k] || WORDS.hostel; homestayWords(); return W; };
+// Homestays: a caretaker instead of a front desk, and Airbnb is the usual OTA (033)
+function homestayWords() {
+  const hs = W.kind === 'homestay';
+  ROLE_LABEL.front_desk = hs ? 'Caretaker' : 'Front desk';
+  const ota = SOURCES.find((s) => s[0] === 'ota'); if (ota) ota[1] = hs ? 'Airbnb / OTA' : 'Hostelworld / OTA';
+}
+export const isHomestay = () => W.kind === 'homestay';
+export const isResort = () => W.kind === 'resort';                                  // resort = rooms property + resort switch (034)
+export const hostExtras = () => W.kind === 'homestay' || W.kind === 'resort';     // meal plans, guest guide, whole-home / group (033/034)
+/** "Garden Room · Garden Room" → "Garden Room" (homestay rooms are often named once); otherwise "Room · Unit". Plain text — esc() it. */
+export const unitName = (room, label) => (String(room ?? '').trim().toLowerCase() === String(label ?? '').trim().toLowerCase() ? String(room ?? '') : `${room ?? ''} · ${label ?? ''}`);
 export const roomsMode = () => W.unit === 'room';
 export const guestsText = (adults, children) => `${adults || 1} adult${(adults || 1) > 1 ? 's' : ''}${children ? ` · ${children} child${children > 1 ? 'ren' : ''}` : ''}`;
 
@@ -331,7 +354,6 @@ const ADMIN_NAV = [
   ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
   ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
-  ['company.html', 'Company', '<path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-5h6v5"></path><path d="M9 10h.01M15 10h.01"></path>'],   // NammaStay's own business (040)
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
 ];
@@ -352,7 +374,6 @@ function adminChrome(user, hasProperty) {
   const so = $('.ns-sidebar .ns-signout');
   if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
   window.nsMarkActiveNav?.();
-  rpc('company_badge').then((n) => { const a = n > 0 && $('.ns-sidebar a[href="company.html"]'); if (a) a.insertAdjacentHTML('beforeend', `<b class="ns-nav-count" title="Filings or renewals due">${n}</b>`); }).catch(() => {});   // Company (040): due within 7 days
 }
 /** Admin screens: their own login, their own menu, no property needed. */
 export function adminPage(fn) {
@@ -422,6 +443,7 @@ async function boot(key) {
   const adminP = rpc('is_platform_admin').catch(() => false);
   const accessP = rpc('property_access', { p_property: m.property_id }).catch(() => null);
   const pgP = rpc('pg_mode', { p_property: m.property_id }).catch(() => false);    // PG / co-living property (031)
+  const resortP = rpc('resort_mode', { p_property: m.property_id }).catch(() => false);   // resort (034)
   const kindRow = await sb.from('properties').select('kind, role_permissions').eq('id', m.property_id).limit(1)
     .then((r) => (r.data && r.data[0]) || {}, () => sb.from('properties').select('kind').eq('id', m.property_id).limit(1).then((r2) => (r2.data && r2.data[0]) || {}, () => ({})));
   setKind(kindRow.kind);
@@ -437,7 +459,14 @@ async function boot(key) {
   };
   ctx.isAdmin = await adminP;                                         // NammaStay platform admin
   ctx.isPg = (await pgP) === true;                                    // PG / co-living property (031)
+  ctx.isResort = (await resortP) === true;                            // resort (034)
+  if (ctx.isResort) { setKind('resort'); ctx.kind = W.kind; ctx.words = W; }
   applyChrome(ctx);
+  if (!ctx.isResort && ['activities', 'dayvisits', 'groups'].includes(key)) { location.replace('dashboard.html'); throw new Stop(); }   // resort pages (034)
+  // PG / co-living accounts use PG pages instead of the nightly-booking ones (032)
+  const PG_AWAY = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' };
+  if (ctx.isPg && PG_AWAY[key]) { location.replace(PG_AWAY[key]); throw new Stop(); }
+  if (!ctx.isPg && ['pgpayments', 'pgreport'].includes(key)) { location.replace('dashboard.html'); throw new Stop(); }
   const allowed = PAGE_ROLES[key];
   if (allowed && !allowed.includes(ctx.role)) {
     showFatal('Your role doesn’t have access to this page.');
@@ -561,6 +590,8 @@ function applyChrome(ctx) {
       cal.insertAdjacentElement('afterend', a);
     }
   }
+  pgMenu(ctx);                                                          // PG / co-living menu (032)
+  resortMenu(ctx);                                                      // resorts: Activities, Day visitors, Groups (034)
   if (DEMO) demoBadge();
   const out = $('.ns-signout');
   if (out) out.addEventListener('click', async (e) => {
@@ -576,42 +607,50 @@ function applyChrome(ctx) {
       ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
       .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
   }
-  branchMenu(ctx);                                    // Branches (043)
   window.nsMarkActiveNav?.();
   document.documentElement.classList.add('ns-chrome-ready');
 }
 
-// Branches (043): owners get "Branches" in the menu; anyone with 2+ properties gets a switcher at the top of the menu
-function branchMenu(ctx) {
-  $$('.ns-sidebar [data-branch-switch]').forEach((e) => e.remove());
-  const owner = ctx.role === 'owner';
-  if (!owner) $$('.ns-sidebar a[href="branches.html"]').forEach((a) => a.remove());
-  else if (!$('.ns-sidebar a[href="branches.html"]')) {
-    const d = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
-    if (d) {
-      const a = document.createElement('a'); a.href = 'branches.html'; a.className = 'ns-nav-link';
-      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V9l5-4 5 4v12"></path><path d="M15 21v-8l3-2 3 2v8"></path><path d="M9 21v-4h2v4"></path></svg><span>Branches</span>';
-      if (/branches\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-      d.insertAdjacentElement('afterend', a);
-    }
+// PG / co-living: a menu made for monthly tenants — no nightly bookings, check-in, OTA or booking payments/reports
+function pgMenu(ctx) {
+  const side = $('.ns-sidebar .ns-nav');
+  if (!ctx.isPg && $('[data-pg-link], [data-pg-hidden], [data-pg-renamed]')) {   // menu remembered from a PG property → draw this one fresh
+    clearShell(); location.reload(); throw new Stop();
   }
-  const nav = $('.ns-sidebar .ns-nav');
-  if (!nav || ctx.memberships.length < 2) return;
-  const b = document.createElement('button');
-  b.type = 'button'; b.dataset.branchSwitch = '1'; b.setAttribute('aria-haspopup', 'dialog');
-  b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:calc(100% - 16px);margin:0 8px 10px;min-height:50px;padding:7px 12px;border-radius:12px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:700 13.5px Manrope,sans-serif;text-align:left;cursor:pointer';
-  b.innerHTML = `<span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:11px;font-weight:800;letter-spacing:.05em;color:#A9B4D6">${ctx.memberships.length} PROPERTIES · VIEWING</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(ctx.property_name)}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>`;
-  b.addEventListener('click', () => {
-    const list = ctx.memberships.map((m) => ({ label: `${m.property_id === ctx.property_id ? '✓ ' : ''}${m.property_name}${m.role === 'owner' ? '' : ` (${ROLE_LABEL[m.role]})`}`, value: m.property_id }));
-    if (owner) list.push({ label: 'All branches together', value: '#all' }, { label: '+ Add a branch', value: '#add' });
-    choose('Switch branch', list).then((v) => {
-      if (!v || v === ctx.property_id) return;
-      if (v === '#all' || v === '#add') { location.href = v === '#add' ? 'branches.html?add=1' : 'branches.html'; return; }
-      localStorage.setItem('ns.property', v);
-      location.href = location.search ? 'dashboard.html' : (location.pathname.split('/').pop() || 'dashboard.html');   // same screen, other branch
+  if (!ctx.isPg || !side) return;
+  ['bookings.html', 'check-in.html', 'ota.html', 'payments.html', 'reports.html'].forEach((h) => $$(`.ns-sidebar a[href^="${h}"], .ns-mobile-nav a[href^="${h}"]`).forEach((a) => { a.style.display = 'none'; a.dataset.pgHidden = '1'; }));
+  $$('.ns-sidebar a[href="guest-profile.html"] span').forEach((sp) => { sp.textContent = 'Tenant profiles'; sp.parentElement.dataset.pgRenamed = '1'; });
+  const ten = $('.ns-sidebar a[href="tenants.html"]'); const dash = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
+  if (ten && dash && dash.nextElementSibling !== ten) dash.insertAdjacentElement('afterend', ten);
+  const add = (href, label, svg, ok) => {
+    if (!ok || $(`.ns-sidebar a[href="${href}"]`)) return;
+    const a = document.createElement('a'); a.href = href; a.className = 'ns-nav-link'; a.dataset.pgLink = '1';
+    a.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label}</span>`;
+    if (__PATH().endsWith('/' + href) || __PATH() === href) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
+    const after = $$('.ns-sidebar a[data-pg-link]').pop() || ten; (after || dash)?.insertAdjacentElement('afterend', a);
+  };
+  add('pg-payments.html', 'Rent payments', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>', ctx.allow('view_payments'));
+  add('pg-report.html', 'Rent reports', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>', ['owner', 'manager', 'accountant'].includes(ctx.role) && ctx.allow('view_reports'));
+}
+
+// Resorts (034): Activities, Day visitors and Groups & events in the menu, after Calendar
+function resortMenu(ctx) {
+  if (!ctx.isResort) { $$('.ns-sidebar a[data-resort-link]').forEach((a) => a.remove()); return; }   // also clears a remembered resort menu
+  const cal = $('.ns-sidebar .ns-nav-link[href="calendar.html"]'); if (!cal) return;
+  let after = cal;
+  [['activities.html', 'Activities', '<path d="M12 2C8 6 6 9 6 13a6 6 0 0012 0c0-4-2-7-6-11z"></path><path d="M12 22V12"></path>'],
+    ['day-visitors.html', 'Day visitors', '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>'],
+    ['groups.html', 'Groups & events', '<circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M15.5 14.5c2.5 0 5.5 1.5 5.5 4.5"></path>']]
+    .forEach(([href, label, svg]) => {
+      let a = $(`.ns-sidebar a[href="${href}"]`);
+      if (!a) {
+        a = document.createElement('a'); a.href = href; a.className = 'ns-nav-link'; a.dataset.resortLink = '1';
+        a.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg><span>${label.replace('&', '&amp;')}</span>`;
+      }
+      a.classList.toggle('is-active', __PATH().endsWith('/' + href) || __PATH() === href);
+      if (a.classList.contains('is-active')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      after.insertAdjacentElement('afterend', a); after = a;
     });
-  });
-  nav.insertAdjacentElement('beforebegin', b);
 }
 
 // Trial / expiry banner at the top of every screen
@@ -684,7 +723,7 @@ function demoBadge() {
       <summary aria-label="Demo options"><b>Demo</b><span>▾</span></summary>
       <div class="ns-demo-panel">
         <label>View as<select data-role-as>${opt([['owner', 'Owner'], ['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']], role)}</select></label>
-        <label>Property type<select data-kind>${opt([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay']], k)}</select></label>
+        <label>Property type<select data-kind>${opt([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay'], ['resort', 'Resort']], k)}</select></label>
         <div class="ns-demo-acts"><button type="button" data-reset>Reset data</button><button type="button" data-exit>Exit demo</button></div>
         <a href="admin-login.html?demo=1" class="ns-demo-admin">Open NammaStay admin area →</a>
         <div class="ns-demo-note">Sample data, saved only in this browser.</div>

@@ -81,7 +81,7 @@ page('tenants', async (ctx) => {
             <div class="ns-muted" style="margin-bottom:14px">Add your monthly PG / co-living tenants. Rent is created every month automatically.</div>
             ${staff ? '<button type="button" class="ns-btn" data-pg-new>+ Move in tenant</button>' : ''}`}</div>`}
       </div>
-      <div class="ns-muted" style="font-size:12px">Rent and food are added on each tenant’s rent day. A tenant’s bed shows on the calendar as a ₹0 booking (rent is kept here), so nightly guests can’t be booked into it.</div>`);
+      <div class="ns-muted" style="font-size:12px">Rent and food are added on each tenant’s rent day. Each tenant’s bed is shown on the Calendar — to change a tenant’s bed, tap them there and choose Move….</div>`);
   }
 
   function row(t, today) {
@@ -153,7 +153,7 @@ page('tenants', async (ctx) => {
           ${live && boss ? '<button type="button" class="ns-btn-ghost" data-a="edit">Edit rent</button>' : ''}
           ${live ? `<button type="button" class="ns-btn-ghost" data-a="notice">${d.status === 'notice' ? 'Change / withdraw notice' : 'Give notice'}</button>` : ''}
           ${live && boss ? '<button type="button" class="ns-btn-ghost" data-a="out" style="color:#B23A3A">Move out & settle</button>' : ''}
-          ${d.booking_id ? `<a class="ns-btn-ghost" href="booking-detail.html?id=${esc(d.booking_id)}" style="display:inline-flex;align-items:center">Bed booking</a>` : ''}
+          ${live ? '<a class="ns-btn-ghost" href="calendar.html" style="display:inline-flex;align-items:center" title="Tap the tenant on the calendar → Move…">Change bed</a>' : ''}
           ${boss && !d.payments.length ? '<button type="button" class="ns-btn-ghost" data-a="del" style="color:#B23A3A">Delete</button>' : ''}
         </div>` : ''}
         <div>
@@ -383,8 +383,8 @@ page('tenants', async (ctx) => {
     el.querySelectorAll('[name=ded],[name=day]').forEach((x) => x.addEventListener('input', prev)); prev();
   }
 
-  async function moveIn() {
-    const start = data.today;
+  async function moveIn(pre = {}) {
+    const start = pre.start && pre.start >= addDays(data.today, -62) ? pre.start : data.today;
     const bedOptions = (list) => (list.length ? list.map((b) => `<option value="${esc(b.id)}">${esc(b.room_name)} · ${esc(b.label)} — ${b.free >= 60 ? 'free 2+ months' : `free until ${day(b.until)}`}</option>`).join('')
       : '<option value="">No free bed from that date</option>');
     // beds free on the move-in date, longest-free first ("free until …" when another guest is booked later)
@@ -402,6 +402,7 @@ page('tenants', async (ctx) => {
     }
     let beds = [];
     try { beds = await bedsFrom(start); } catch { beds = []; }
+    if (pre.bed && beds.some((b) => b.id === pre.bed)) beds = [beds.find((b) => b.id === pre.bed), ...beds.filter((b) => b.id !== pre.bed)];   // chosen on the dashboard / calendar
     const im = modal({
       title: 'Move in a tenant', width: 680,
       body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -445,14 +446,26 @@ page('tenants', async (ctx) => {
     });
     wireIdPreviews(im.el);
     const el = im.el;
+    // PG / co-living: a bed's rate is its monthly rent → fill the rent in (until the user types their own)
+    let rentTyped = false; const rentIn = el.querySelector('[name=rent]');
+    rentIn.addEventListener('input', () => { rentTyped = true; });
+    const fillRent = () => { const b = beds.find((x) => x.id === el.querySelector('[name=bed]').value); if (ctx.isPg && !rentTyped && b?.rate_paise) rentIn.value = b.rate_paise / 100; };
+    el.querySelector('[name=bed]').addEventListener('change', fillRent); fillRent();
     // beds free from the chosen date
     el.querySelector('[name=start]').addEventListener('change', async (e) => {
       const s = e.target.value; if (!s) return;
-      try { el.querySelector('[name=bed]').innerHTML = bedOptions(await bedsFrom(s)); } catch { /* keep the list */ }
+      try { beds = await bedsFrom(s); el.querySelector('[name=bed]').innerHTML = bedOptions(beds); fillRent(); } catch { /* keep the list */ }
     });
   }
 
   await load();
+  // links from the dashboard / calendar / payments: ?movein=1[&bed=&start=]  ?id=<tenancy>  ?booking=<bed booking>  ?q=
+  const qp = new URLSearchParams(location.search);
+  if (qp.get('q')) { search = qp.get('q').toLowerCase(); draw(); }
+  const openId = qp.get('id') || data.tenants.find((t) => qp.get('booking') && t.booking_id === qp.get('booking'))?.id;
+  if (openId && data.tenants.some((t) => t.id === openId)) openTenant(openId);
+  else if (qp.get('movein') && staff) moveIn({ bed: qp.get('bed'), start: qp.get('start') });
+  if ([...qp.keys()].length) history.replaceState(null, '', 'tenants.html');
 });
 
 function first(name) { return String(name || '').trim().split(/\s+/)[0] || 'there'; }

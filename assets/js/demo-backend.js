@@ -55,13 +55,15 @@ const DEMO_PROPS = {
   hostel: { name: 'Social Backpackers Hostel', address: 'Little Mount', city: 'Chennai', owner: 'Hostel Owner', upi: 'socialbackpackers@okaxis', mail: 'socialbackpackers.in' },
   hotel: { name: 'Hotel Marina Residency', address: 'Besant Nagar', city: 'Chennai', owner: 'Hotel Owner', upi: 'marinaresidency@okhdfc', mail: 'marinaresidency.in' },
   pg: { name: 'Namma Co-Living', address: 'Velachery', city: 'Chennai', owner: 'PG Owner', upi: 'nammacoliving@okaxis', mail: 'nammacoliving.in' },
+  resort: { name: 'Misty Hills Resort', address: 'Pollibetta', city: 'Coorg', owner: 'Resort Manager', upi: 'mistyhills@okaxis', mail: 'mistyhills.in' },
   homestay: { name: 'Green Leaf Homestay', address: 'Lake Road', city: 'Kodaikanal', owner: 'Homestay Host', upi: 'greenleaf@okaxis', mail: 'greenleaf.in' },
 };
 export function demoKind() { return localStorage.getItem(DEMO_KIND) || 'hostel'; }
+const ownerName = () => (DEMO_PROPS[demoKind()] || DEMO_PROPS.hostel).owner;
 export function setDemoKind(k) { localStorage.setItem(DEMO_KIND, k); resetDemo(); }
 
 function seed() {
-  const kind = demoKind() === 'pg' ? 'hostel' : demoKind(); const PR = DEMO_PROPS[demoKind()] || DEMO_PROPS.hostel;   // a PG is a bed property + PG switch
+  const kind = demoKind() === 'pg' ? 'hostel' : demoKind() === 'resort' ? 'hotel' : demoKind(); const PR = DEMO_PROPS[demoKind()] || DEMO_PROPS.hostel;   // a PG is a bed property + PG switch
   const r = rng(20260923);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const today = ymd();
@@ -82,7 +84,15 @@ function seed() {
   };
   const unit = (room_id, label, rate, sort, max = 1, base = 1, extra = 0, position = 'single') =>
     db.beds.push({ id: uuid(), property_id: P, room_id, label, position, rate_paise: rate, is_active: true, sort, max_guests: max, base_guests: base, extra_guest_paise: extra });
-  if (kind === 'hotel') {
+  if (demoKind() === 'resort') {                                  // resort = rooms property + resort switch (034)
+    const [gc, pv, th] = [uuid(), uuid(), uuid()];
+    db.rooms.push({ id: gc, property_id: P, name: 'Garden Cottage', description: 'King bed · Sit-out · Coffee estate view', sort: 1 },
+      { id: pv, property_id: P, name: 'Pool Villa', description: 'Private plunge pool · 2 bedrooms', sort: 2 },
+      { id: th, property_id: P, name: 'Tree House', description: 'Up in the canopy · Queen bed', sort: 3 });
+    ['C1', 'C2', 'C3', 'C4'].forEach((l, i) => unit(gc, 'Cottage ' + l, 450000, i + 1, 3, 2, 120000));
+    ['V1', 'V2'].forEach((l, i) => unit(pv, 'Villa ' + l, 950000, i + 1, 5, 4, 150000));
+    unit(th, 'Tree House', 650000, 1, 2, 2, 0);
+  } else if (kind === 'hotel') {
     const [dx, fs, st] = [uuid(), uuid(), uuid()];
     db.rooms.push({ id: dx, property_id: P, name: 'Deluxe Double', description: 'King bed · AC · City view · Breakfast included', sort: 1 },
       { id: fs, property_id: P, name: 'Family Suite', description: '2 rooms · AC · Sofa bed · Breakfast included', sort: 2 },
@@ -183,6 +193,12 @@ function seed() {
   const recent = db.bookings.filter((b) => T(b.created_at) > now - 3 * DAY).slice(-3);
   recent.forEach((b) => db.notifications.push({ id: uuid(), property_id: P, user_id: null, kind: 'booking_created',
     title: 'New booking ' + b.code, body: guestOf(db, b).full_name, booking_id: b.id, read_at: null, created_at: b.created_at }));
+  if (demoKind() === 'pg') {                                // PG / co-living demo: monthly rent, no nightly guests (tenants are added on first visit)
+    db.bookings = []; db.payments = []; db.blocks = []; db.notifications = [];
+    const names = ['4-Sharing Room · Non-AC', '3-Sharing Room · AC'];
+    db.rooms.forEach((r, i) => { r.name = names[i] || r.name; r.description = i ? 'AC · Attached bath · Food included' : 'Fan · Shared bath · Food included'; });
+    db.beds.forEach((b) => { b.rate_paise = b.position === 'upper' ? 650000 : b.room_id === db.rooms[1]?.id ? 900000 : 750000; });
+  }
   return db;
 }
 const guestOf = (db, b) => db.guests.find((g) => g.id === b.guest_id);
@@ -308,12 +324,12 @@ function seedExpenses() {
     const day = (n) => { const x = `${mm}-${String(n).padStart(2, '0')}`; return x > t ? t : x; };
     if (day(1) > t) continue;
     add(day(1), 'rent', 18000, 'bank', 'Landlord', 'Monthly rent');
-    if (day(5) <= t) add(day(5), 'salaries', 14000, 'bank', 'Front desk + housekeeping', null);
+    if (day(5) <= t) add(day(5), 'salaries', 14000, 'bank', demoKind() === 'homestay' ? 'Caretaker + cleaning' : 'Front desk + housekeeping', null);
     if (day(8) <= t) add(day(8), 'electricity', 4200 + (k * 370) % 1500, 'upi', 'TNEB', null);
     if (day(10) <= t) add(day(10), 'internet', 1179, 'upi', 'ACT Fibernet', null);
     if (day(12) <= t) add(day(12), 'laundry', 2600 + (k * 210) % 900, 'cash', 'Raja Laundry', 'Bedsheets & towels');
     if (day(15) <= t) add(day(15), 'supplies', 1800 + (k * 150) % 700, 'cash', 'Supermarket', 'Toiletries, cleaning');
-    if (day(20) <= t) add(day(20), 'ota_commission', 3100 + (k * 420) % 1600, 'bank', 'Hostelworld', 'Commission');
+    if (day(20) <= t) add(day(20), 'ota_commission', 3100 + (k * 420) % 1600, 'bank', demoKind() === 'homestay' ? 'Airbnb' : 'Hostelworld', 'Commission');
     if (k % 2 === 0 && day(24) <= t) add(day(24), 'repairs', 1500, 'cash', 'Electrician', 'Fan repair');
   }
   return out;
@@ -455,7 +471,7 @@ function cxDemo(body) {
 }
 function allProps() {
   const m = DB.billing.mine; const now = Date.now();
-  const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: 'Hostel Owner', owner_email: 'owner@demo.nammastay',
+  const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: ownerName(), owner_email: 'owner@demo.nammastay',
     created_at: DB.properties[0].created_at, beds: DB.beds.filter((b) => b.is_active).length,
     bookings_30d: DB.bookings.filter((b) => T(b.created_at) > now - 30 * DAY).length,
     last_seen_at: new Date().toISOString(), last_booking_at: DB.bookings.map((b) => b.created_at).sort().pop(), sub: m, ...m };
@@ -687,6 +703,8 @@ function load() {
   if (!DB.inv) DB.inv = seedInvest();                            // My investment (036)
   if (!DB.paylinks) DB.paylinks = [];
   if (!DB.bguests) DB.bguests = [];                               // other guests in a booking (030)
+  if (DB.resortMode === undefined) { DB.resortMode = demoKind() === 'resort'; DB.rsSeed = DB.resortMode; }   // resort (034)
+  if (!DB.mealPlans) { DB.mealPlans = []; DB.bookingMeals = []; DB.guide = null; if (demoKind() === 'homestay') DB.hsSeed = true; }   // homestay (033)
   if (!DB.tenancies) { DB.tenancies = []; DB.rentDues = []; DB.rentPays = []; DB.seq.rc = DB.seq.rc || 1001; DB.pgMode = demoKind() === 'pg'; DB.pgSeed = DB.pgMode; }   // PG tenants (031)
   if (!DB.invset) DB.invset = { legal_name: 'Namma Groups', gstin: '33AAKFN1234C1Z8', address: 'Little Mount, Saidapet, Chennai 600015', state_code: '33', sac: '998314', gst_rate: 18, invoice_prefix: 'NS' };
   if (!DB.pinv) {
@@ -738,6 +756,91 @@ function load() {
   return DB;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch { /* storage full: keep in memory */ } }
+// Homestay demo: meal plans, a house guide and meals on the current bookings (033)
+function hsSeedOnce() {
+  if (DB.rsSeed) rsData();                                        // resort demo seeds its own meal plans & guide
+  if (!DB.hsSeed) return; DB.hsSeed = false;
+  [['Breakfast included', 1, 0, 0, 25000, 15000], ['Breakfast + Dinner', 1, 0, 1, 60000, 35000], ['All meals', 1, 1, 1, 90000, 50000]]
+    .forEach(([name, b, l, d, a, c]) => RPC.meal_plan_save({ p: { name, breakfast: !!b, lunch: !!l, dinner: !!d, adult_paise: a, child_paise: c } }));
+  DB.guide = { welcome: 'Welcome to Green Leaf! We live on the ground floor — just knock if you need anything.', host_name: 'Lakshmi', host_phone: '+919840011223',
+    wifi_name: 'GreenLeaf-Home', wifi_password: 'filtercoffee', checkin_info: 'From 1 PM. The caretaker Murugan will give you the keys.',
+    checkout_info: 'By 11 AM. Leave the keys on the dining table.', house_rules: 'No smoking inside · Quiet after 10 PM · Please switch off the geyser after use',
+    food_info: 'Breakfast 8–10 AM on the verandah. Tell us by 5 PM if you want dinner.', directions: '1.5 km from the lake, behind St. Mary’s church — the green gate.',
+    maps_url: 'https://maps.google.com/?q=Kodaikanal', updated_at: new Date().toISOString() };
+  const live = DB.bookings.filter((b) => ['checked_in', 'confirmed'].includes(b.status)).sort((a, b) => T(a.check_in_at) - T(b.check_in_at)).slice(0, 5);
+  live.forEach((b, i) => { try { RPC.booking_meal_set({ p_booking: b.id, p_plan: DB.mealPlans[i % 2 ? 0 : 1].id }); } catch { /* skip */ } });
+  save();
+}
+// ---------------------------------------------------------------- resort demo data (034)
+function rsData() {
+  if (!DB.rs) DB.rs = { settings: { extra_bed_paise: 80000, extra_bed_max: 2 }, activities: [], abook: [], dpk: [], visits: [], rpay: [], spk: [], bpk: [], groups: [], gmem: [], beds: [], seq: { dv: 1001, rp: 1001 } };
+  if (DB.rsSeed) { DB.rsSeed = false; rsDemoSeed(); }
+  return DB.rs;
+}
+const dvRow = (v) => ({ id: v.id, code: v.code, visit_date: v.visit_date, guest: v.guest_name, phone: v.phone, adults: v.adults, children: v.children, package_id: v.package_id, package: v.package_name,
+  lunch: v.lunch, package_paise: v.package_paise, extras_paise: v.extras_paise, total_paise: v.package_paise + v.extras_paise, paid_paise: v.paid_paise,
+  balance_paise: v.package_paise + v.extras_paise - v.paid_paise, status: v.status, note: v.note, arrived_at: v.arrived_at, left_at: v.left_at,
+  activities: DB.rs.abook.filter((x) => x.day_visit_id === v.id).map((x) => ({ id: x.id, name: x.activity_name, slot: x.slot, persons: x.persons + x.children, amount_paise: x.amount_paise, status: x.status })),
+  payments: DB.rs.rpay.filter((x) => x.day_visit_id === v.id).map((x) => ({ id: x.id, code: x.code, kind: x.kind, method: x.method, amount_paise: x.amount_paise, reference: x.reference, received_at: x.received_at })) });
+function rsPay(v, p, kind) {
+  const amt = Number(p.amount_paise) || 0; const method = p.method || 'cash'; const ref = p.reference ? String(p.reference).replace(/\s/g, '').toUpperCase() : null;
+  if (amt <= 0) fail('Enter an amount greater than zero.'); const bal = v.package_paise + v.extras_paise - v.paid_paise;
+  if (kind === 'payment') { if (amt > bal) fail(`Only ${rupees(Math.max(bal, 0))} is due.`); if (method === 'upi' && !/^[0-9A-Z]{6,35}$/.test(ref || '')) fail('Enter the UPI transaction ID (UTR).');
+    if (method === 'upi' && DB.rs.rpay.some((x) => x.method === 'upi' && x.kind === 'payment' && x.reference === ref)) fail(`UPI transaction ${ref} was already recorded.`); }
+  else if (amt > v.paid_paise) fail('Refund is more than the amount paid.');
+  const x = { id: uuid(), day_visit_id: v.id, code: 'RP-' + DB.rs.seq.rp++, kind, method, amount_paise: amt, reference: ref, note: p.note || null, received_at: new Date().toISOString() };
+  DB.rs.rpay.push(x); v.paid_paise += kind === 'refund' ? -amt : amt; return { code: x.code, amount_paise: amt };
+}
+const grpRow = (g) => {
+  const bks = DB.rs.gmem.filter((m) => m.group_id === g.id).map((m) => DB.bookings.find((b) => b.id === m.booking_id)).filter(Boolean); const live = bks.filter((b) => !['cancelled', 'no_show'].includes(b.status));
+  return { ...g, rooms: live.length, guests: live.reduce((t, b) => t + Math.max(1, b.visitors || 1) + (b.children || 0), 0),
+    check_in_at: live.map((b) => b.check_in_at).sort()[0] || null, check_out_at: live.map((b) => b.check_out_at).sort().pop() || null,
+    total_paise: live.reduce((t, b) => t + b.total_paise, 0), paid_paise: bks.reduce((t, b) => t + b.paid_paise, 0), balance_paise: live.reduce((t, b) => t + balance(b), 0) };
+};
+function rsDemoSeed() {
+  const R = DB.rs; const today = ymd();
+  const act = (name, category, duration_min, price, child, capacity, slots) => { const a = { id: uuid(), name, category, duration_min, price_paise: price, child_paise: child, capacity, slots, is_active: true }; R.activities.push(a); return a; };
+  const spa = act('Ayurvedic massage', 'spa', 60, 250000, 0, 2, ['10:00', '12:00', '16:00']);
+  const safari = act('Jungle jeep safari', 'adventure', 150, 120000, 60000, 8, ['06:30', '15:30']);
+  const walk = act('Coffee plantation walk', 'leisure', 90, 60000, 30000, 15, ['08:00', '15:00']);
+  const bonfire = act('Bonfire & BBQ dinner', 'food', 120, 90000, 45000, 30, ['19:30']);
+  const pottery = act('Kids pottery class', 'kids', 60, 0, 40000, 10, ['11:00']);
+  [['CP · Breakfast', 1, 0, 0, 40000, 20000], ['MAP · Breakfast + Dinner', 1, 0, 1, 90000, 45000], ['AP · All meals', 1, 1, 1, 140000, 70000]]
+    .forEach(([name, b, l, d, a, c]) => { if (!DB.mealPlans.some((m) => m.name === name)) DB.mealPlans.push({ id: uuid(), property_id: P, name, breakfast: !!b, lunch: !!l, dinner: !!d, adult_paise: a, child_paise: c, is_active: true, sort: DB.mealPlans.length }); });
+  const map = DB.mealPlans.find((m) => m.name.startsWith('MAP')); const ap = DB.mealPlans.find((m) => m.name.startsWith('AP'));
+  R.spk.push({ id: uuid(), name: '2N/3D Honeymoon', nights: 2, price_paise: 2400000, base_guests: 2, extra_adult_paise: 0, child_paise: 0, meal_plan_id: map.id, activity_ids: [spa.id],
+      includes: 'Candle-light dinner · flower bed decoration · couple massage', is_active: true },
+    { id: uuid(), name: '3N/4D Family Fun', nights: 3, price_paise: 3600000, base_guests: 2, extra_adult_paise: 450000, child_paise: 250000, meal_plan_id: ap.id, activity_ids: [safari.id, pottery.id, walk.id],
+      includes: 'Safari · plantation walk · kids pottery · bonfire night', is_active: true });
+  const pool = { id: uuid(), name: 'Pool + lunch', includes: 'Pool, buffet lunch, indoor games', lunch: true, adult_paise: 120000, child_paise: 60000, capacity: 40, is_active: true };
+  const plant = { id: uuid(), name: 'Plantation day out', includes: 'Plantation walk, lunch, coffee tasting', lunch: true, adult_paise: 180000, child_paise: 90000, capacity: 25, is_active: true };
+  R.dpk.push(pool, plant);
+  DB.guide = { welcome: 'Welcome to Misty Hills! Breakfast is served at the Verandah restaurant; dial 9 from your cottage for anything you need.', host_name: 'Front office', host_phone: '+919845012345',
+    wifi_name: 'MistyHills-Guest', wifi_password: 'coorgcoffee', checkin_info: 'From 1 PM at the reception. A buggy will take you to your cottage.', checkout_info: 'By 11 AM. Late check-out on request.',
+    house_rules: 'No loud music after 10 PM · Pool 7 AM–8 PM · Please don’t feed the monkeys', food_info: 'Breakfast 7:30–10:30 · Lunch 12:30–3 · Dinner 7:30–10:30 (Verandah restaurant)',
+    directions: '35 km from Madikeri via Siddapur; take the left after Pollibetta bus stand.', maps_url: 'https://maps.google.com/?q=Pollibetta+Coorg', updated_at: new Date().toISOString() };
+  // today's guests: activities, a package on a 2-night stay, meal plans
+  const inHouse = DB.bookings.filter((b) => b.status === 'checked_in');
+  let two = inHouse.find((b) => b.nights === 2) || null;
+  if (two) { try { RPC.booking_package_set({ p_booking: two.id, p_package: R.spk[0].id }); } catch { two = null; } }
+  if (!two) { const t3 = inHouse.find((b) => b.nights === 3); if (t3) { try { RPC.booking_package_set({ p_booking: t3.id, p_package: R.spk[1].id }); two = t3; } catch { /* skip */ } } }
+  inHouse.filter((b) => b !== two).slice(0, 3).forEach((b, i) => { try { RPC.booking_meal_set({ p_booking: b.id, p_plan: [map, ap, DB.mealPlans.find((m) => m.name.startsWith('CP'))][i % 3].id }); } catch { /* skip */ } });
+  const tryBook = (a, slot, b, persons, children = 0) => { try { RPC.activity_book({ p: { activity_id: a.id, day: today, slot, booking_id: b.id, persons, children } }); } catch { /* skip */ } };
+  if (two) { const bp = R.bpk.find((x) => x.booking_id === two.id); const first = R.activities.find((x) => bp?.activity_ids.includes(x.id)); if (first) tryBook(first, first.slots[first.slots.length - 1], two, 2); }
+  if (inHouse[1]) tryBook(safari, '15:30', inHouse[1], 2, 1);
+  if (inHouse[2]) tryBook(walk, '15:00', inHouse[2], 2);
+  if (inHouse[0]) tryBook(bonfire, '19:30', inHouse[0], 2);
+  // day visitors today
+  try { const v1 = RPC.day_visit_save({ p: { package_id: pool.id, guest: 'Ravi Shankar', phone: '9845011122', adults: 4, children: 2, visit_date: today, payment: { amount_paise: 480000, method: 'upi', reference: '512345678901' }, arrived: true } });
+    RPC.activity_book({ p: { activity_id: walk.id, day: today, slot: '15:00', day_visit_id: v1.id, persons: 4, children: 2 } }); } catch { /* skip */ }
+  try { RPC.day_visit_save({ p: { package_id: plant.id, guest: 'Bengaluru Cyclists Club', phone: '9900112233', adults: 12, visit_date: today, payment: { amount_paise: 1000000, method: 'bank' } } }); } catch { /* skip */ }
+  try { RPC.day_visit_save({ p: { package_id: pool.id, guest: 'Meena & friends', phone: '9886012345', adults: 3, visit_date: addDays(today, 1) } }); } catch { /* skip */ }
+  // a wedding group: upcoming confirmed bookings
+  const up = DB.bookings.filter((b) => ['confirmed', 'pending'].includes(b.status) && ymd(b.check_in_at) > today).sort((a, b) => T(a.check_in_at) - T(b.check_in_at)).slice(0, 3);
+  if (up.length) { const g = { id: uuid(), name: 'Ananya & Rohit wedding', kind: 'wedding', contact_name: 'Ananya Rao', contact_phone: '+919845098765', event_date: ymd(up[0].check_in_at),
+    note: 'Mehendi on the lawn, 60 guests · decor by Kodagu Florals', created_at: new Date().toISOString() }; R.groups.push(g); up.forEach((b) => R.gmem.push({ booking_id: b.id, group_id: g.id })); }
+  save();
+}
 export function resetDemo() { localStorage.removeItem(KEY); DB = null; }
 
 // ---------------------------------------------------------------- shared lookups
@@ -876,21 +979,28 @@ function pgKeepZero(bid) {
 }
 // Demo only: a small "PG rooms (monthly)" block with two tenants, so the page has something to show
 function pgDemoSeed() {
-  if (!DB.beds.some((b) => !b.max_guests || b.max_guests === 1) || DB.properties[0].kind && DB.properties[0].kind !== 'hostel') return;
-  const rid = uuid(); DB.rooms.push({ id: rid, property_id: P, name: 'PG Rooms (monthly)', description: 'Double sharing · Food included', sort: 9 });
-  const beds = ['PG-1A', 'PG-1B', 'PG-2A', 'PG-2B'].map((label, i) => { const b = { id: uuid(), property_id: P, room_id: rid, label, position: null, rate_paise: 50000, is_active: true, sort: i + 1,
-    max_guests: 1, base_guests: 1, extra_guest_paise: 0, ical_token: uuid(), hk_status: 'clean' }; DB.beds.push(b); return b; });
-  const today = ymd();
-  const t1 = RPC.pg_move_in({ p: { guest: { full_name: 'Karthik Raja', phone: '9840011223', nationality: 'India', id_type: 'aadhaar', id_number: '432156781234' }, bed_id: beds[0].id,
-    start_date: addDays(today, -50), rent_paise: 750000, food_paise: 250000, deposit_paise: 1500000, deposit_paid_paise: 1500000, method: 'upi', note: 'Works at Zoho · veg food' } });
-  pgSync(DB.tenancies.find((t) => t.id === t1.id));
-  RPC.pg_pay({ p_tenancy: t1.id, p: { amount_paise: 1000000, method: 'upi', reference: 'UPI 30219' } });
-  const t2 = RPC.pg_move_in({ p: { guest: { full_name: 'Sneha Iyer', phone: '9884022334', nationality: 'India', id_type: 'aadhaar', id_number: '987612340987' }, bed_id: beds[2].id,
-    start_date: addDays(today, -20), rent_paise: 800000, food_paise: 0, deposit_paise: 1600000, deposit_paid_paise: 1600000, method: 'cash', cycle: 'movein' } });
-  const t2o = DB.tenancies.find((t) => t.id === t2.id); pgSync(t2o);
-  RPC.pg_pay({ p_tenancy: t2.id, p: { amount_paise: 800000, method: 'cash' } });
+  if (DB.properties[0].kind && DB.properties[0].kind !== 'hostel') return;
+  const today = ymd(); const beds = activeBeds().sort((a, b) => roomOf(a.room_id).sort - roomOf(b.room_id).sort || a.sort - b.sort);
+  const mk = (bed, name, phone, nat, idType, idNo, start, extra = {}) => RPC.pg_move_in({ p: { guest: { full_name: name, phone, nationality: nat, id_type: idType, id_number: idNo },
+    bed_id: bed.id, start_date: addDays(today, start), rent_paise: bed.rate_paise, food_paise: 250000, deposit_paise: bed.rate_paise * 2, deposit_paid_paise: bed.rate_paise * 2,
+    method: 'upi', ...extra } });
+  const due = (id) => DB.rentDues.filter((d) => d.tenancy_id === id && d.due_on <= today).reduce((s, d) => s + d.amount_paise - d.paid_paise, 0);
+  const sync = (id) => pgSync(DB.tenancies.find((t) => t.id === id));
+  const t1 = mk(beds[0], 'Karthik Raja', '9840011223', 'India', 'aadhaar', '432156781234', -50, { note: 'Works at Zoho · veg food' }); sync(t1.id);
+  RPC.pg_pay({ p_tenancy: t1.id, p: { amount_paise: due(t1.id) - (beds[0].rate_paise + 250000), method: 'upi', reference: 'UPI 30219' } });   // last month paid, this month due
+  const t2 = mk(beds[1], 'Sneha Iyer', '9884022334', 'India', 'aadhaar', '987612340987', -20, { method: 'cash' }); sync(t2.id);
+  RPC.pg_pay({ p_tenancy: t2.id, p: { amount_paise: due(t2.id), method: 'cash' } });
   RPC.pg_notice({ p_tenancy: t2.id, p_move_out: addDays(today, 18) });
+  const t3 = mk(beds[2], 'Arjun Menon', '9790033445', 'India', 'driving_licence', 'TN0920180012345', -60); sync(t3.id);
+  RPC.pg_pay({ p_tenancy: t3.id, p: { amount_paise: due(t3.id), method: 'upi', reference: 'UPI 88231' } });
+  const t4 = mk(beds[3], 'Priya Nair', '9600044556', 'India', 'aadhaar', '765412349876', -40, { cycle: 'calendar' }); sync(t4.id);   // rent late
+  const t5 = mk(beds[6] || beds[4], 'Fatima Al-Sayed', '+971501234567', 'United Arab Emirates', 'passport', 'P8812345', -12); sync(t5.id);
+  RPC.pg_pay({ p_tenancy: t5.id, p: { amount_paise: due(t5.id), method: 'card' } });
+  mk(beds[7] || beds[5], 'Rahul Verma', '9944055667', 'India', 'aadhaar', '123498761234', 3);                                              // moving in soon
+  RPC.pg_add_charge({ p_tenancy: t1.id, p: { kind: 'electricity', label: 'Electricity · 42 units', amount_paise: 33600, note: 'Meter 1240 → 1282 × ₹8' } });
 }
+const pgIncomeRows = () => DB.rentPays.filter((p) => ['payment', 'deposit_adjust'].includes(p.kind) && DB.rentDues.find((d) => d.id === p.due_id)?.kind !== 'deposit')
+  .map((p) => ({ on: ymd(p.received_at), amt: p.amount_paise }));
 const pgT = (id) => DB.tenancies.find((x) => x.id === id) || fail('Tenant not found.');
 
 const RPC = {
@@ -1206,6 +1316,72 @@ const RPC = {
     return null;
   },
 
+  // ---------------------------------------------------------------- homestay: meal plans + house guide (033)
+  meal_plans_list: () => hsSeedOnce() || DB.mealPlans.slice().sort((a, b) => a.sort - b.sort).map(({ property_id, sort, ...x }) => x),
+  meal_plan_save: ({ p }) => {
+    const name = String(p.name || '').trim(); if (!name) fail('Give the meal plan a name, e.g. “Breakfast included”.');
+    if (!(p.breakfast || p.lunch || p.dinner)) fail('Tick at least one meal (breakfast, lunch or dinner).');
+    const v = { name: name.slice(0, 60), breakfast: !!p.breakfast, lunch: !!p.lunch, dinner: !!p.dinner, adult_paise: Number(p.adult_paise) || 0, child_paise: Number(p.child_paise) || 0 };
+    if (p.id) { const m = DB.mealPlans.find((x) => x.id === p.id) || fail('Meal plan not found.'); Object.assign(m, v, { is_active: p.is_active ?? m.is_active }); return { id: m.id }; }
+    if (DB.mealPlans.length >= 12) fail('Up to 12 meal plans.');
+    const m = { id: uuid(), property_id: P, ...v, is_active: p.is_active ?? true, sort: DB.mealPlans.length }; DB.mealPlans.push(m); return { id: m.id };
+  },
+  meal_plan_delete: ({ p_id }) => { DB.mealPlans = DB.mealPlans.filter((x) => x.id !== p_id); return null; },
+  booking_meal_get: ({ p_booking }) => {
+    hsSeedOnce();
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    const m = DB.bookingMeals.find((x) => x.booking_id === p_booking); if (!m) return { plan: null };
+    return { plan: { ...m, name: m.plan_name, charged: DB.charges.some((c) => c.id === m.charge_id), stale: m.nights !== b.nights || m.adults !== b.visitors || m.children !== (b.children || 0) } };
+  },
+  booking_meal_set: ({ p_booking, p_plan }) => {
+    const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    const old = DB.bookingMeals.find((x) => x.booking_id === p_booking);
+    if (old?.charge_id && DB.charges.some((c) => c.id === old.charge_id)) RPC.remove_charge({ p_charge: old.charge_id });
+    DB.bookingMeals = DB.bookingMeals.filter((x) => x.booking_id !== p_booking);
+    if (!p_plan) return { plan: null };
+    const mp = DB.mealPlans.find((x) => x.id === p_plan) || fail('That meal plan isn’t in your list any more.');
+    const adults = Math.max(1, b.visitors || 1); const kids = b.children || 0;
+    const night = mp.adult_paise * adults + mp.child_paise * kids;
+    const meals = ['breakfast', 'lunch', 'dinner'].filter((k) => mp[k]).join(' + ');
+    const c = night > 0 ? RPC.add_charge({ p_booking, p: { name: ('Meals: ' + mp.name).slice(0, 80), category: 'food', qty: b.nights, unit_price_paise: night,
+      note: `${adults} adult${adults > 1 ? 's' : ''}${kids ? ` + ${kids} child${kids > 1 ? 'ren' : ''}` : ''}, every night (${meals})`, charged_on: ymd(b.check_in_at) } }) : null;
+    DB.bookingMeals.push({ booking_id: b.id, plan_id: mp.id, plan_name: mp.name, breakfast: mp.breakfast, lunch: mp.lunch, dinner: mp.dinner, adults, children: kids,
+      nights: b.nights, amount_paise: night * b.nights, charge_id: c?.id || null });
+    return { plan: mp.name, amount_paise: night * b.nights };
+  },
+  kitchen_list: ({ p_day }) => {
+    hsSeedOnce();
+    const rows = []; const tot = { breakfast: 0, lunch: 0, dinner: 0 };
+    DB.bookingMeals.forEach((m) => {
+      const b = DB.bookings.find((x) => x.id === m.booking_id); if (!b || !['pending', 'confirmed', 'checked_in', 'checked_out'].includes(b.status)) return;
+      const din = ymd(b.check_in_at); const dout = ymd(b.check_out_at); if (!(din <= p_day && dout >= p_day)) return;
+      const hb = m.breakfast && din < p_day; const hl = m.lunch && dout > p_day; const hd = m.dinner && dout > p_day; if (!(hb || hl || hd)) return;
+      const n = Math.max(1, b.visitors || 1) + (b.children || 0); if (hb) tot.breakfast += n; if (hl) tot.lunch += n; if (hd) tot.dinner += n;
+      const bed = bedOf(b.bed_id);
+      rows.push({ booking_id: b.id, code: b.code, guest: guestOf(DB, b).full_name, room: roomOf(bed.room_id).name, unit: bed.label, plan: m.plan_name,
+        adults: Math.max(1, b.visitors || 1), children: b.children || 0, breakfast: hb, lunch: hl, dinner: hd });
+    });
+    return { day: p_day, totals: tot, rows };
+  },
+  guide_get: () => (hsSeedOnce(), { ...(DB.guide || {}) }),
+  guide_save: ({ p }) => {
+    const v = {}; ['welcome', 'house_rules', 'wifi_name', 'wifi_password', 'directions', 'maps_url', 'host_name', 'host_phone', 'checkin_info', 'checkout_info', 'food_info']
+      .forEach((k) => { v[k] = String(p[k] ?? '').trim() || null; });
+    if (v.host_phone) { v.host_phone = v.host_phone.replace(/[\s\-()]/g, ''); if (!/^\+?[0-9]{8,15}$/.test(v.host_phone)) fail('Check the host phone number.'); }
+    if (v.maps_url && !/^https?:\/\//i.test(v.maps_url)) fail('The map link should start with https://');
+    DB.guide = { ...v, updated_at: new Date().toISOString() }; return { ok: true };
+  },
+  guide_for_token: ({ p_token }) => {
+    hsSeedOnce();
+    const b = DB.bookings.find((x) => x.self_checkin_token === p_token && LIVE_ST.includes(x.status) && T(x.check_out_at) > Date.now());
+    if (!b || !DB.guide) return {};
+    const { updated_at, ...g } = DB.guide; if (T(b.check_in_at) > Date.now() + 864e5) delete g.wifi_password;
+    return { ...g, property: DB.properties[0].name };
+  },
+  pg_selfcheckin_info: ({ p_token }) => {
+    const b = DB.bookings.find((x) => x.self_checkin_token === p_token); const t = b && (DB.tenancies || []).find((x) => x.booking_ids.includes(b.id));
+    return t ? { tenant: true, start_date: t.start_date, moved_in: t.start_date <= ymd() } : { tenant: false };
+  },
   selfcheckin_get: ({ p_token }) => {
     const b = DB.bookings.find((x) => x.self_checkin_token === p_token && LIVE_ST.includes(x.status) && T(x.check_out_at) > Date.now())
       || fail('This check-in link is invalid or has expired. Please ask the front desk.');
@@ -1289,7 +1465,7 @@ const RPC = {
   create_my_property: () => fail('Sign-up works once NammaStay is connected to its database.'),
   admin_subscriptions: ({ p_q }) => {
     const m = DB.billing.mine; const q = (p_q || '').toLowerCase();
-    const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: 'Hostel Owner', owner_email: 'owner@demo.nammastay',
+    const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: ownerName(), owner_email: 'owner@demo.nammastay',
       beds: activeBeds().length, created_at: DB.properties[0].created_at, last_booking_at: DB.bookings.map((b) => b.created_at).sort().pop(), ...m };
     const list = [mine, ...DB.billing.others].map((x) => ({ ...x, state: accessOf(x) }))
       .filter((x) => !q || [x.name, x.city, x.owner_email].some((v) => (v || '').toLowerCase().includes(q)));
@@ -1335,7 +1511,7 @@ const RPC = {
     const pays = DB.payments.filter((x) => x.booking_id === b.id);
     DB.deleted = DB.deleted || [];
     DB.deleted.push({ at: new Date().toISOString(), code: b.code, guest: guestOf(DB, b).full_name, reason: p_reason, check_in_at: b.check_in_at,
-      check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, by: 'Hostel Owner' });
+      check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, by: ownerName() });
     DB.payments = DB.payments.filter((x) => x.booking_id !== b.id);
     DB.bookings = DB.bookings.filter((x) => x.id !== b.id);
     DB.notifications = DB.notifications.filter((x) => x.booking_id !== b.id);
@@ -1348,7 +1524,7 @@ const RPC = {
     DB.deleted = DB.deleted || [];
     bs.forEach((b) => { paid += b.paid_paise;
       DB.deleted.push({ at: new Date().toISOString(), code: b.code, guest: g.full_name, reason: 'Guest deleted: ' + p_reason, check_in_at: b.check_in_at,
-        check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, by: 'Hostel Owner' }); });
+        check_out_at: b.check_out_at, total_paise: b.total_paise, paid_paise: b.paid_paise, by: ownerName() }); });
     const ids = new Set(bs.map((b) => b.id));
     DB.payments = DB.payments.filter((x) => !ids.has(x.booking_id));
     DB.notifications = DB.notifications.filter((x) => !ids.has(x.booking_id));
@@ -1450,7 +1626,7 @@ const RPC = {
     else { name = String(p.name || '').trim(); if (!name) fail('Enter what the extra is for.'); category = p.category || 'other'; price = p.unit_price_paise; if (!(price >= 0)) fail('Enter the price.'); }
     const amount = Math.round(qty * price);
     const c = { id: uuid(), property_id: P, booking_id: b.id, item_id: item?.id || null, name, category, qty, unit_price_paise: price, amount_paise: amount,
-      note: p.note || null, charged_on: ymd(), created_by: ME, created_at: new Date().toISOString() };
+      note: p.note || null, charged_on: p.charged_on || ymd(), created_by: ME, created_at: new Date().toISOString() };
     DB.charges.push(c); b.charges_paise = (b.charges_paise || 0) + amount; b.total_paise += amount;
     audit(b, 'extra_added', { name, qty, amount_paise: amount });
     return { id: c.id, amount_paise: amount };
@@ -1511,10 +1687,294 @@ const RPC = {
       vendor: p.vendor || null, note: p.note || null, created_by: ME, created_at: new Date().toISOString() };
     DB.expenses.push(x); return x.id;
   },
+  // ---------------------------------------------------------------- resort (034)
+  resort_mode: () => !!DB.resortMode,
+  resort_set_mode: ({ p_on }) => { if (p_on && DB.properties[0].kind === 'hostel') fail('A resort sells rooms / cottages — set the type to Resort (not hostel).'); DB.resortMode = !!p_on; if (p_on) rsData(); return !!p_on; },
+  resort_settings_get: () => ({ ...rsData().settings }),
+  resort_settings_save: ({ p }) => { const st = rsData().settings; const v = Number(p.extra_bed_paise) || 0; const mx = Number(p.extra_bed_max ?? 1);
+    if (v < 0) fail('Enter an extra-bed price between ₹0 and ₹1,00,000.'); if (mx < 0 || mx > 6) fail('Up to 6 extra beds per room.'); Object.assign(st, { extra_bed_paise: v, extra_bed_max: mx }); return { ...st }; },
+  activities_list: () => rsData().activities.map((a) => ({ ...a })),
+  activity_save: ({ p }) => {
+    const R = rsData(); if (!DB.resortMode) fail('This is for resorts. Set the property type to Resort in Settings.');
+    const name = String(p.name || '').trim(); if (!name) fail('Give the activity a name, e.g. “Ayurvedic massage”.');
+    const slots = [...new Set((p.slots || []).map((x) => String(x).trim()).filter(Boolean))].sort();
+    slots.forEach((x) => { if (!/^[0-2][0-9]:[0-5][0-9]$/.test(x) || +x.slice(0, 2) > 23) fail(`Times look like 07:00 or 16:30 (“${x}” isn’t).`); });
+    if (!slots.length) fail('Add at least one start time, e.g. 07:00.');
+    const v = { name: name.slice(0, 60), category: p.category || 'leisure', duration_min: Number(p.duration_min) || 60, price_paise: Number(p.price_paise) || 0,
+      child_paise: Number(p.child_paise) || 0, capacity: Number(p.capacity) || 0, slots };
+    if (p.id) { const a = R.activities.find((x) => x.id === p.id) || fail('Activity not found.'); Object.assign(a, v, { is_active: p.is_active ?? a.is_active }); return { id: a.id }; }
+    const a = { id: uuid(), ...v, is_active: p.is_active ?? true }; R.activities.push(a); return { id: a.id };
+  },
+  activity_delete: ({ p_id }) => { const R = rsData(); if (R.abook.some((x) => x.activity_id === p_id && x.status === 'booked' && x.day >= ymd())) fail('This activity has upcoming bookings. Hide it instead (untick “Offered”), or cancel those bookings first.');
+    R.activities = R.activities.filter((x) => x.id !== p_id); return null; },
+  activity_schedule: ({ p_day }) => {
+    const R = rsData(); const live = (x) => ['booked', 'done'].includes(x.status);
+    const where = (x) => { if (x.booking_id) { const b = DB.bookings.find((y) => y.id === x.booking_id); const bd = b && bedOf(b.bed_id); return bd ? `${roomOf(bd.room_id).name} · ${bd.label}` : ''; }
+      const dv = R.visits.find((y) => y.id === x.day_visit_id); return dv ? 'Day visit ' + dv.code : ''; };
+    const acts = R.activities.filter((a) => a.is_active || R.abook.some((x) => x.activity_id === a.id && x.day === p_day)).map((a) => ({ ...a,
+      slots: a.slots.map((sl) => { const bk = R.abook.filter((x) => x.activity_id === a.id && x.day === p_day && x.slot === sl);
+        return { slot: sl, taken: bk.filter(live).reduce((t, x) => t + x.persons + x.children, 0),
+          bookings: bk.map((x) => ({ id: x.id, guest: x.guest_name, persons: x.persons, children: x.children, amount_paise: x.amount_paise, included: x.included,
+            status: x.status, note: x.note, booking_id: x.booking_id, day_visit_id: x.day_visit_id, where: where(x) })) }; }) }));
+    const day = R.abook.filter((x) => x.day === p_day && live(x));
+    return { day: p_day, activities: acts, totals: { bookings: day.length, people: day.reduce((t, x) => t + x.persons + x.children, 0), amount_paise: day.reduce((t, x) => t + x.amount_paise, 0) } };
+  },
+  activity_guests: ({ p_day }) => {
+    const R = rsData();
+    const stays = DB.bookings.filter((b) => LIVE_ST.includes(b.status) && ymd(b.check_in_at) <= p_day && ymd(b.check_out_at) >= p_day).map((b) => {
+      const bd = bedOf(b.bed_id); const bp = R.bpk.find((x) => x.booking_id === b.id);
+      return { booking_id: b.id, code: b.code, guest: guestOf(DB, b).full_name, room: roomOf(bd.room_id).name, unit: bd.label, adults: Math.max(1, b.visitors || 1), children: b.children || 0,
+        package: bp?.package_name || null, included: (bp?.activity_ids || []).filter((id) => !R.abook.some((x) => x.booking_id === b.id && x.activity_id === id && x.included && x.status !== 'cancelled')) }; })
+      .sort((a, b) => (a.room + a.unit).localeCompare(b.room + b.unit));
+    return { stays, visits: R.visits.filter((v) => v.visit_date === p_day && ['booked', 'arrived'].includes(v.status)).map((v) => ({ day_visit_id: v.id, code: v.code, guest: v.guest_name, adults: v.adults, children: v.children })) };
+  },
+  activity_book: ({ p }) => {
+    const R = rsData(); const a = R.activities.find((x) => x.id === p.activity_id) || fail('Choose an activity.');
+    const day = p.day || fail('Choose the day.'); if (!a.slots.includes(p.slot)) fail(`Choose one of the start times for ${a.name}.`);
+    const ad = Number(p.persons ?? 1); const ch = Number(p.children || 0); if (ad < 0 || ch < 0 || ad + ch < 1) fail('Enter how many people.');
+    const taken = R.abook.filter((x) => x.activity_id === a.id && x.day === day && x.slot === p.slot && ['booked', 'done'].includes(x.status)).reduce((t, x) => t + x.persons + x.children, 0);
+    if (a.capacity > 0 && taken + ad + ch > a.capacity) fail(`${a.name} at ${p.slot} has ${Math.max(a.capacity - taken, 0)} place(s) left.`);
+    let amt = a.price_paise * ad + a.child_paise * ch; let incl = false;
+    const row = { id: uuid(), activity_id: a.id, activity_name: a.name, day, slot: p.slot, booking_id: null, day_visit_id: null, persons: ad, children: ch, status: 'booked', charge_id: null, note: p.note || null, created_at: new Date().toISOString() };
+    if (p.booking_id) {
+      const b = DB.bookings.find((x) => x.id === p.booking_id) || fail('Booking not found.');
+      if (!LIVE_ST.includes(b.status)) fail('That booking isn’t active.');
+      if (day < ymd(b.check_in_at) || day > ymd(b.check_out_at)) fail('The guest isn’t staying on that day.');
+      const bp = R.bpk.find((x) => x.booking_id === b.id);
+      if (bp && bp.activity_ids.includes(a.id) && !R.abook.some((x) => x.booking_id === b.id && x.activity_id === a.id && x.included && x.status !== 'cancelled') && !p.charge) { incl = true; amt = 0; }
+      Object.assign(row, { booking_id: b.id, guest_name: guestOf(DB, b).full_name, amount_paise: amt, included: incl });
+      if (amt > 0) row.charge_id = RPC.add_charge({ p_booking: b.id, p: { name: ('Activity: ' + a.name).slice(0, 80), category: a.category === 'food' ? 'food' : 'tour', qty: 1, unit_price_paise: amt, charged_on: day,
+        note: `${day.slice(8)} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+day.slice(5, 7) - 1]} ${p.slot} · ${ad} adult${ad !== 1 ? 's' : ''}${ch ? ` + ${ch} child${ch > 1 ? 'ren' : ''}` : ''}` } }).id;
+    } else if (p.day_visit_id) {
+      const dv = R.visits.find((x) => x.id === p.day_visit_id) || fail('Day visit not found.');
+      if (['cancelled', 'no_show', 'left'].includes(dv.status)) fail('That day visit isn’t active.'); if (day !== dv.visit_date) fail('The day visit is on another day.');
+      Object.assign(row, { day_visit_id: dv.id, guest_name: dv.guest_name, amount_paise: amt, included: false }); dv.extras_paise += amt;
+    } else fail('Choose the guest (a room booking or a day visitor).');
+    R.abook.push(row); return { id: row.id, amount_paise: amt, included: incl };
+  },
+  activity_booking_status: ({ p_id, p_status }) => {
+    const R = rsData(); const x = R.abook.find((y) => y.id === p_id) || fail('Activity booking not found.');
+    if (x.status === 'cancelled') fail('This activity booking was cancelled.');
+    if (p_status === 'cancelled') {
+      if (x.charge_id && DB.charges.some((c) => c.id === x.charge_id)) RPC.remove_charge({ p_charge: x.charge_id });
+      if (x.day_visit_id && x.amount_paise > 0) { const dv = R.visits.find((y) => y.id === x.day_visit_id);
+        if (dv.package_paise + dv.extras_paise - x.amount_paise < dv.paid_paise) fail('The visitor has already paid for this. Give a refund first.'); dv.extras_paise -= x.amount_paise; }
+    }
+    x.status = p_status; return { id: x.id, status: p_status };
+  },
+  dayout_packages_list: () => rsData().dpk.map((x) => ({ ...x })),
+  dayout_package_save: ({ p }) => {
+    const R = rsData(); if (!DB.resortMode) fail('This is for resorts. Set the property type to Resort in Settings.');
+    const name = String(p.name || '').trim(); if (!name) fail('Give the day package a name, e.g. “Pool + lunch”.');
+    const v = { name: name.slice(0, 60), includes: p.includes || null, lunch: !!p.lunch, adult_paise: Number(p.adult_paise) || 0, child_paise: Number(p.child_paise) || 0, capacity: Number(p.capacity) || 0 };
+    if (p.id) { const x = R.dpk.find((y) => y.id === p.id) || fail('Day package not found.'); Object.assign(x, v, { is_active: p.is_active ?? x.is_active }); return { id: x.id }; }
+    const x = { id: uuid(), ...v, is_active: p.is_active ?? true }; R.dpk.push(x); return { id: x.id };
+  },
+  dayout_package_delete: ({ p_id }) => { const R = rsData(); R.dpk = R.dpk.filter((x) => x.id !== p_id); return null; },
+  day_visits_list: ({ p_day }) => {
+    const R = rsData(); const vs = R.visits.filter((v) => v.visit_date === p_day); const ok = vs.filter((v) => !['cancelled', 'no_show'].includes(v.status));
+    const pays = R.rpay.filter((x) => vs.some((v) => v.id === x.day_visit_id));
+    return { day: p_day, visits: vs.slice().sort((a, b) => (a.status === 'cancelled') - (b.status === 'cancelled') || a.code.localeCompare(b.code)).map(dvRow),
+      totals: { visits: ok.length, people: ok.reduce((t, v) => t + v.adults + v.children, 0), arrived: vs.filter((v) => ['arrived', 'left'].includes(v.status)).reduce((t, v) => t + v.adults + v.children, 0),
+        lunches: ok.filter((v) => v.lunch).reduce((t, v) => t + v.adults + v.children, 0), billed_paise: ok.reduce((t, v) => t + v.package_paise + v.extras_paise, 0),
+        collected_paise: pays.reduce((t, x) => t + (x.kind === 'refund' ? -x.amount_paise : x.amount_paise), 0) } };
+  },
+  day_visit_save: ({ p }) => {
+    const R = rsData(); if (!DB.resortMode) fail('This is for resorts. Set the property type to Resort in Settings.');
+    const name = String(p.guest || '').trim(); if (name.length < 2) fail('Enter the visitor’s name.');
+    const phone = String(p.phone || '').replace(/[\s\-()]/g, '') || null; if (phone && !/^\+?[0-9]{8,15}$/.test(phone)) fail('Check the phone number.');
+    const ad = Number(p.adults || 1); const ch = Number(p.children || 0); if (ad < 1) fail('At least 1 adult.');
+    if (p.id) { const v = R.visits.find((x) => x.id === p.id) || fail('Day visit not found.'); Object.assign(v, { guest_name: name, phone, note: p.note || null }); return dvRow(v); }
+    const pk = R.dpk.find((x) => x.id === p.package_id) || fail('Choose a day package.'); const day = p.visit_date || ymd();
+    if (day < ymd()) fail('The visit day can’t be in the past.');
+    if (pk.capacity > 0) { const taken = R.visits.filter((v) => v.package_id === pk.id && v.visit_date === day && !['cancelled', 'no_show'].includes(v.status)).reduce((t, v) => t + v.adults + v.children, 0);
+      if (taken + ad + ch > pk.capacity) fail(`${pk.name} has ${Math.max(pk.capacity - taken, 0)} place(s) left on that day.`); }
+    const v = { id: uuid(), code: 'DV-' + (R.seq.dv++), visit_date: day, guest_name: name, phone, adults: ad, children: ch, package_id: pk.id, package_name: pk.name, lunch: pk.lunch,
+      package_paise: pk.adult_paise * ad + pk.child_paise * ch, extras_paise: 0, paid_paise: 0, status: 'booked', note: p.note || null, arrived_at: null, left_at: null, created_at: new Date().toISOString() };
+    R.visits.push(v);
+    if (p.payment && Number(p.payment.amount_paise) > 0) rsPay(v, p.payment, 'payment');
+    if (p.arrived) Object.assign(v, { status: 'arrived', arrived_at: new Date().toISOString() });
+    return dvRow(v);
+  },
+  day_visit_pay: ({ p_id, p }) => { const R = rsData(); const v = R.visits.find((x) => x.id === p_id) || fail('Day visit not found.');
+    if ((p.kind || 'payment') === 'payment' && ['cancelled', 'no_show'].includes(v.status)) fail('This day visit was cancelled.'); return rsPay(v, p, p.kind === 'refund' ? 'refund' : 'payment'); },
+  day_visit_status: ({ p_id, p_status }) => {
+    const R = rsData(); const v = R.visits.find((x) => x.id === p_id) || fail('Day visit not found.');
+    if (['cancelled', 'no_show'].includes(p_status) && v.paid_paise > 0) fail(`The visitor has paid ${rupees(v.paid_paise)} — give a refund first, then cancel.`);
+    v.status = p_status; if (p_status === 'arrived') v.arrived_at = v.arrived_at || new Date().toISOString(); if (p_status === 'left') v.left_at = new Date().toISOString();
+    if (['cancelled', 'no_show'].includes(p_status)) { R.abook.forEach((x) => { if (x.day_visit_id === v.id && x.status === 'booked') x.status = 'cancelled'; }); v.extras_paise = 0; }
+    return dvRow(v);
+  },
+  resort_income: ({ p_from, p_to }) => {
+    const R = rsData(); const m = {}; let total = 0;
+    R.rpay.forEach((x) => { const d = ymd(x.received_at); if (d < p_from || d > p_to) return; const a = x.kind === 'refund' ? -x.amount_paise : x.amount_paise; total += a; m[d.slice(0, 7)] = (m[d.slice(0, 7)] || 0) + a; });
+    return { total_paise: total, months: Object.keys(m).sort().map((k) => ({ month: k, income_paise: m[k] })) };
+  },
+  stay_packages_list: () => { const R = rsData(); return R.spk.map((x) => ({ ...x, meal_plan: DB.mealPlans.find((m) => m.id === x.meal_plan_id)?.name || null,
+    activities: R.activities.filter((a) => x.activity_ids.includes(a.id)).map((a) => a.name) })); },
+  stay_package_save: ({ p }) => {
+    const R = rsData(); if (!DB.resortMode) fail('This is for resorts. Set the property type to Resort in Settings.');
+    const name = String(p.name || '').trim(); if (!name) fail('Give the package a name, e.g. “2N/3D Honeymoon”.'); if (!(Number(p.price_paise) > 0)) fail('Enter the package price.');
+    const v = { name: name.slice(0, 60), nights: Number(p.nights) || 1, price_paise: Number(p.price_paise), base_guests: Number(p.base_guests) || 2, extra_adult_paise: Number(p.extra_adult_paise) || 0,
+      child_paise: Number(p.child_paise) || 0, meal_plan_id: p.meal_plan_id || null, activity_ids: (p.activity_ids || []).filter((id) => R.activities.some((a) => a.id === id)), includes: p.includes || null };
+    if (p.id) { const x = R.spk.find((y) => y.id === p.id) || fail('Package not found.'); Object.assign(x, v, { is_active: p.is_active ?? x.is_active }); return { id: x.id }; }
+    const x = { id: uuid(), ...v, is_active: p.is_active ?? true }; R.spk.push(x); return { id: x.id };
+  },
+  stay_package_delete: ({ p_id }) => { const R = rsData(); R.spk = R.spk.filter((x) => x.id !== p_id); return null; },
+  booking_package_set: ({ p_booking, p_package }) => {
+    const R = rsData(); const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.');
+    if (!LIVE_ST.includes(b.status)) fail('Packages can be set only on active bookings.');
+    const old = R.bpk.find((x) => x.booking_id === b.id);
+    if (old) { if (old.charge_id && DB.charges.some((c) => c.id === old.charge_id)) RPC.remove_charge({ p_charge: old.charge_id });
+      DB.bookingMeals = DB.bookingMeals.filter((m) => !(m.booking_id === b.id && m.amount_paise === 0 && !m.charge_id)); R.bpk = R.bpk.filter((x) => x !== old); }
+    if (!p_package) return { package: null };
+    const sp = R.spk.find((x) => x.id === p_package) || fail('That package isn’t in your list any more.');
+    if (b.nights !== sp.nights) fail(`${sp.name} is for ${sp.nights} night(s) — change the dates to ${sp.nights} night(s) first.`);
+    const room = Math.max(0, b.total_paise - (b.charges_paise || 0));
+    const price = sp.price_paise + sp.extra_adult_paise * Math.max(Math.max(1, b.visitors || 1) - sp.base_guests, 0) + sp.child_paise * (b.children || 0);
+    const diff = price - room;
+    if (diff < 0) fail(`The package price (${rupees(price)}) is less than the room charge (${rupees(room)}) for these nights. Lower the room rate on the booking, or raise the package price.`);
+    const c = diff > 0 ? RPC.add_charge({ p_booking: b.id, p: { name: ('Package: ' + sp.name).slice(0, 80), category: 'other', qty: 1, unit_price_paise: diff, charged_on: ymd(b.check_in_at),
+      note: `Package ${rupees(price)} = room ${rupees(room)} + inclusions` } }) : null;
+    R.bpk.push({ booking_id: b.id, package_id: sp.id, package_name: sp.name, price_paise: price, room_paise: room, charge_id: c?.id || null, activity_ids: sp.activity_ids.slice() });
+    if (sp.meal_plan_id) { const mp = DB.mealPlans.find((m) => m.id === sp.meal_plan_id);
+      const om = DB.bookingMeals.find((m) => m.booking_id === b.id); if (om?.charge_id && DB.charges.some((x) => x.id === om.charge_id)) RPC.remove_charge({ p_charge: om.charge_id });
+      DB.bookingMeals = DB.bookingMeals.filter((m) => m.booking_id !== b.id);
+      if (mp) DB.bookingMeals.push({ booking_id: b.id, plan_id: mp.id, plan_name: mp.name + ' (in package)', breakfast: mp.breakfast, lunch: mp.lunch, dinner: mp.dinner,
+        adults: Math.max(1, b.visitors || 1), children: b.children || 0, nights: b.nights, amount_paise: 0, charge_id: null }); }
+    return { package: sp.name, price_paise: price, room_paise: room, charge_paise: Math.max(diff, 0) };
+  },
+  booking_extra_beds_set: ({ p_booking, p_beds }) => {
+    const R = rsData(); const b = DB.bookings.find((x) => x.id === p_booking) || fail('Booking not found.'); const st = R.settings; const n = Number(p_beds) || 0;
+    if (!LIVE_ST.includes(b.status)) fail('Extra beds can be set only on active bookings.'); if (n > st.extra_bed_max) fail(`Up to ${st.extra_bed_max} extra bed(s) per room.`);
+    const old = R.beds.find((x) => x.booking_id === b.id);
+    if (old) { if (old.charge_id && DB.charges.some((c) => c.id === old.charge_id)) RPC.remove_charge({ p_charge: old.charge_id }); R.beds = R.beds.filter((x) => x !== old); }
+    if (n <= 0) return { beds: 0 };
+    const c = st.extra_bed_paise > 0 ? RPC.add_charge({ p_booking: b.id, p: { name: 'Extra bed' + (n > 1 ? ' × ' + n : ''), category: 'rental', qty: b.nights, unit_price_paise: st.extra_bed_paise * n,
+      charged_on: ymd(b.check_in_at), note: `${n} bed${n > 1 ? 's' : ''} × ${rupees(st.extra_bed_paise)} a night` } }) : null;
+    R.beds.push({ booking_id: b.id, beds: n, price_paise: st.extra_bed_paise, nights: b.nights, charge_id: c?.id || null });
+    return { beds: n, amount_paise: st.extra_bed_paise * n * b.nights };
+  },
+  booking_resort_get: ({ p_booking }) => {
+    const R = rsData(); const bp = R.bpk.find((x) => x.booking_id === p_booking); const gm = R.gmem.find((x) => x.booking_id === p_booking); const g = gm && R.groups.find((x) => x.id === gm.group_id);
+    return { package: bp ? { package_id: bp.package_id, name: bp.package_name, price_paise: bp.price_paise, room_paise: bp.room_paise,
+        activities: R.activities.filter((a) => bp.activity_ids.includes(a.id)).map((a) => ({ id: a.id, name: a.name, used: R.abook.some((x) => x.booking_id === p_booking && x.activity_id === a.id && x.included && x.status !== 'cancelled') })) } : null,
+      extra_beds: R.beds.find((x) => x.booking_id === p_booking)?.beds || 0, settings: { ...R.settings }, group: g ? { id: g.id, name: g.name, kind: g.kind } : null,
+      activities: R.abook.filter((x) => x.booking_id === p_booking).sort((a, b) => (a.day + a.slot).localeCompare(b.day + b.slot))
+        .map((x) => ({ id: x.id, name: x.activity_name, day: x.day, slot: x.slot, persons: x.persons + x.children, amount_paise: x.amount_paise, included: x.included, status: x.status })) };
+  },
+  groups_list: () => rsData().groups.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).map(grpRow),
+  group_get: ({ p_group }) => {
+    const R = rsData(); const g = R.groups.find((x) => x.id === p_group) || fail('Group not found.');
+    const bks = R.gmem.filter((m) => m.group_id === g.id).map((m) => DB.bookings.find((b) => b.id === m.booking_id)).filter(Boolean).map((b) => { const bd = bedOf(b.bed_id); const gu = guestOf(DB, b);
+      return { id: b.id, code: b.code, status: b.status, guest: gu.full_name, phone: gu.phone, room: roomOf(bd.room_id).name, unit: bd.label, adults: Math.max(1, b.visitors || 1), children: b.children || 0,
+        check_in_at: b.check_in_at, check_out_at: b.check_out_at, nights: b.nights, total_paise: b.total_paise, paid_paise: b.paid_paise, balance_paise: balance(b), charges_paise: b.charges_paise || 0 }; })
+      .sort((a, b) => (a.room + a.unit).localeCompare(b.room + b.unit));
+    const pr = DB.properties[0];
+    return { ...grpRow(g), bookings: bks, property: { name: pr.name, address: pr.address, city: pr.city, phone: pr.phone, upi_id: pr.upi_id } };
+  },
+  group_save: ({ p }) => {
+    const R = rsData(); if (!DB.resortMode) fail('This is for resorts. Set the property type to Resort in Settings.');
+    const name = String(p.name || '').trim(); if (name.length < 2) fail('Give the group a name, e.g. “Priya & Arjun wedding”.');
+    const phone = String(p.contact_phone || '').replace(/[\s\-()]/g, '') || null; if (phone && !/^\+?[0-9]{8,15}$/.test(phone)) fail('Check the contact phone number.');
+    const v = { name: name.slice(0, 80), kind: p.kind || 'other', contact_name: p.contact_name || null, contact_phone: phone, event_date: p.event_date || null, note: p.note || null };
+    let g; if (p.id) { g = R.groups.find((x) => x.id === p.id) || fail('Group not found.'); Object.assign(g, v); } else { g = { id: uuid(), ...v, created_at: new Date().toISOString() }; R.groups.push(g); }
+    (p.booking_ids || []).forEach((id) => { if (!DB.bookings.some((b) => b.id === id)) fail('Booking not found.'); R.gmem = R.gmem.filter((m) => m.booking_id !== id); R.gmem.push({ booking_id: id, group_id: g.id }); });
+    return grpRow(g);
+  },
+  group_remove_booking: ({ p_booking }) => { const R = rsData(); R.gmem = R.gmem.filter((m) => m.booking_id !== p_booking); return null; },
+  group_delete: ({ p_group }) => { const R = rsData(); R.groups = R.groups.filter((g) => g.id !== p_group); R.gmem = R.gmem.filter((m) => m.group_id !== p_group); return null; },
+  group_pay: ({ p_group, p }) => {
+    const R = rsData(); const g = R.groups.find((x) => x.id === p_group) || fail('Group not found.');
+    let left = Number(p.amount_paise) || 0; const method = p.method || 'upi'; const ref = p.reference ? String(p.reference).replace(/\s/g, '').toUpperCase() : null;
+    if (left <= 0) fail('Enter the amount received.'); if (method === 'upi' && !/^[0-9A-Z]{6,35}$/.test(ref || '')) fail('Enter the UPI transaction ID (UTR).');
+    if (method === 'upi' && DB.payments.some((x) => x.method === 'upi' && x.kind === 'payment' && x.reference === ref)) fail(`UPI transaction ${ref} was already recorded.`);
+    const bks = R.gmem.filter((m) => m.group_id === g.id).map((m) => DB.bookings.find((b) => b.id === m.booking_id)).filter((b) => b && !['cancelled', 'no_show'].includes(b.status) && balance(b) > 0)
+      .sort((a, b) => T(a.check_in_at) - T(b.check_in_at));
+    const due = bks.reduce((t, b) => t + balance(b), 0); if (left > due) fail(`Only ${rupees(due)} is due for this group.`);
+    const codes = []; let n = 0;
+    for (const b of bks) { if (left <= 0) break; const part = Math.min(left, balance(b)); n++; const now = new Date().toISOString();
+      const pay = { id: uuid(), property_id: P, booking_id: b.id, code: 'TXN-' + DB.seq.txn++, kind: 'payment', method, amount_paise: part, reference: n === 1 ? ref : null,
+        note: `Group payment · ${g.name}${ref && n > 1 ? ' · UTR ' + ref : ''}`, received_at: now, received_by: ME, created_at: now };
+      DB.payments.push(pay); b.paid_paise += part; audit(b, 'payment', { amount_paise: part, method, code: pay.code }); codes.push(pay.code); left -= part; }
+    return { receipts: codes, rooms: n };
+  },
+  resort_today: ({ p_day }) => {
+    const R = rsData(); const vs = R.visits.filter((v) => v.visit_date === p_day && !['cancelled', 'no_show'].includes(v.status));
+    const acts = {}; R.abook.filter((x) => x.day === p_day && ['booked', 'done'].includes(x.status)).forEach((x) => { const k = x.slot + '|' + x.activity_name; (acts[k] ||= { name: x.activity_name, slot: x.slot, people: 0, bookings: 0 }); acts[k].people += x.persons + x.children; acts[k].bookings++; });
+    const groups = R.groups.map((g) => ({ id: g.id, name: g.name, kind: g.kind, rooms: R.gmem.filter((m) => m.group_id === g.id).map((m) => DB.bookings.find((b) => b.id === m.booking_id))
+      .filter((b) => b && LIVE_ST.includes(b.status) && ymd(b.check_in_at) === p_day).length })).filter((g) => g.rooms);
+    return { day: p_day, day_visits: { visits: vs.length, people: vs.reduce((t, v) => t + v.adults + v.children, 0), arrived: vs.filter((v) => ['arrived', 'left'].includes(v.status)).reduce((t, v) => t + v.adults + v.children, 0),
+      lunches: vs.filter((v) => v.lunch).reduce((t, v) => t + v.adults + v.children, 0) }, activities: Object.values(acts).sort((a, b) => (a.slot + a.name).localeCompare(b.slot + b.name)), groups };
+  },
   pg_mode: () => !!DB.pgMode,
   pg_set_mode: ({ p_on }) => {
     if (p_on && DB.properties[0].kind !== 'hostel') fail('PG / co-living works with beds — set the type to PG / Co-living (not hotel or homestay).');
+    if (!p_on && DB.pgMode) fail('This is a PG / co-living account — it can’t be switched to another type. Contact NammaStay support if you need to.');
     DB.pgMode = !!p_on; return !!p_on;
+  },
+  // ---- PG app (032)
+  pg_dashboard: () => {
+    if (!DB.pgMode) fail('This is only for PG / co-living properties.');
+    const L = RPC.pg_tenants(); const today = L.today; const live = DB.tenancies.filter((t) => t.status !== 'moved_out');
+    const bedName = (id) => { const b = bedOf(id); return `${roomOf(b.room_id).name} · ${b.label}`; };
+    const nm = (t) => guestOf(DB, t).full_name;
+    const occIds = new Set(live.filter((t) => t.start_date <= today).map((t) => t.bed_id));
+    const dues = live.map((t) => { const o = DB.rentDues.filter((d) => d.tenancy_id === t.id && d.due_on <= today && d.amount_paise > d.paid_paise);
+      return { t, due: o.reduce((s, d) => s + d.amount_paise - d.paid_paise, 0), oldest: o.map((d) => d.due_on).sort()[0] }; })
+      .filter((x) => x.due > 0).sort((a, b) => b.due - a.due).slice(0, 8)
+      .map((x) => ({ id: x.t.id, name: nm(x.t), phone: guestOf(DB, x.t).phone, bed: bedName(x.t.bed_id), due_paise: x.due, oldest: x.oldest, late: x.oldest < addDays(today, -5) }));
+    const rentDays = live.map((t) => { for (let i = 1; i <= 7; i++) { const d = addDays(today, i); const dom = Number(d.slice(8));
+        const last = Number(pgAddMonths(d.slice(0, 8) + '01', 1).slice(8)) || 0; const lastDay = Number(addDays(pgAddMonths(d.slice(0, 8) + '01', 1), -1).slice(8));
+        const sd = Number(t.start_date.slice(8)); void last;
+        if (t.start_date < d && (t.move_out_on || '9999') > d && ((t.cycle === 'calendar' && dom === 1) || (t.cycle !== 'calendar' && (dom === sd || (sd > lastDay && dom === lastDay))))) return { id: t.id, name: nm(t), bed: bedName(t.bed_id), day: d, amount_paise: t.rent_paise + t.food_paise }; }
+      return null; }).filter(Boolean).sort((a, b) => (a.day < b.day ? -1 : 1));
+    const income = pgIncomeRows();
+    return { today, property: L.property, beds_total: activeBeds().length, beds_occupied: occIds.size, tenants: live.length, on_notice: L.summary.notice,
+      rent_roll_paise: L.summary.rent_roll_paise, collected_month_paise: income.filter((r) => r.on >= today.slice(0, 8) + '01').reduce((s, r) => s + r.amt, 0),
+      due_now_paise: L.summary.due_now_paise, overdue_paise: L.tenants.reduce((s, t) => s + (t.status !== 'moved_out' ? t.overdue_paise : 0), 0),
+      deposits_held_paise: L.summary.deposits_held_paise, dues, rent_days: rentDays,
+      leaving: live.filter((t) => t.status === 'notice').sort((a, b) => (a.move_out_on < b.move_out_on ? -1 : 1)).map((t) => ({ id: t.id, name: nm(t), bed: bedName(t.bed_id), day: t.move_out_on })),
+      arriving: live.filter((t) => t.start_date > today).map((t) => ({ id: t.id, name: nm(t), bed: bedName(t.bed_id), day: t.start_date })),
+      vacant: activeBeds().filter((b) => !occIds.has(b.id)).map((b) => ({ id: b.id, bed: `${roomOf(b.room_id).name} · ${b.label}`, rent_paise: b.rate_paise })),
+      recent: [...DB.rentPays].filter((p) => ['payment', 'refund'].includes(p.kind)).sort((a, b) => (a.received_at < b.received_at ? 1 : -1)).slice(0, 8)
+        .map((p) => { const t = DB.tenancies.find((x) => x.id === p.tenancy_id); return { code: p.code, name: t ? nm(t) : '', amount_paise: p.amount_paise, method: p.method, kind: p.kind,
+          for: DB.rentDues.find((d) => d.id === p.due_id)?.label || null, at: p.received_at }; }) };
+  },
+  pg_payments: ({ p_from, p_to }) => {
+    if (!DB.pgMode) fail('This is only for PG / co-living properties.');
+    const rows = DB.rentPays.filter((p) => ymd(p.received_at) >= p_from && ymd(p.received_at) <= p_to).sort((a, b) => (a.received_at < b.received_at ? 1 : -1)).map((p) => {
+      const t = DB.tenancies.find((x) => x.id === p.tenancy_id); const g = guestOf(DB, t); const b = bedOf(t.bed_id); const d = DB.rentDues.find((x) => x.id === p.due_id);
+      return { id: p.id, code: p.code, kind: p.kind, amount_paise: p.amount_paise, method: p.method, reference: p.reference, note: p.note, received_at: p.received_at,
+        for: d?.label || null, due_kind: d?.kind || null, tenancy_id: t.id, name: g.full_name, phone: g.phone, bed: `${roomOf(b.room_id).name} · ${b.label}` }; });
+    const sum = (f) => rows.filter(f).reduce((s, r) => s + r.amount_paise, 0);
+    return { rows, totals: { rent_paise: sum((r) => r.kind === 'payment' && r.due_kind !== 'deposit'), deposits_in_paise: sum((r) => r.kind === 'payment' && r.due_kind === 'deposit'),
+      from_deposit_paise: sum((r) => r.kind === 'deposit_adjust'), refunds_paise: sum((r) => r.kind === 'refund'),
+      upi_paise: sum((r) => r.kind === 'payment' && r.due_kind !== 'deposit' && r.method === 'upi'), cash_paise: sum((r) => r.kind === 'payment' && r.due_kind !== 'deposit' && r.method === 'cash'),
+      other_paise: sum((r) => r.kind === 'payment' && r.due_kind !== 'deposit' && !['upi', 'cash'].includes(r.method)) } };
+  },
+  pg_report: ({ p_months = 12 }) => {
+    if (!DB.pgMode) fail('This is only for PG / co-living properties.');
+    RPC.pg_tenants(); const today = ymd(); const m0 = today.slice(0, 8) + '01'; const inc = pgIncomeRows();
+    const months = Array.from({ length: Math.max(1, Math.min(p_months, 36)) }, (_, i) => pgAddMonths(m0, -i)).reverse().map((ms) => {
+      const mm = ms.slice(0, 7); const probe = addDays(ms, 14) < today ? addDays(ms, 14) : today;
+      return { month: mm,
+        billed_paise: DB.rentDues.filter((d) => d.kind !== 'deposit' && d.due_on.startsWith(mm)).reduce((s, d) => s + d.amount_paise - (d.credit_paise || 0), 0),
+        collected_paise: inc.filter((r) => r.on.startsWith(mm)).reduce((s, r) => s + r.amt, 0),
+        deposits_in_paise: DB.rentPays.filter((p) => p.kind === 'payment' && DB.rentDues.find((d) => d.id === p.due_id)?.kind === 'deposit' && ymd(p.received_at).startsWith(mm)).reduce((s, p) => s + p.amount_paise, 0),
+        refunds_paise: DB.rentPays.filter((p) => p.kind === 'refund' && ymd(p.received_at).startsWith(mm)).reduce((s, p) => s + p.amount_paise, 0),
+        move_ins: DB.tenancies.filter((t) => t.start_date.startsWith(mm)).length,
+        move_outs: DB.tenancies.filter((t) => t.status === 'moved_out' && (t.move_out_on || '').startsWith(mm)).length,
+        occupied: new Set(DB.tenancies.filter((t) => t.start_date <= probe && (t.move_out_on || '9999') > probe).map((t) => t.bed_id)).size };
+    });
+    return { beds_total: activeBeds().length, months };
+  },
+  pg_income: ({ p_from, p_to }) => {
+    if (!DB.pgMode) return { total_paise: 0, months: [] };
+    const rows = pgIncomeRows(); const by = {};
+    rows.forEach((r) => { by[r.on.slice(0, 7)] = (by[r.on.slice(0, 7)] || 0) + r.amt; });
+    return { total_paise: rows.filter((r) => r.on >= p_from && r.on <= p_to).reduce((s, r) => s + r.amt, 0),
+      months: Object.entries(by).map(([month, income_paise]) => ({ month, income_paise })) };
   },
   pg_tenants: () => {
     if (DB.pgSeed) { DB.pgSeed = false; pgDemoSeed(); }
@@ -1838,7 +2298,7 @@ const RPC = {
   hk_board: () => DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id && b.is_active).sort((a, b) => a.sort - b.sort).map((b) => {
     const inh = DB.bookings.find((x) => x.bed_id === b.id && x.status === 'checked_in');
     const arr = DB.bookings.filter((x) => x.bed_id === b.id && ['pending', 'confirmed'].includes(x.status) && ymd(x.check_in_at) === ymd()).sort((a, c) => (a.check_in_at < c.check_in_at ? -1 : 1))[0];
-    return { id: b.id, label: b.label, room: r.name, room_id: r.id, status: b.hk_status || 'clean', note: b.hk_note || null, updated_at: b.hk_updated_at || null, updated_by: b.hk_updated_at ? 'Hostel Owner' : null,
+    return { id: b.id, label: b.label, room: r.name, room_id: r.id, status: b.hk_status || 'clean', note: b.hk_note || null, updated_at: b.hk_updated_at || null, updated_by: b.hk_updated_at ? ownerName() : null,
       in_house: inh ? { guest: guestOf(DB, inh).full_name, out: inh.check_out_at, leaving_today: ymd(inh.check_out_at) === ymd() } : null,
       arriving: arr ? { guest: guestOf(DB, arr).full_name, at: arr.check_in_at } : null, blocked: DB.blocks.some((k) => k.bed_id === b.id && T(k.starts_at) <= Date.now() && T(k.ends_at) > Date.now()) }; })),
   hk_set: ({ p_bed, p_status, p_note }) => { const b = bedOf(p_bed) || fail('Bed not found.'); Object.assign(b, { hk_status: p_status, hk_note: p_note || null, hk_updated_at: new Date().toISOString(), hk_by: ME }); return null; },
@@ -1933,9 +2393,6 @@ function table(name) {
   return api;
 }
 
-// Smart pricing (041) — prices follow demand: demo rules in demo-smart.js
-import { smartDemo, SMART_FUNCTIONS } from './demo-smart.js';
-SMART_FUNCTIONS.forEach((n) => { RPC[n] = (a) => smartDemo(n, a, { DB, P, fail, uuid, ymd, addDays, nightRate }); });
 // ---------------------------------------------------------------- files (kept in memory for this tab)
 const files = new Map();
 function sampleIdCard(path) {
@@ -1950,10 +2407,6 @@ function sampleIdCard(path) {
     <text x="56" y="330" font-family="sans-serif" font-size="14" fill="#9AA3B5">${path.replace(/[<&>]/g, '')}</text></svg>`;
   return new Blob([svg], { type: 'image/svg+xml' });
 }
-
-// Branches (043) — owners with several properties: demo rules in demo-branches.js
-import { branchDemo, BRANCH_FUNCTIONS } from './demo-branches.js';
-BRANCH_FUNCTIONS.forEach((n) => { const base = RPC[n]; RPC[n] = (a) => branchDemo(n, a, { DB, P, RPC, fail, uuid, ymd, addDays, base, setDemoKind, demoKind }); });
 
 // ---------------------------------------------------------------- the client
 export function createDemoClient() {
@@ -2003,6 +2456,3 @@ export function createDemoClient() {
     },
   };
 }
-// Company (040) — NammaStay's own business numbers (admin area): demo rules in demo-company.js
-import { companyDemo, COMPANY_FUNCTIONS } from './demo-company.js';
-COMPANY_FUNCTIONS.forEach((n) => { RPC[n] = (a) => companyDemo(n, a, { DB, fail }); });

@@ -1,9 +1,11 @@
-import {
+import { hostExtras, isResort, isHomestay, unitName,
   DEMO, openInvoice, openReceipt, receiptDoc, q, sb, fmtDate, W, roomsMode, guestsText, sendBookingWhatsApp, deleteBookingDialog, page, rpc, $, esc, rupees, toPaise, fmtDayTime, toInputDT, fromInputDT, avatar, statusPill, methodPill,
   modal, confirmDialog, toast, field, options, METHOD_OPTIONS, upiLink, qrDataUrl, viewIdDocs, param, uuidOk,
   SITE_URL, titleCase,
 } from '../core.js';
 import { mountBookingGuests } from './booking-guests.js';   // add-on: other guests in the booking (030)
+import { mountBookingHomestay } from './homestay.js';        // add-on: homestays — meal plan, house guide (033)
+import { mountBookingResort } from './resort.js';          // add-on: resorts — package, extra beds, group, activities (034)
 
 const ACTIVITY = {
   created: () => 'Booking created',
@@ -22,6 +24,7 @@ const ACTIVITY = {
 page(null, async (ctx) => {
   const id = param('id');
   if (!uuidOk(id)) throw new Error('Open a booking from the Bookings list.');
+  if (ctx.isPg) { location.replace(`tenants.html?booking=${id}`); return; }   // PG / co-living: no nightly booking page — show the tenant (032)
   const d = await rpc('booking_detail', { p_booking: id });
   const charges = await q(sb.from('booking_charges').select('*').eq('booking_id', id).order('created_at')).catch(() => []);
   const b = d.booking;
@@ -58,7 +61,7 @@ page(null, async (ctx) => {
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        ${field(roomsMode() ? 'Room' : 'Room / Bed', `<div class="ns-input" style="display:flex;align-items:center">${esc(d.bed.room)} · ${esc(d.bed.label)}${roomsMode() ? ` · ${guestsText(b.visitors, b.children)}` : ''}</div>`)}
+        ${field(roomsMode() ? 'Room' : 'Room / Bed', `<div class="ns-input" style="display:flex;align-items:center">${esc(unitName(d.bed.room, d.bed.label))}${roomsMode() ? ` · ${guestsText(b.visitors, b.children)}` : ''}</div>`)}
         ${field('Nights', `<div class="ns-input" style="display:flex;align-items:center">${b.nights} night${b.nights > 1 ? 's' : ''} · ${rupees(b.rate_paise)}/night</div>`)}
         ${field('Check-in', `<input class="ns-input" type="datetime-local" name="check_in_at" value="${toInputDT(b.check_in_at)}" ${editable && b.status !== 'checked_in' ? '' : 'disabled'}>`)}
         ${field('Check-out', `<input class="ns-input" type="datetime-local" name="check_out_at" value="${toInputDT(b.check_out_at)}" ${editable ? '' : 'disabled'}>`)}
@@ -125,6 +128,8 @@ page(null, async (ctx) => {
 
   const val = (n) => dlg.querySelector(`[name="${n}"]`)?.value;
   mountBookingGuests({ ctx, booking: b, anchor: dlg.querySelector('.ns-guestbox') }).catch(() => {});
+  if (isResort()) mountBookingResort({ ctx, booking: b, anchor: dlg.querySelector('.ns-guestbox') }).catch(() => {});   // (034)
+  if (hostExtras()) mountBookingHomestay({ ctx, booking: b, guest: g, bed: d.bed, anchor: dlg.querySelector('.ns-guestbox'), selfLink }).catch(() => {});   // (033)
   $('#wa-details')?.addEventListener('click', () => sendBookingWhatsApp(b.id).catch((e) => toast(e.message, { error: true })));
   if (staff && param('new')) {                                   // just created → offer to send details
     history.replaceState(null, '', 'booking-detail.html?id=' + b.id);

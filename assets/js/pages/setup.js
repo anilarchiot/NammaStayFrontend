@@ -9,6 +9,7 @@ page('setup', async (ctx) => {
   headerActions().innerHTML = '<a class="ns-btn-ghost" href="dashboard.html">Do it later</a>';
   const pr = await q(sb.from('properties').select('*').eq('id', ctx.property_id).single());
   const hostel = (pr.kind || 'hostel') === 'hostel';
+  const homestay = pr.kind === 'homestay';                         // homestay wording (033)
 
   async function draw() {
     const prog = await rpc('setup_progress', { p_property: ctx.property_id }).catch(() => ({}));
@@ -53,17 +54,18 @@ page('setup', async (ctx) => {
   async function rooms() {
     const have = await q(sb.from('beds').select('id,room_id,rate_paise').eq('property_id', ctx.property_id).eq('is_active', true));
     const row = (r = {}) => `<div class="su-row">
-        <input class="ns-input" name="rname" placeholder="${hostel ? 'e.g. 6-Bed Mixed Dorm' : 'e.g. Deluxe Room'}" value="${esc(r.name || '')}" aria-label="Room name">
-        <input class="ns-input" name="count" type="number" min="1" max="${hostel ? 40 : 200}" value="${r.count || ''}" placeholder="${hostel ? 'Beds' : 'Rooms'}" aria-label="How many">
+        <input class="ns-input" name="rname" placeholder="${hostel ? 'e.g. 6-Bed Mixed Dorm' : homestay ? 'e.g. Garden Room' : 'e.g. Deluxe Room'}" value="${esc(r.name || '')}" aria-label="Room name">
+        <input class="ns-input" name="count" type="number" min="1" max="${hostel ? 40 : 200}" value="${r.count || ''}" placeholder="${hostel ? 'Beds' : homestay ? '1' : 'Rooms'}" aria-label="How many">
         ${hostel ? `<select class="ns-input" name="pos" aria-label="Bed type">${options([['lower', 'Lower'], ['upper', 'Upper'], ['single', 'Single']], r.pos || 'lower')}</select>` : `<input class="ns-input" name="max" type="number" min="1" max="10" value="${r.max || 2}" aria-label="Max guests" title="Max guests">`}
-        <input class="ns-input" name="rate" inputmode="decimal" value="${r.rate || ''}" placeholder="₹ / night" aria-label="Price per night">
+        <input class="ns-input" name="rate" inputmode="decimal" value="${r.rate || ''}" placeholder="${ctx.isPg ? '₹ rent / month' : '₹ / night'}" aria-label="${ctx.isPg ? 'Monthly rent per bed' : 'Price per night'}">
         <button type="button" class="ns-icon-del" data-del aria-label="Remove row">✕</button></div>`;
     const sample = hostel ? [{ name: '6-Bed Mixed Dorm', count: 3, pos: 'lower', rate: 700 }, { name: '6-Bed Mixed Dorm', count: 3, pos: 'upper', rate: 600 }]
+      : homestay ? [{ name: 'Garden Room', count: 1, max: 2, rate: 1800 }, { name: 'Family Room', count: 1, max: 4, rate: 2800 }]   // homestays: rooms with names (033)
       : [{ name: 'Standard Room', count: 5, max: 2, rate: 1800 }];
-    body(`<div class="su-h">${hostel ? 'Add your dorms and beds' : 'Add your rooms'}</div>
-      <div class="ns-muted su-sub">${hostel ? 'One line per group of beds with the same price. Same room name on two lines = one dorm (e.g. 3 lower beds ₹700 + 3 upper beds ₹600).' : 'One line per room type. Rooms are numbered 101, 102… — rename them later in Rooms.'}</div>
+    body(`<div class="su-h">${hostel ? 'Add your dorms and beds' : homestay ? 'Add the rooms in your home' : 'Add your rooms'}</div>
+      <div class="ns-muted su-sub">${homestay ? 'One line per room, with its own name — e.g. Garden Room, Attic. “How many” stays 1 unless you have identical rooms.' : hostel ? 'One line per group of beds with the same price. Same room name on two lines = one dorm (e.g. 3 lower beds ₹700 + 3 upper beds ₹600).' : 'One line per room type. Rooms are numbered 101, 102… — rename them later in Rooms.'}</div>
       ${have.length ? `<div class="su-have">✓ You already have <b>${have.length} ${have.length === 1 ? W.unit : W.units}</b>. Add more below, or skip.</div>` : ''}
-      <div class="su-rows-head"><span>${hostel ? 'Dorm / room' : 'Room type'}</span><span>${hostel ? 'Beds' : 'Rooms'}</span><span>${hostel ? 'Bed type' : 'Max guests'}</span><span>Price / night</span><span></span></div>
+      <div class="su-rows-head"><span>${hostel ? 'Dorm / room' : homestay ? 'Room name' : 'Room type'}</span><span>${hostel ? 'Beds' : homestay ? 'How many' : 'Rooms'}</span><span>${hostel ? 'Bed type' : 'Max guests'}</span><span>Price / night</span><span></span></div>
       <div id="su-rows">${(have.length ? [{}] : sample).map(row).join('')}</div>
       <button type="button" class="ns-btn-ghost" id="su-add" style="align-self:flex-start">+ Add a line</button>
       ${nav()}`);
@@ -83,7 +85,7 @@ page('setup', async (ctx) => {
         for (const l of ls) for (let k = 0; k < l.count; k++) {
           i++;
           beds.push(hostel ? { property_id: ctx.property_id, room_id: room.id, label: `${l.pos === 'upper' ? 'Upper' : l.pos === 'lower' ? 'Lower' : 'Bed'} ${i}`, rate_paise: l.rate, sort: i, position: l.pos }
-            : { property_id: ctx.property_id, room_id: room.id, label: String(roomNo++), rate_paise: l.rate, sort: i, position: 'single', max_guests: l.max, base_guests: Math.min(l.max, 2), extra_guest_paise: 0 });
+            : { property_id: ctx.property_id, room_id: room.id, label: homestay ? (ls.length === 1 && l.count === 1 ? name : `${name} ${i}`) : String(roomNo++), rate_paise: l.rate, sort: i, position: 'single', max_guests: l.max, base_guests: Math.min(l.max, 2), extra_guest_paise: 0 });
         }
         await q(sb.from('beds').insert(beds)); made += beds.length;
       }
@@ -94,7 +96,7 @@ page('setup', async (ctx) => {
   // ---------------------------------------------------------------- 3. payments
   function upi() {
     body(`<div class="su-h">Get paid by UPI — no gateway fees</div>
-      <div class="ns-muted su-sub">Guests scan a QR on their booking and pay straight into your bank. Find your UPI ID in GPay / PhonePe / Paytm → profile.</div>
+      <div class="ns-muted su-sub">${ctx.isPg ? 'Tenants pay rent by scanning your UPI QR — straight into your bank.' : 'Guests scan a QR on their booking and pay straight into your bank.'} Find your UPI ID in GPay / PhonePe / Paytm → profile.</div>
       <div class="su-grid">${field('Your UPI ID', `<input class="ns-input" name="upi" value="${esc(pr.upi_id || '')}" placeholder="yourname@okaxis">`)}</div>
       <div class="ns-help">Card / net-banking payment links (Razorpay) and GST invoices can be switched on later in Settings.</div>${nav()}`);
     wire(async () => {
@@ -130,11 +132,12 @@ page('setup', async (ctx) => {
       ${item(prog.rooms, hostel ? 'Dorms & beds' : 'Rooms', 'rooms.html', 'Add')}
       ${item(prog.upi, 'UPI ID for payments', 'settings.html', 'Add')}
       ${item(prog.staff, 'Team invited', 'settings.html?tab=team', 'Invite')}
-      ${item(prog.booking, 'First booking', 'check-in.html?new=1', 'Make one')}
+      ${ctx.isPg ? item(prog.booking, 'First tenant', 'tenants.html?movein=1', 'Move one in') : item(prog.booking, 'First booking', 'check-in.html?new=1', 'Make one')}
       <div class="su-next">
-        <a class="ns-btn ns-btn-lg" href="check-in.html?new=1">➕ Make your first booking</a>
-        <a class="ns-btn-ghost" href="ota.html">🔗 Connect Airbnb / Booking.com</a>
-        <a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Weekend &amp; season prices</a>
+        ${ctx.isPg ? '<a class="ns-btn ns-btn-lg" href="tenants.html?movein=1">➕ Move in your first tenant</a>' : '<a class="ns-btn ns-btn-lg" href="check-in.html?new=1">➕ Make your first booking</a>'}
+        ${ctx.isPg ? '<a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Monthly rent per bed</a>' : `<a class="ns-btn-ghost" href="ota.html">🔗 Connect Airbnb / Booking.com</a>
+        <a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Weekend &amp; season prices</a>`}
+        ${homestay ? '<a class="ns-btn-ghost" href="settings.html?tab=rooms">🍳 Meal plans</a><a class="ns-btn-ghost" href="settings.html#guide">🏡 House guide for guests</a>' : ''}
         <a class="ns-btn-ghost" href="dashboard.html">Go to dashboard</a></div>`);
   }
 

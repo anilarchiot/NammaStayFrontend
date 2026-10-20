@@ -1,4 +1,6 @@
-import { ymd, W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { hostExtras, isResort, isHomestay, ymd, W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
+import { mountGuideCard, mountMealPlansCard } from './homestay.js';   // homestays (033)
+import { mountResortSettings } from './resort.js';            // resorts (034)
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
 const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
@@ -10,9 +12,6 @@ page('settings', async (ctx) => {
   const tabEls = tabsRow ? [...tabsRow.children] : [];
   if (tabsRow && tabEls.length === 4) {                 // add Billing and My account next to the design's four
     for (const label of ['Billing', 'My account']) { const t = tabEls[0].cloneNode(false); t.textContent = label; tabsRow.appendChild(t); tabEls.push(t); }
-  }
-  if (tabsRow && tabEls.length === 6 && !ctx.isPg) {   // Smart pricing (041): one more tab, right after Rooms & prices
-    const t = tabEls[0].cloneNode(false); t.textContent = 'Smart pricing'; tabEls[2].after(t); tabEls.splice(3, 0, t); TABS.splice(3, 0, 'smart');
   }
   const styles = tabEls.map((t) => t.getAttribute('style') || '');
   const onStyle = styles.find((s) => /#1C9A6C|border-bottom:2px solid #1/i.test(s)) || styles[1] || '';
@@ -46,7 +45,8 @@ page('settings', async (ctx) => {
             <div class="ns-h3">Property details</div>
             ${field('Property name', `<input class="ns-input" name="name" value="${esc(p.name)}">`)}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              ${field('Type', `<select class="ns-input" name="kind">${options([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay']], ctx.isPg ? 'pg' : p.kind)}</select>`)}
+              ${ctx.isPg ? field('Type', '<select class="ns-input" name="kind" disabled title="Locked for PG / co-living accounts"><option value="pg" selected>PG / Co-living 🔒</option></select>', 'PG / co-living accounts can’t switch type. Contact NammaStay support if you need to.')
+                : field('Type', `<select class="ns-input" name="kind">${options([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay'], ['resort', 'Resort']], ctx.isResort ? 'resort' : p.kind)}</select>`)}
               ${field('Timezone', '<input class="ns-input" value="Asia/Kolkata (GMT+5:30)" disabled>')}
               ${field('Area / address', `<input class="ns-input" name="address" value="${esc(p.address || '')}">`)}
               ${field('City', `<input class="ns-input" name="city" value="${esc(p.city || '')}">`)}
@@ -79,10 +79,12 @@ page('settings', async (ctx) => {
         v.id_doc_retention_days = parseInt(v.id_doc_retention_days, 10) || 180;
         if (!v.name) return toast('Property name can’t be empty.', { error: true });
         const pgNow = v.kind === 'pg'; if (pgNow) v.kind = 'hostel';            // a PG is saved as a bed property + the PG switch (031)
+        const rsNow = v.kind === 'resort'; if (rsNow) v.kind = 'hotel';          // a resort is saved as a rooms property + the resort switch (034)
         e.target.disabled = true;
         try {
           await q(sb.from('properties').update(v).eq('id', ctx.property_id));
-          if (pgNow !== !!ctx.isPg) { await rpc('pg_set_mode', { p_property: ctx.property_id, p_on: pgNow }); toast(pgNow ? 'Saved — Tenants & rent is now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
+          if (rsNow !== !!ctx.isResort) { await rpc('resort_set_mode', { p_property: ctx.property_id, p_on: rsNow }); toast(rsNow ? 'Saved — Activities, Day visitors and Groups are now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
+          else if (pgNow !== !!ctx.isPg) { await rpc('pg_set_mode', { p_property: ctx.property_id, p_on: pgNow }); toast(pgNow ? 'Saved — Tenants & rent is now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
           else toast('Saved.');
         }
         catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
@@ -108,6 +110,7 @@ page('settings', async (ctx) => {
         catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
       };
       moreCards(ctx, p);
+      if (hostExtras()) await mountGuideCard(ctx).catch(() => {});   // homestay: house guide for guests (033)
       $('#reset-demo')?.addEventListener('click', async () => {
         if (await confirmDialog('Reset demo data', 'Start again with fresh sample bookings? Changes you made in the demo will be cleared.', { confirmLabel: 'Reset' })) { sb.reset(); location.reload(); }
       });
@@ -136,7 +139,7 @@ page('settings', async (ctx) => {
           <div class="ns-card-dark" style="display:flex;flex-direction:column;gap:10px;align-self:start">
             <div class="ns-h3" style="color:#FBF3DE">Role permissions</div>
             ${[['Owner', 'everything, incl. team and settings'], ['Manager', 'bookings, rooms & rates, payments, reports'],
-              ['Front desk', 'check-in/out, bookings, guest profiles, payments'], ['Accountant', 'payments & reports, read-only elsewhere; no guest ID data']]
+              [ROLE_LABEL.front_desk, 'check-in/out, bookings, guest profiles, payments'], ['Accountant', 'payments & reports, read-only elsewhere; no guest ID data']]
               .map(([r, d]) => `<div style="font-size:12.5px;color:#AEB6C9;line-height:1.5"><b style="color:#FBF3DE">${r}</b> — ${d}</div>`).join('')}
           </div>
         </div>`);
@@ -176,21 +179,22 @@ page('settings', async (ctx) => {
       content(`
         <div class="ns-card" style="padding:0;overflow:hidden">
           <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px">
-            <div><div class="ns-h3">Room types & pricing</div><div class="ns-muted">Nightly rate per ${W.unit}. Changes apply to new bookings.</div></div>
+            <div>${ctx.isPg ? '<div class="ns-h3">Rooms & monthly rent</div><div class="ns-muted">Monthly rent per bed — filled in when you move a tenant in. A tenant’s own rent is changed on Tenants & rent.</div>'
+              : `<div class="ns-h3">Room types & pricing</div><div class="ns-muted">Nightly rate per ${W.unit}. Changes apply to new bookings.</div>`}</div>
             <a class="ns-btn-ghost" href="rooms.html">Manage ${W.setup.toLowerCase()} →</a></div>
-          <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Room type</th><th>${W.Unit}</th><th>Type</th><th>Rate / night (₹)</th><th>In use</th></tr></thead><tbody>
+          <div style="overflow-x:auto"><table class="ns-table" style="min-width:560px"><thead><tr><th>Room type</th><th>${W.Unit}</th>${W.kind === 'homestay' ? '' : '<th>Type</th>'}<th>${ctx.isPg ? 'Rent / month (₹)' : 'Rate / night (₹)'}</th><th>In use</th></tr></thead><tbody>
             ${rooms.flatMap((r) => r.beds.map((b, i) => `<tr data-bed="${esc(b.id)}">
               <td style="font-weight:700">${i === 0 ? esc(r.name) + `<div class="ns-muted" style="font-weight:500">${esc(r.description || '')}</div>` : ''}</td>
-              <td>${esc(b.label)}</td><td class="ns-muted">${esc(b.position[0].toUpperCase() + b.position.slice(1))}</td>
+              <td>${esc(b.label)}</td>${W.kind === 'homestay' ? '' : `<td class="ns-muted">${esc(b.position[0].toUpperCase() + b.position.slice(1))}</td>`}
               <td><input class="ns-input" name="rate" inputmode="decimal" value="${b.rate_paise / 100}" style="height:36px;width:110px" aria-label="Rate for ${esc(b.label)}" data-was="${b.rate_paise}"></td>
               <td><input type="checkbox" name="active" ${b.is_active ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1C9A6C" aria-label="${esc(b.label)} in use" data-was="${b.is_active}"></td></tr>`)).join('')}
           </tbody></table></div>
           <div style="padding:16px 20px;border-top:1px solid #F3EFE1;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-            <div class="ns-muted" id="avg"></div><button type="button" class="ns-btn" id="save-rates">Save pricing</button></div>
+            <div class="ns-muted" id="avg"></div><button type="button" class="ns-btn" id="save-rates">${ctx.isPg ? 'Save rents' : 'Save pricing'}</button></div>
         </div>`);
       const avg = () => {
         const rates = $$('[name=rate]').map((i) => toPaise(i.value)).filter((x) => x >= 0);
-        $('#avg').textContent = rates.length ? `Average ${rupees(rates.reduce((a, b) => a + b, 0) / rates.length)} per ${W.unit} · full house ${rupees(rates.reduce((a, b) => a + b, 0))} per night` : '';
+        $('#avg').textContent = rates.length ? `Average ${rupees(rates.reduce((a, b) => a + b, 0) / rates.length)} per ${W.unit} · full house ${rupees(rates.reduce((a, b) => a + b, 0))} ${ctx.isPg ? 'a month' : 'per night'}` : '';
       };
       $$('[name=rate]').forEach((i) => i.addEventListener('input', avg)); avg();
       $('#save-rates').onclick = async (e) => {
@@ -209,7 +213,9 @@ page('settings', async (ctx) => {
         } catch (err) { toast(err.message, { error: true }); } finally { e.target.disabled = false; }
       };
       await extrasCard(ctx);
-      await priceRulesCard(ctx);
+      if (hostExtras()) await mountMealPlansCard(ctx).catch(() => {});   // homestay / resort: meal plans (033)
+      if (isResort()) await mountResortSettings(ctx).catch(() => {});   // resort: stay packages, extra beds (034)
+      if (!ctx.isPg) await priceRulesCard(ctx);           // seasonal / weekend nightly prices don't apply to PG rent
       if (!ctx.allow('manage_rooms')) {
         $$('#save-rates, #x-save, #x-add, #x-suggest, [data-x-del], #pr-add, [data-pr-edit], [data-pr-del]').forEach((b) => b.remove());
         $$('.ns-content input, .ns-content select').forEach((i) => { i.disabled = true; });
@@ -416,7 +422,6 @@ page('settings', async (ctx) => {
     },
   };
 
-  VIEWS.smart = async () => (await import('./smart-pricing.js')).smartPricing(ctx);   // Smart pricing (041)
   await show(new URLSearchParams(location.search).get('tab') || 'property');
 });
 
@@ -479,7 +484,7 @@ async function extrasCard(ctx) {
 // ------------------------------------------------------------ what each role can do (owner edits)
 function permsCard(ctx) {
   const owner = ctx.role === 'owner';
-  const ROLES = [['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']];
+  const ROLES = [['manager', 'Manager'], ['front_desk', ROLE_LABEL.front_desk], ['accountant', 'Accountant']];
   const cur = (role, perm) => { const v = ctx.rolePermissions?.[role]?.[perm]; return typeof v === 'boolean' ? v : permDefault(role, perm); };
   document.querySelector('.ns-content').insertAdjacentHTML('beforeend', `<div class="ns-card" style="padding:0;overflow:hidden;margin-top:20px" id="perms-card">
     <div style="padding:18px 20px"><div class="ns-h3">What each role can do</div>
@@ -651,7 +656,7 @@ async function billingExtras(ctx) {
 const DOW = [['5', 'Fri'], ['6', 'Sat'], ['0', 'Sun'], ['1', 'Mon'], ['2', 'Tue'], ['3', 'Wed'], ['4', 'Thu']];
 async function priceRulesCard(ctx) {
   const [rules, rooms, beds] = await Promise.all([
-    q(sb.from('rate_rules').select('*').eq('property_id', ctx.property_id).order('created_at')).then((x) => x.filter((r) => r.name !== 'Smart pricing')).catch(() => null),   // Smart pricing's own rules show on its tab (041)
+    q(sb.from('rate_rules').select('*').eq('property_id', ctx.property_id).order('created_at')).catch(() => null),
     q(sb.from('rooms').select('id,name,sort').eq('property_id', ctx.property_id).order('sort')),
     q(sb.from('beds').select('id,label,room_id,rate_paise,is_active,sort').eq('property_id', ctx.property_id).eq('is_active', true).order('sort'))]);
   if (rules === null) return;                                         // database not updated yet (026)
