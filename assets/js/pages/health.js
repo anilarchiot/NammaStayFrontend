@@ -4,6 +4,7 @@ import { page, rpc, content, setSubtitle, headerActions, esc, fmtDate, $ } from 
 
 const WORD = { green: 'Good', amber: 'Watch', red: 'Act now', unknown: 'No data yet' };
 const TONE = { green: '#3CC48F', amber: '#F2B33D', red: '#F0806A', unknown: '#8A93AD' };
+const SCORE_TONE = { green: '#16845D', amber: '#8A5B00', red: '#B23A2E', unknown: '#5B6475' };
 const I = (d, w = 22) => `<svg aria-hidden="true" width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const AREA_PATHS = {
   occupancy: '<path d="M3 18V8"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="2"/>',
@@ -45,7 +46,7 @@ page('health', async (ctx) => {
   const gauge = `<svg class="bhx-gauge" viewBox="0 0 200 190" role="img" aria-label="Health score ${s == null ? 'not available' : s + ' out of 100'}">
     <circle cx="100" cy="100" r="80" fill="none" stroke="#24305A" stroke-width="16" stroke-linecap="round" stroke-dasharray="${arc.toFixed(1)} ${C.toFixed(1)}" transform="rotate(135 100 100)"/>
     <circle cx="100" cy="100" r="80" fill="none" stroke="${TONE[tone]}" stroke-width="16" stroke-linecap="round" stroke-dasharray="${val.toFixed(1)} ${C.toFixed(1)}" transform="rotate(135 100 100)"/>
-    <text x="100" y="106" text-anchor="middle" class="bhx-score" fill="${TONE[tone]}">${s == null ? '—' : s}</text>
+    <text x="100" y="106" text-anchor="middle" class="bhx-score" style="fill:${SCORE_TONE[tone]}">${s == null ? '—' : s}</text>
     <text x="100" y="132" text-anchor="middle" class="bhx-of">out of 100</text>
     <text x="44" y="182" text-anchor="middle" class="bhx-end">0</text><text x="156" y="182" text-anchor="middle" class="bhx-end">100</text></svg>`;
   const spark = (() => {

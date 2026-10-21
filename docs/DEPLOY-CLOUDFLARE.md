@@ -49,7 +49,7 @@ Watch these in **Supabase → Reports** and **Usage** every month.
 ## 2. Before you start
 
 - You can sign in to the domain registrar for `thenammastay.com`.
-- The production build works: `npm ci` then `npm test` builds and checks the minified site in `dist/`. Cloudflare runs the same command.
+- The static site check works: `npm ci` then `npm test` validates the root HTML pages and assets. The website is served directly from the repository root.
 - Keep GitHub Pages running until step 5 — the site stays online during the move.
 
 ---
@@ -66,7 +66,7 @@ Watch these in **Supabase → Reports** and **Usage** every month.
    | Production branch | `main` |
    | Framework preset | None |
    | Build command | `npm test` |
-   | Build output directory | `dist` |
+   | Build output directory | `.` |
    | Root directory | *(leave empty)* |
 
 5. **Environment variables → Add**: `NODE_VERSION` = `22`.
@@ -80,7 +80,7 @@ From now on every push to `main` deploys automatically, and every pull request g
 
 ### If Cloudflare created a Worker instead of a Pages project
 
-Cloudflare's dashboard may set the site up as a **Worker** with the deploy command `npx wrangler deploy`. That works too, because the repo contains `wrangler.jsonc`, which publishes only `dist/`. Use these settings (**Workers & Pages → your Worker → Settings → Build**):
+Cloudflare's dashboard may set the site up as a **Worker** with the deploy command `npx wrangler deploy`. The `wrangler.jsonc` publishes the root static site files. Use these settings (**Workers & Pages → your Worker → Settings → Build**):
 
 | Setting | Value |
 |---|---|
@@ -153,7 +153,7 @@ Only after the domain works on Cloudflare:
 
 - **Updating the site:** push to `main` → Cloudflare builds and deploys. See progress in **Workers & Pages → your project → Deployments**.
 - **Rollback:** Deployments → pick an earlier successful deployment → **Rollback to this deployment**.
-- **Failed build:** open the deployment's build log. A failure in `npm test` means the build or the production checks (`scripts/validate-production.cjs`) failed — fix it locally first with `npm ci && npm test`.
+- **Failed build:** open the deployment's build log. A failure in `npm test` means the static-site checks (`scripts/validate-production.cjs`) failed — fix it locally first with `npm ci && npm test`.
 - **Database changes:** new numbered migration → run on the staging Supabase project → run on live → re-run `supabase/tests/01_security_checks.sql`.
 
 ---

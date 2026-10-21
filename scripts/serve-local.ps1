@@ -2,10 +2,7 @@ param(
   [int]$Port = 4173
 )
 
-$root = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'dist'
-if (-not (Test-Path -LiteralPath $root -PathType Container)) {
-  throw 'Production output is missing. Run npm test before starting the local server.'
-}
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $listener = [System.Net.HttpListener]::new()
 $listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
