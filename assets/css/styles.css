@@ -744,8 +744,12 @@ body.cal-moving, body.cal-moving *{cursor:grabbing !important}
 .cx-bk-row.is-bad{background:#FFF8F8}
 .cx-bk-main{min-width:0}
 .cx-frame{width:100%;height:65vh;border:1px solid #E2DAC4;border-radius:12px;background:#fff}
+.cx-connect-modal{width:min(1440px,calc(100vw - 24px))!important}
+.cx-connect-modal .ns-modal-body{min-width:0}
+.cx-connect-modal .cx-frame{display:block;min-width:0;height:min(72vh,820px);flex:1 1 auto}
 @media (max-width:640px){ .cx-bk-row{grid-template-columns:auto 1fr} .cx-bk-row .ns-pill,.cx-bk-row .ns-btn-ghost{grid-column:2} }
 .cx-demo-frame{display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;line-height:1.7;font-size:14px;background:#F6F9FF;height:auto;min-height:260px}
+@media (max-width:640px){.cx-connect-modal{width:calc(100vw - 16px)!important}.cx-connect-modal .cx-frame{height:60vh}}
 
 /* ---------- Setup wizard ---------- */
 .su-wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}

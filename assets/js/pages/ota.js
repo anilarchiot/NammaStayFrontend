@@ -178,11 +178,12 @@ async function cxCard(ctx) {
     busy(e.target, 'Opening…');
     try {
       const { url } = await call({ action: 'iframe' });
-      modal({ title: 'Connect your OTAs', width: 980,
+      const connectionModal = modal({ title: 'Connect your OTAs', width: 1200,
         body: `<div class="ns-muted" style="font-size:12.5px;margin-bottom:8px">Choose an OTA (Booking.com, MakeMyTrip, Agoda…), sign in with your OTA account, then match each OTA room to a NammaStay room. Each OTA may also need you to approve NammaStay’s channel manager in its own extranet.</div>
           ${url === 'demo' ? `<div class="cx-frame cx-demo-frame"><div><b>Channex’s “Connect a channel” screen opens here</b><br>Pick an OTA → sign in with your Booking.com / MakeMyTrip / Hostelworld account → match each OTA room to a NammaStay room (e.g. “Mixed Dorm bed” → “6-Bed Mixed Dorm · ₹700”) → Activate.<br><br><span class="ns-muted">Demo: nothing to connect here — tap Done, then Sync now.</span></div></div>`
             : `<iframe class="cx-frame" src="${esc(url)}" title="Connect OTAs"></iframe>`}`,
         actions: [{ label: 'Done', kind: 'primary', onClick: () => { setTimeout(() => cxCard(ctx), 50); } }] });
+      connectionModal.el.querySelector('.ns-modal').classList.add('cx-connect-modal');
     } catch (err) { toast(err.message, { error: true }); }
     done(e.target);
   });
