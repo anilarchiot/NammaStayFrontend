@@ -1,6 +1,6 @@
 // Form C — foreign guests must be reported to FRRO within 24 hours of arrival (and on departure).
 // NammaStay prepares the details in the portal's order, tracks the deadline and records the FRRO number.
-import { unitName, page, rpc, content, setSubtitle, headerActions, esc, modal, field, options, toast, guestFace, viewIdDocs, fmtDayTime, $, $$ } from '../core.js';
+import { unitName, page, rpc, content, setSubtitle, headerActions, esc, modal, field, options, toast, guestFace, viewIdDocs, fmtDayTime, onPageLeave, $, $$ } from '../core.js';
 
 const FRRO_URL = 'https://indianfrro.gov.in/frro/FormC';
 const FIELDS = [   // details the FRRO form asks for (beyond name, nationality, date of birth)
@@ -143,5 +143,6 @@ page('formc', async (ctx) => {
   }
 
   await draw();
-  setInterval(() => { if (!document.querySelector('.ns-overlay')) draw(); }, 60000);   // keep countdowns fresh
+  const countdownTimer = setInterval(() => { if (!document.querySelector('.ns-overlay')) draw(); }, 60000);   // keep countdowns fresh
+  onPageLeave(() => clearInterval(countdownTimer));
 });

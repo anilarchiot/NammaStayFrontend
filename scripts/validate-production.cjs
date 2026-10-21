@@ -3,12 +3,13 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
+const routesFile = path.join(root, 'src', 'assets', 'js', 'routes.js');
 
 if (!fs.existsSync(output) || !fs.statSync(output).isDirectory()) {
   throw new Error('Production output is missing. Run npm run build first.');
 }
 
-const sourcePages = fs.readdirSync(root)
+const sourcePages = fs.readdirSync(path.join(root, 'src', 'pages'))
   .filter((name) => name.endsWith('.html'))
   .sort();
 const builtPages = fs.readdirSync(output)
@@ -33,6 +34,54 @@ collectFiles(output);
 const sourceMaps = files.filter((file) => file.endsWith('.map'));
 if (sourceMaps.length) {
   throw new Error(`Production output contains source maps: ${sourceMaps.map((file) => path.relative(output, file)).join(', ')}`);
+}
+
+const routeSource = fs.readFileSync(routesFile, 'utf8');
+const routeEntries = [...routeSource.matchAll(/\{ key: (null|'[^']+'), path: '([^']+)', title: '[^']+', module: '([^']+)'(?:, roles: \[[^\]]*\])? \}/g)]
+  .map(([, key, routePath, modulePath]) => ({ key: key === 'null' ? null : key.slice(1, -1), path: routePath, module: modulePath }));
+if (!routeEntries.length) throw new Error('The app route manifest contains no routes.');
+
+const seenPaths = new Set(); const seenKeys = new Set();
+for (const route of routeEntries) {
+  if (seenPaths.has(route.path)) throw new Error(`Duplicate app route path: ${route.path}`);
+  seenPaths.add(route.path);
+  if (route.key) {
+    if (seenKeys.has(route.key)) throw new Error(`Duplicate app route key: ${route.key}`);
+    seenKeys.add(route.key);
+  }
+  if (!builtPages.includes(route.path)) throw new Error(`App route has no emitted page: ${route.path}`);
+  const moduleFile = path.resolve(path.dirname(routesFile), route.module);
+  if (!moduleFile.startsWith(path.join(root, 'src', 'assets', 'js', 'pages') + path.sep) || !fs.existsSync(moduleFile)) {
+    throw new Error(`App route has a missing or invalid page module: ${route.module}`);
+  }
+  const pageHtml = fs.readFileSync(path.join(output, route.path), 'utf8');
+  if (!pageHtml.includes(`assets/js/${route.module.replace(/^\.\//, '')}`)) {
+    throw new Error(`Route page does not load its registered module: ${route.path}`);
+  }
+}
+
+const headersFile = path.join(output, '_headers');
+if (!fs.existsSync(headersFile)) throw new Error('Production output is missing Cloudflare security headers.');
+const headers = fs.readFileSync(headersFile, 'utf8').toLowerCase();
+for (const header of ['x-content-type-options: nosniff', 'referrer-policy:', 'x-frame-options:', 'permissions-policy:']) {
+  if (!headers.includes(header)) throw new Error(`Production security headers are missing ${header.trim()}.`);
+}
+
+const secretArtifacts = [];
+for (const file of files) {
+  const contents = fs.readFileSync(file, 'utf8');
+  if (/sb_secret_[A-Za-z0-9_-]{16,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----|service_role\s*[:=]/i.test(contents)) {
+    secretArtifacts.push(path.relative(output, file));
+  }
+  for (const match of contents.matchAll(/\b(eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/g)) {
+    try {
+      const claims = JSON.parse(Buffer.from(match[1].split('.')[1], 'base64url').toString('utf8'));
+      if (claims.role === 'service_role') secretArtifacts.push(path.relative(output, file));
+    } catch { /* unrelated JWT-like string */ }
+  }
+}
+if (secretArtifacts.length) {
+  throw new Error(`Production output contains server-only credential markers: ${[...new Set(secretArtifacts)].join(', ')}`);
 }
 
 const missingReferences = [];
@@ -60,4 +109,4 @@ if (!fs.existsSync(path.join(output, '.nojekyll'))) {
   throw new Error('Production output is missing .nojekyll.');
 }
 
-console.log(`Production validation passed (${builtPages.length} pages, ${files.length} files, no source maps or missing local assets).`);
+console.log(`Production validation passed (${builtPages.length} pages, ${routeEntries.length} app routes, ${files.length} files, security headers present, no server secrets or source maps).`);

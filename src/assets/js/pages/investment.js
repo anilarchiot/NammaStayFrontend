@@ -1,7 +1,7 @@
 // My business (owner only) — money invested, payback from profit, milestones, legal documents (036_investment.sql);
 // loans, partners and lease in their own tab (039_my_business.sql, business.js).
 import { page, rpc, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, fmtDate, ymd, modal, field, options,
-  toast, confirmDialog, $, $$ } from '../core.js';
+  toast, confirmDialog, onPageLeave, $, $$ } from '../core.js';
 import { checklist, KINDS, STATE_OPTIONS, STATES, CHECKED_ON } from './licences-data.js';
 import { SETUP_KINDS, setupItems } from './setup-items.js';
 import { drawMilestoneCard, CARD_THEMES, CARD_SIZES } from './milestone-card.js';
@@ -57,10 +57,12 @@ page('investment', async (ctx) => {
       rpc('legal_checklist_get', { p_property: ctx.property_id }).catch(() => null), loadBusiness(ctx.property_id)]);
     paint();
   }
-  window.addEventListener('hashchange', () => {                 // links like investment.html#docs from the dashboard
+  const onInvestmentHashChange = () => {                 // links like investment.html#docs from the dashboard
     const h = location.hash.replace('#', ''); const t = h === 'docs' || h === 'licences' ? 'documents' : h;
     if (['payback', 'business', 'documents'].includes(t) && t !== tab && S) { tab = t; paint(); if (h === 'docs' || h === 'licences') $('#' + h)?.scrollIntoView({ block: 'start' }); }
-  });
+  };
+  window.addEventListener('hashchange', onInvestmentHashChange);
+  onPageLeave(() => window.removeEventListener('hashchange', onInvestmentHashChange));
   function paint() {
     actions();
     const tabs = TABS.filter(([k]) => k !== 'business' || B);

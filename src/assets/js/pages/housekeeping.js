@@ -1,5 +1,5 @@
 // Housekeeping board — every bed/room: Dirty → Cleaning → Ready (Clean). Check-out marks it Dirty automatically.
-import { page, rpc, content, setSubtitle, headerActions, esc, modal, field, toast, fmtTime, W, $, $$ } from '../core.js';
+import { page, rpc, content, setSubtitle, headerActions, esc, modal, field, toast, fmtTime, W, onPageLeave, $, $$ } from '../core.js';
 
 const ST = {
   dirty: { label: 'Dirty', next: 'cleaning', action: 'Start cleaning', icon: '🧺' },
@@ -59,5 +59,6 @@ page('housekeeping', async (ctx) => {
 
   $('#hk-refresh').onclick = draw;
   await draw();
-  setInterval(() => { if (!document.querySelector('.ns-overlay')) draw(); }, 60000);
+  const refreshTimer = setInterval(() => { if (!document.querySelector('.ns-overlay')) draw(); }, 60000);
+  onPageLeave(() => clearInterval(refreshTimer));
 });

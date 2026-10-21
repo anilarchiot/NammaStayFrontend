@@ -21,10 +21,11 @@ Budget about 2–3 hours for the first setup.
 
 | Path | What it is |
 |---|---|
-| `index.html` | Marketing homepage. Edit the WhatsApp/email at the bottom of the file. |
-| `login.html` + other `*.html`, `assets/` | The app. Works as a demo until `assets/js/config.js` is filled in. |
-| `assets/js/core.js` | Login check, roles, formatting, dialogs, notification bell. |
-| `assets/js/pages/*.js` | One script per screen; each calls the database functions. |
+| `src/pages/index.html` | Marketing homepage. Edit the WhatsApp/email at the bottom of the file. |
+| `src/pages/*.html`, `src/assets/` | Page documents and app assets. Works as a demo until `src/assets/js/config.js` is filled in. |
+| `src/assets/js/core.js` | Login check, roles, formatting, dialogs, notification bell. |
+| `src/assets/js/routes.js` | Registered app routes, page modules, and client-side role gates. |
+| `src/assets/js/pages/*.js` | One script per screen; each calls the database functions. |
 | `supabase/migrations/001–005` | The database: run in order. |
 | `supabase/tests/01_security_checks.sql` | Security checks — run before launch and after every change. |
 | `supabase/tests/02_load_test.sql` | 1.5 lakh-booking load test — **separate test project only**. |
@@ -100,7 +101,7 @@ Also open **Advisors → Security Advisor** and **Performance Advisor** in Supab
 ## 6. Connect the website
 
 1. Supabase → **Project Settings → API**: copy the **Project URL** and the **anon public** key.
-2. Edit `assets/js/config.js`:
+2. Edit `src/assets/js/config.js`:
    ```js
    supabaseUrl: 'https://abcdxyz.supabase.co',
    supabaseAnonKey: 'eyJhbGciOi...',
@@ -108,7 +109,7 @@ Also open **Advisors → Security Advisor** and **Performance Advisor** in Supab
    The anon key is meant to be public; RLS protects the data. **Never** put the `service_role` key in the website.
 3. Push to the `main` branch on GitHub. Cloudflare Pages builds (`npm test` → `dist/`) and redeploys in 1–2 minutes (set-up: [DEPLOY-CLOUDFLARE.md](./DEPLOY-CLOUDFLARE.md)).
 4. Open `https://thenammastay.in/login.html`, sign in, and you should see an empty live dashboard with 9 beds.
-   (`https://thenammastay.in` itself is the marketing homepage — `index.html`.)
+   (`https://thenammastay.in` itself is the marketing homepage — `src/pages/index.html`.)
 
 > Only the built `dist/` folder is published; `supabase/` and `docs/` are not served.
 

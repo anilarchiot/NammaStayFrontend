@@ -1,7 +1,7 @@
 // Calendar — every bed, every night. Drag across a bed's row (or tap the first
 // and last night on a phone) to create a booking for those dates.
 import { hostExtras, isResort, isHomestay, unitName, otaOf, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
-  modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, $, $$ } from '../core.js';
+  modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, onPageLeave, $, $$ } from '../core.js';
 
 let DAYS = 9;                                     // 9 days (week view) or the days of the month (month view)
 const WEEK_DAYS = 9;
@@ -313,7 +313,7 @@ page('calendar', async (ctx) => {
       const bad = moveProblem(mv.b, bedId, startIdx);
       mv.target = { bedId, startIdx, bad }; paintMove(bedId, startIdx, bad);
     });
-    window.addEventListener('pointerup', () => {
+    const onBookingPointerUp = () => {
       if (ex) {
         const x = ex; ex = null;
         if (!x.active) return;
@@ -331,7 +331,9 @@ page('calendar', async (ctx) => {
       if (!m.target) { paintMove(null); return; }
       if (m.target.bad) { toast(m.target.bad, { error: true }); paintMove(null); return; }
       confirmMove(m.b, m.target.bedId, m.target.startIdx);
-    });
+    };
+    window.addEventListener('pointerup', onBookingPointerUp);
+    onPageLeave(() => window.removeEventListener('pointerup', onBookingPointerUp));
     host.addEventListener('pointerdown', (e) => {                       // mouse / pen: drag
       const c = e.target.closest('.cal-cell.is-free');
       if (!c || e.pointerType === 'touch' || e.button !== 0) return;
@@ -345,11 +347,13 @@ page('calendar', async (ctx) => {
       const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
       if (c && c.dataset.bed === sel.bed && +c.dataset.i !== sel.b) { sel.b = +c.dataset.i; paint(); }
     });
-    window.addEventListener('pointerup', () => {
+    const onSelectionPointerUp = () => {
       if (!dragging) return;
       dragging = false; justDragged = true; setTimeout(() => { justDragged = false; }, 60);
       finish();
-    });
+    };
+    window.addEventListener('pointerup', onSelectionPointerUp);
+    onPageLeave(() => window.removeEventListener('pointerup', onSelectionPointerUp));
     host.addEventListener('click', (e) => {                              // tap a booking bar → quick panel
       const bar = e.target.closest('a.bar[data-id]');
       if (bar) { e.preventDefault(); if (!justMoved && !moveMode) bookingPanel(bar.dataset.id); return; }

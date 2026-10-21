@@ -1,5 +1,6 @@
 // NammaStay — shared front-end core (ES module, no build step).
 // Every page script imports from here.
+import { PAGE_ROLES, NAV_KEY, ROUTE_BY_KEY, resolveRoute } from './routes.js';
 const CFG = window.NAMMASTAY_CONFIG || {};
 /** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
 const DEMO_ON = (() => {
@@ -119,26 +120,6 @@ export async function q(promise, { withCount = false } = {}) {
 }
 
 // ---------------------------------------------------------------- page lifecycle
-const PAGE_ROLES = {
-  dashboard: null, bookings: null, calendar: null, rooms: null, payments: null,
-  guests: ['owner', 'manager', 'front_desk'],
-  ota: ['owner', 'manager'],
-  formc: ['owner', 'manager', 'front_desk'],
-  housekeeping: ['owner', 'manager', 'front_desk'],
-  setup: ['owner', 'manager'],
-  expenses: ['owner', 'manager', 'accountant'],
-  investment: ['owner'],                                      // My business (was My investment): owner only (036, 039)
-  health: ['owner', 'manager'],                               // Business health (037)
-  tenants: ['owner', 'manager', 'front_desk', 'accountant'],   // PG / co-living: monthly tenants & rent (031)
-  activities: ['owner', 'manager', 'front_desk', 'accountant'], dayvisits: ['owner', 'manager', 'front_desk', 'accountant'], groups: ['owner', 'manager', 'front_desk', 'accountant'],   // resorts (034)
-  pgpayments: ['owner', 'manager', 'front_desk', 'accountant'], pgreport: ['owner', 'manager', 'accountant'],   // PG (032)
-  checkin: ['owner', 'manager', 'front_desk'],
-  reports: ['owner', 'manager', 'accountant'],
-  settings: ['owner', 'manager'],
-};
-const NAV_KEY = {
-  'guest-profile.html': 'guests', 'check-in.html': 'checkin', 'reports.html': 'reports', 'settings.html': 'settings',
-};
 // Words follow the property type: hostels/PGs sell beds, hotels/homestays sell rooms
 const WORDS = {
   hostel: { kind: 'hostel', unit: 'bed', Unit: 'Bed', units: 'beds', Units: 'Beds', setup: 'Rooms & beds', group: 'Room', groups: 'room types',
@@ -336,7 +317,13 @@ export function showFatal(message, { signIn = false } = {}) {
 /** Run a page: check the login, apply the role, then render. */
 export function page(key, fn) {
   if (NOT_CONNECTED) { location.replace('login.html'); return; }
-  (async () => {
+  const route = resolveRoute();
+  if (!route || route.key !== key || (key && !ROUTE_BY_KEY.has(key))) {
+    showFatal('This page is not registered in the app router.');
+    return;
+  }
+  disposeCurrentPage();
+  const render = (async () => {
     try {
       const ctx = await boot(key);
       await fn(ctx);
@@ -347,7 +334,91 @@ export function page(key, fn) {
       showFatal(e.message || 'Something went wrong.');
     }
   })();
+  window.__NS_PAGE_RENDER__ = render;
+  return render;
 }
+
+let routeLoadId = 0;
+let routeNavigationQueue = Promise.resolve();
+let pageCleanups = [];
+export function onPageLeave(cleanup) {
+  if (typeof cleanup === 'function') pageCleanups.push(cleanup);
+  return cleanup;
+}
+function disposeCurrentPage() {
+  const cleanups = pageCleanups; pageCleanups = [];
+  cleanups.forEach((cleanup) => { try { cleanup(); } catch (error) { console.warn('Page cleanup failed', error); } });
+}
+
+function spaRouteTarget(url) {
+  let route = resolveRoute(url.pathname);
+  if (!route) return null;
+  if (appContext?.isPg) {
+    const redirect = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' }[route.key];
+    if (redirect) { url = new URL(redirect, url); route = resolveRoute(url.pathname); }
+  } else if (['pgpayments', 'pgreport'].includes(route.key)) {
+    url = new URL('dashboard.html', url); route = resolveRoute(url.pathname);
+  }
+  if (appContext?.isResort === false && ['activities', 'dayvisits', 'groups'].includes(route.key)) {
+    url = new URL('dashboard.html', url); route = resolveRoute(url.pathname);
+  }
+  return { route, url };
+}
+
+async function renderSpaRoute(target, { replace = false } = {}) {
+  const url = target instanceof URL ? target : new URL(target, location.href);
+  const resolved = spaRouteTarget(url);
+  if (!resolved?.route) return false;
+  const { route } = resolved;
+  if (replace) history.replaceState(null, '', resolved.url.href);
+  else history.pushState(null, '', resolved.url.href);
+
+  const header = $('.ns-main > [style*="height:76px"]');
+  const heading = header?.children[0]?.children[0];
+  if (heading) heading.textContent = route.title;
+  const activePath = route.key === null ? 'bookings.html' : route.path;
+  $$('.ns-sidebar .ns-nav-link, .ns-mobile-nav .ns-nav-link').forEach((link) => {
+    const active = new URL(link.href, location.href).pathname.endsWith('/' + activePath);
+    link.classList.toggle('is-active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+
+  document.title = `${route.title} · NammaStay`;
+  document.documentElement.classList.add('ns-booting');
+  headerActions()?.replaceChildren();
+  content('<div class="ns-card ns-empty">Loading…</div>');
+  const moduleUrl = new URL(route.module, import.meta.url);
+  moduleUrl.searchParams.set('spa', String(++routeLoadId));
+  window.__NS_PAGE_RENDER__ = null;
+  try {
+    await import(moduleUrl.href);
+    await window.__NS_PAGE_RENDER__;
+  } catch (error) {
+    console.error(error);
+    showFatal(error.message || 'This page could not be loaded.');
+  }
+  return true;
+}
+
+function queueSpaRoute(target, options) {
+  routeNavigationQueue = routeNavigationQueue.catch(() => {}).then(() => renderSpaRoute(target, options));
+  return routeNavigationQueue;
+}
+
+document.addEventListener('click', (event) => {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = event.target.closest('a[href]');
+  if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin !== location.origin || !resolveRoute(url.pathname) || !resolveRoute()) return;
+  if (url.pathname === location.pathname && url.search === location.search && url.hash === location.hash) return;
+  event.preventDefault();
+  queueSpaRoute(url).catch((error) => { console.error(error); location.assign(url.href); });
+});
+window.addEventListener('popstate', () => {
+  if (resolveRoute()) queueSpaRoute(new URL(location.href), { replace: true }).catch((error) => { console.error(error); location.reload(); });
+});
 
 // ---------------------------------------------------------------- NammaStay admin area (separate login: admin-login.html)
 const ADMIN_NAV = [
@@ -408,7 +479,37 @@ export function adminPage(fn) {
 
 export const TEMP_KEY = 'ns.temp.session';
 export function markBrowserSession() { try { document.cookie = 'ns_alive=1; path=/; SameSite=Lax'; } catch { /* ignore */ } }
+let appContext = null;
+let appContextPromise = null;
 async function boot(key) {
+  if (!appContextPromise) {
+    appContextPromise = bootApp().catch((error) => { appContextPromise = null; throw error; });
+  }
+  const ctx = await appContextPromise;
+  const redirect = (target) => {
+    const url = new URL(target, location.href);
+    if (resolveRoute(url.pathname) && resolveRoute()) renderSpaRoute(url, { replace: true }).catch(() => location.replace(url.href));
+    else location.replace(url.href);
+    throw new Stop();
+  };
+  if (!ctx.isResort && ['activities', 'dayvisits', 'groups'].includes(key)) redirect('dashboard.html');
+  const pgAway = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' };
+  if (ctx.isPg && pgAway[key]) redirect(pgAway[key]);
+  if (!ctx.isPg && ['pgpayments', 'pgreport'].includes(key)) redirect('dashboard.html');
+  const allowed = PAGE_ROLES[key];
+  if (allowed && !allowed.includes(ctx.role)) {
+    showFatal('Your role doesn’t have access to this page.');
+    throw new Stop();
+  }
+  const pagePerm = { reports: 'view_reports', payments: 'view_payments', expenses: 'view_reports' }[key];
+  if (pagePerm && !ctx.allow(pagePerm)) {
+    showFatal('Your role doesn’t have access to this page. Ask the owner if you need it.');
+    throw new Stop();
+  }
+  return ctx;
+}
+
+async function bootApp() {
   // "Keep me signed in" was unticked and the browser has since been closed → sign out
   if (LIVE) {
     let temp = false; try { temp = localStorage.getItem(TEMP_KEY) === '1'; } catch { /* ignore */ }
@@ -462,27 +563,13 @@ async function boot(key) {
   ctx.isResort = (await resortP) === true;                            // resort (034)
   if (ctx.isResort) { setKind('resort'); ctx.kind = W.kind; ctx.words = W; }
   applyChrome(ctx);
-  if (!ctx.isResort && ['activities', 'dayvisits', 'groups'].includes(key)) { location.replace('dashboard.html'); throw new Stop(); }   // resort pages (034)
-  // PG / co-living accounts use PG pages instead of the nightly-booking ones (032)
-  const PG_AWAY = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' };
-  if (ctx.isPg && PG_AWAY[key]) { location.replace(PG_AWAY[key]); throw new Stop(); }
-  if (!ctx.isPg && ['pgpayments', 'pgreport'].includes(key)) { location.replace('dashboard.html'); throw new Stop(); }
-  const allowed = PAGE_ROLES[key];
-  if (allowed && !allowed.includes(ctx.role)) {
-    showFatal('Your role doesn’t have access to this page.');
-    throw new Stop();
-  }
-  const PAGE_PERM = { reports: 'view_reports', payments: 'view_payments', expenses: 'view_reports' };
-  if (PAGE_PERM[key] && !ctx.allow(PAGE_PERM[key])) {
-    showFatal('Your role doesn’t have access to this page. Ask the owner if you need it.');
-    throw new Stop();
-  }
   ctx.access = await accessP;
   accessBanner(ctx);
   saveShell(false);
   rpc('touch_presence', { p_property: ctx.property_id }).catch(() => {});
   sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.replace('login.html'); });
   startNotifications(ctx);
+  appContext = ctx;
   return ctx;
 }
 

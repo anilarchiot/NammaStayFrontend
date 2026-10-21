@@ -1,6 +1,6 @@
 import { hostExtras, isResort, isHomestay, unitName, guestFace, newId, countryOptions, statusPill, fmtDayTime, fmtDay, headerActions, headerSearch, setSubtitle, confirmDialog, sendBookingWhatsApp, W, roomsMode, guestsText, idUploadFields, wireIdPreviews, uploadIdSides,
   page, rpc, q, sb, $, esc, rupees, toPaise, ymd, addDays, daysBetween, fromInputDT, field, options,
-  ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content,
+  ID_TYPES, SOURCES, METHOD_OPTIONS, toast, compressImage, uploadIdDoc, param, uuidOk, debounce, content, onPageLeave,
 } from '../core.js';
 import { mountCheckinResort } from './resort.js';          // add-on: resorts — stay package, group / event (034)
 import { mountCheckinGuests } from './checkin-guests.js';   // add-on: other guests in the room (030)
@@ -217,8 +217,11 @@ page('checkin', async (ctx) => {
     f('nationality').addEventListener('change', natCheck); natCheck();
   }
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-gid]'); if (b) selectGuest(b.dataset.gid); });
-  document.addEventListener('click', (e) => { if (!e.target.closest('#gs-wrap, [name=full_name], [name=phone]')) hideList(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideList(); });
+  const onDocumentClick = (e) => { if (!e.target.closest('#gs-wrap, [name=full_name], [name=phone]')) hideList(); };
+  const onDocumentKeydown = (e) => { if (e.key === 'Escape') hideList(); };
+  document.addEventListener('click', onDocumentClick);
+  document.addEventListener('keydown', onDocumentKeydown);
+  onPageLeave(() => { document.removeEventListener('click', onDocumentClick); document.removeEventListener('keydown', onDocumentKeydown); });
   if (existing) await selectGuest(existing.id);
 
   async function submit(status, btn) {

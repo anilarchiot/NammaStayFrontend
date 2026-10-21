@@ -7,6 +7,8 @@ const { minify: minifyJs } = require('terser');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 const rootFiles = fs.readdirSync(root, { withFileTypes: true });
+const sourcePages = path.join(root, 'src', 'pages');
+const sourceAssets = path.join(root, 'src', 'assets');
 
 if (fs.existsSync(output) && !fs.statSync(output).isDirectory()) {
   throw new Error('Build output path exists and is not a directory: dist');
@@ -33,7 +35,7 @@ async function copyAssets(sourceDir, destinationDir) {
     if (!entry.isFile() || /\.map$/i.test(entry.name)) continue;
     const extension = path.extname(entry.name).toLowerCase();
     if (extension === '.js' || extension === '.mjs') {
-      const assetPath = path.relative(path.join(root, 'assets'), source).replaceAll(path.sep, '/');
+      const assetPath = path.relative(sourceAssets, source).replaceAll(path.sep, '/');
       const isModule = assetPath === 'js/core.js' || assetPath.startsWith('js/pages/') || extension === '.mjs';
       const result = await minifyJs(fs.readFileSync(source, 'utf8'), {
         ecma: 2022,
@@ -57,27 +59,28 @@ async function copyAssets(sourceDir, destinationDir) {
 }
 
 async function build() {
-  for (const entry of rootFiles) {
-    if (!entry.isFile()) continue;
-    const source = path.join(root, entry.name);
+  for (const entry of fs.readdirSync(sourcePages, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
+    const source = path.join(sourcePages, entry.name);
     const destination = path.join(output, entry.name);
-    const extension = path.extname(entry.name).toLowerCase();
-
-    if (extension === '.html') {
-      const html = await minifyHtml(fs.readFileSync(source, 'utf8'), {
-        collapseWhitespace: true,
-        removeComments: true,
-        minifyCSS: true,
-        minifyJS: true,
-      });
-      fs.writeFileSync(destination, html);
-    } else if (entry.name === 'CNAME' || entry.name === 'robots.txt' || /\.(?:png|jpe?g|webp|svg|ico|avif)$/i.test(entry.name)) {
-      copyStaticFile(source, destination);
-    }
+    const html = await minifyHtml(fs.readFileSync(source, 'utf8'), {
+      collapseWhitespace: true,
+      removeComments: true,
+      minifyCSS: true,
+      minifyJS: true,
+    });
+    fs.writeFileSync(destination, html);
   }
 
-  const assets = path.join(root, 'assets');
-  if (fs.existsSync(assets)) await copyAssets(assets, path.join(output, 'assets'));
+  for (const entry of rootFiles) {
+    if (!entry.isFile() || !['CNAME', 'robots.txt'].includes(entry.name)) continue;
+    copyStaticFile(path.join(root, entry.name), path.join(output, entry.name));
+  }
+
+  const headersFile = path.join(root, 'src', '_headers');
+  if (fs.existsSync(headersFile)) copyStaticFile(headersFile, path.join(output, '_headers'));
+
+  if (fs.existsSync(sourceAssets)) await copyAssets(sourceAssets, path.join(output, 'assets'));
   fs.writeFileSync(path.join(output, '.nojekyll'), '');
 
   const sourceMaps = [];
