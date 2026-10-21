@@ -67,6 +67,7 @@
   document.addEventListener('click', function (e) {
     var link = e.target.closest && e.target.closest('#ns-sidebar .ns-nav-link');
     if (!link || link.classList.contains('ns-signout')) return;
+    if (window.matchMedia('(max-width: 900px)').matches) setNav(false);
     var target = new URL(link.href, location.href);
     if (target.href === location.href) e.preventDefault();
   });
