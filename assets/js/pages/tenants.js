@@ -90,7 +90,7 @@ page('tenants', async (ctx) => {
       : due > 0 ? `<span class="ns-pill ${late ? 'red' : 'amber'}">${rupees(due)} due</span>` : pill('Paid up', 'green');
     const sub = t.status === 'notice' ? `<b style="color:#B4711A">Leaving ${day(t.move_out_on)}</b>`
       : t.status === 'moved_out' ? `Moved out ${day(t.move_out_on)}${t.settled?.refund_paise ? ` · refunded ${rupees(t.settled.refund_paise)}` : ''}`
-        : `Since ${day(t.start_date)}${t.next_due_on && t.next_due_on > today ? ` · next rent ${day(t.next_due_on)}` : ''}`;
+        : `Since ${day(t.start_date)}${t.move_out_on ? ` · checkout ${day(t.move_out_on)}` : ''}${t.next_due_on && t.next_due_on > today ? ` · next rent ${day(t.next_due_on)}` : ''}`;
     return `<div class="pg-row" data-id="${esc(t.id)}">
         <button type="button" class="pg-main" data-open aria-label="Open ${esc(t.guest.full_name)}">
           ${avatar(t.guest.full_name, 36)}
@@ -137,7 +137,7 @@ page('tenants', async (ctx) => {
           <div><span>Rent day</span><b>${d.cycle === 'calendar' ? '1st of every month' : `Every month on the ${ordinal(Number(String(d.start_date).slice(8, 10)))}`}</b></div>
           <div><span>Deposit held</span><b>${rupees(d.deposit_held_paise)}${d.deposit_paise > d.deposit_held_paise && live ? ` <small style="color:#B4711A">of ${rupees(d.deposit_paise)}</small>` : ''}</b></div>
           <div><span>Notice period</span><b>${d.notice_days} days</b></div>
-          <div><span>Status</span><b>${d.status === 'notice' ? `On notice — leaving ${day(d.move_out_on)}` : d.status === 'moved_out' ? `Moved out ${day(d.move_out_on)}` : 'Living here'}</b></div>
+          <div><span>Status</span><b>${d.status === 'notice' ? `On notice — leaving ${day(d.move_out_on)}` : d.status === 'moved_out' ? `Moved out ${day(d.move_out_on)}` : d.move_out_on ? `Checkout planned ${day(d.move_out_on)}` : 'Living here'}</b></div>
           <div><span>ID</span><b>${d.guest.id_type ? esc(titleCase(d.guest.id_type)) + (d.guest.id_number ? ' · ' + esc(d.guest.id_number) : '') : '—'}${d.self_checkin_at ? ' · <span style="color:#157A56">registered online</span>' : ''}</b></div>
         </div>
         ${d.hold_warning ? `<div class="ns-error" style="display:block">⚠ ${esc(d.hold_warning)}</div>` : ''}
@@ -388,8 +388,9 @@ page('tenants', async (ctx) => {
     const bedOptions = (list) => (list.length ? list.map((b) => `<option value="${esc(b.id)}">${esc(b.room_name)} · ${esc(b.label)} — ${b.free >= 60 ? 'free 2+ months' : `free until ${day(b.until)}`}</option>`).join('')
       : '<option value="">No free bed from that date</option>');
     // beds free on the move-in date, longest-free first ("free until …" when another guest is booked later)
-    async function bedsFrom(s) {
-      const list = await rpc('available_beds', { p_property: ctx.property_id, p_in: new Date(s + 'T14:00:00+05:30').toISOString(), p_out: new Date(addDays(s, 1) + 'T11:00:00+05:30').toISOString() });
+    async function bedsFrom(s, checkout = '') {
+      const out = checkout && checkout > s ? checkout : addDays(s, 1);
+      const list = await rpc('available_beds', { p_property: ctx.property_id, p_in: new Date(s + 'T14:00:00+05:30').toISOString(), p_out: new Date(out + 'T11:00:00+05:30').toISOString() });
       const from = s > data.today ? s : data.today;
       const cal = await rpc('calendar_range', { p_property: ctx.property_id, p_from: from, p_days: 60 }).catch(() => ({ bookings: [], blocks: [] }));
       const next = {};
@@ -398,7 +399,7 @@ page('tenants', async (ctx) => {
         const d0 = ymd(at); if (d0 > from && (!next[bed] || d0 < next[bed])) next[bed] = d0;
       });
       return list.map((b) => ({ ...b, until: next[b.id] || null, free: next[b.id] ? Math.round((new Date(next[b.id]) - new Date(from)) / 864e5) : 99 }))
-        .filter((b) => b.free >= 2).sort((a, b) => b.free - a.free);           // a 1-night gap can't take a tenant
+        .filter((b) => checkout && checkout > s || b.free >= 2).sort((a, b) => b.free - a.free);
     }
     let beds = [];
     try { beds = await bedsFrom(start); } catch { beds = []; }
@@ -417,6 +418,7 @@ page('tenants', async (ctx) => {
         <div style="grid-column:1/-1;font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-top:6px">Bed & rent</div>
         ${field('Bed *', `<select class="ns-input" name="bed">${bedOptions(beds)}</select>`, 'Longest-free beds first. If a bed is free only for a while, move that guest’s booking or the tenant before then.')}
         ${field('Move-in date', `<input class="ns-input" type="date" name="start" value="${start}" min="${addDays(start, -62)}">`)}
+        ${field('Checkout date *', `<input class="ns-input" type="date" name="move_out_on" min="${addDays(start, 1)}" required>`, 'The calendar bed hold ends on this checkout date.')}
         ${field('Rent per month (₹) *', '<input class="ns-input" name="rent" inputmode="decimal" placeholder="e.g. 8000">')}
         ${field('Food per month (₹)', '<input class="ns-input" name="food" inputmode="decimal" placeholder="0 if not included">')}
         ${field('Rent day', `<select class="ns-input" name="cycle">${options([['movein', 'Same date every month (from move-in)'], ['calendar', '1st of every month (first month part-rent)']], 'movein')}</select>`)}
@@ -431,14 +433,17 @@ page('tenants', async (ctx) => {
         const v = (n) => el.querySelector(`[name=${n}]`).value.trim();
         if (v('full_name').length < 2) throw new Error('Enter the tenant’s full name.');
         if (!v('bed')) throw new Error('Choose a bed.');
+        if (!v('move_out_on')) throw new Error('Choose a checkout date.');
+        if (v('move_out_on') && v('move_out_on') <= v('start')) throw new Error('Checkout date must be after the move-in date.');
         const rent = toPaise(v('rent')); if (!(rent > 0)) throw new Error('Enter the monthly rent.');
         const ids = await uploadIdSides(el, `${ctx.property_id}/staff`);
         const r = await rpc('pg_move_in', { p_property: ctx.property_id, p: {
           guest: { full_name: v('full_name'), phone: v('phone'), nationality: v('nationality'), id_type: v('id_type'), id_number: v('id_number'), ...ids },
-          bed_id: v('bed'), start_date: v('start'), rent_paise: rent, food_paise: toPaise(v('food') || '0') || 0,
+          bed_id: v('bed'), start_date: v('start'), move_out_on: v('move_out_on') || null, rent_paise: rent, food_paise: toPaise(v('food') || '0') || 0,
           deposit_paise: toPaise(v('deposit') || '0') || 0, deposit_paid_paise: toPaise(v('dep_paid') || '0') || 0,
           method: v('method'), reference: v('reference'), cycle: v('cycle'), notice_days: v('notice') || 30, note: v('note') } });
-        if (r.held_until && r.held_until < addDays(v('start'), 300)) {
+        await rpc('pg_notice', { p_tenancy: r.id, p_move_out: v('move_out_on') });
+        if (r.held_until && r.held_until < v('move_out_on')) {
           toast(`${v('full_name')} moved in. Note: this bed is free only until ${day(r.held_until)} — another guest is booked on it. Move one of them before then.`, { error: true });
         } else toast(`${v('full_name')} moved in.`);
         await load(); openTenant(r.id);
@@ -452,10 +457,24 @@ page('tenants', async (ctx) => {
     const fillRent = () => { const b = beds.find((x) => x.id === el.querySelector('[name=bed]').value); if (ctx.isPg && !rentTyped && b?.rate_paise) rentIn.value = b.rate_paise / 100; };
     el.querySelector('[name=bed]').addEventListener('change', fillRent); fillRent();
     // beds free from the chosen date
-    el.querySelector('[name=start]').addEventListener('change', async (e) => {
-      const s = e.target.value; if (!s) return;
-      try { beds = await bedsFrom(s); el.querySelector('[name=bed]').innerHTML = bedOptions(beds); fillRent(); } catch { /* keep the list */ }
+    const refreshBeds = async () => {
+      const s = el.querySelector('[name=start]').value; if (!s) return;
+      const checkout = el.querySelector('[name=move_out_on]').value;
+      if (!checkout || checkout <= s) { el.querySelector('[name=move_out_on]').setCustomValidity('Checkout must be after move-in.'); }
+      else el.querySelector('[name=move_out_on]').setCustomValidity('');
+      try {
+        const selected = el.querySelector('[name=bed]').value;
+        beds = await bedsFrom(s, checkout);
+        el.querySelector('[name=bed]').innerHTML = bedOptions(beds);
+        if (beds.some((b) => b.id === selected)) el.querySelector('[name=bed]').value = selected;
+        fillRent();
+      } catch { /* keep the list */ }
+    };
+    el.querySelector('[name=start]').addEventListener('change', () => {
+      el.querySelector('[name=move_out_on]').min = addDays(el.querySelector('[name=start]').value, 1);
+      refreshBeds();
     });
+    el.querySelector('[name=move_out_on]').addEventListener('change', refreshBeds);
   }
 
   await load();

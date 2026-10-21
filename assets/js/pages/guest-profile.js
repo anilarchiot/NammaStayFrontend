@@ -91,6 +91,7 @@ async function guestList(ctx) {
   setSubtitle(ctx.property_name);
   const head = headerActions();
   const canDel = ctx.can('owner', 'manager') && ctx.allow('delete_guests');
+  head.style.flexWrap = 'nowrap';
   head.innerHTML = '<div class="ns-search"><span>Search</span></div>' + (ctx.allow('export_data') ? '<button type="button" class="ns-btn-ghost" id="export-guests">Export CSV</button>' : '');
   document.getElementById('export-guests')?.addEventListener('click', (e) => (ctx.isPg ? exportTenantProfiles : exportGuests)(ctx, e.target));
   const recent = await q(sb.from('guests').select('id, full_name, phone, nationality, created_at')

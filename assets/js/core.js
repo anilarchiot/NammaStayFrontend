@@ -500,7 +500,7 @@ function applyChrome(ctx) {
   const oldLang = $('.ns-sidebar .ns-lang');
   if (oldLang) oldLang.replaceWith(langPicker(LANG_STYLE));             // menu restored from the last page: same size, live again
   else {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'padding:4px 12px 8px';
+    const wrap = document.createElement('div'); wrap.style.cssText = 'padding:4px 0 8px';
     wrap.appendChild(langPicker(LANG_STYLE));
     const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
   }
@@ -515,7 +515,7 @@ function applyChrome(ctx) {
       rpc('hk_counts', { p_property: ctx.property_id }).then((c) => { const n = (c?.dirty || 0) + (c?.cleaning || 0); const el = $('#hk-count'); if (el && n > 0) { el.textContent = n; el.hidden = false; } }).catch(() => {});
     }
   }
-  if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
+  if (!ctx.isPg && ['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="formc.html"]')) {   // Form C (foreign guests)
     const ci = $('.ns-sidebar .ns-nav-link[href="check-in.html"]');
     if (ci) {
       const a = document.createElement('a'); a.href = 'formc.html'; a.className = 'ns-nav-link';
@@ -787,6 +787,41 @@ export function content(html, style = 'padding:24px 32px;display:flex;flex-direc
 
 // ---------------------------------------------------------------- notifications (in-app badge)
 const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 003.4 0"></path></svg>';
+let notificationAudio = null;
+function unlockNotificationAudio() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass || notificationAudio) return;
+  try {
+    notificationAudio = new AudioContextClass();
+    notificationAudio.resume().catch(() => {});
+  } catch { /* sound is optional */ }
+}
+document.addEventListener('pointerdown', unlockNotificationAudio, { once: true, passive: true });
+document.addEventListener('keydown', unlockNotificationAudio, { once: true });
+function playNotificationChime() {
+  if (!notificationAudio || notificationAudio.state !== 'running') return;
+  const start = notificationAudio.currentTime;
+  [[880, 0, 0.24], [1174, 0.11, 0.32]].forEach(([frequency, delay, duration]) => {
+    const oscillator = notificationAudio.createOscillator();
+    const volume = notificationAudio.createGain();
+    const noteStart = start + delay;
+    oscillator.type = 'sine'; oscillator.frequency.value = frequency;
+    volume.gain.setValueAtTime(0.0001, noteStart);
+    volume.gain.exponentialRampToValueAtTime(0.14, noteStart + 0.018);
+    volume.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
+    oscillator.connect(volume); volume.connect(notificationAudio.destination);
+    oscillator.start(noteStart); oscillator.stop(noteStart + duration + 0.03);
+  });
+}
+function ringNotificationBells(bells) {
+  bells.forEach((bell) => {
+    bell.classList.remove('is-ringing');
+    void bell.offsetWidth;
+    bell.classList.add('is-ringing');
+    setTimeout(() => bell.classList.remove('is-ringing'), 800);
+  });
+  playNotificationChime();
+}
 async function startNotifications(ctx) {
   const bells = [];
   for (const host of [$('.ns-sidebar'), $('.ns-mobilebar')]) {
@@ -814,7 +849,7 @@ async function startNotifications(ctx) {
   } catch { /* badge is best-effort */ }
   sb.channel('ns-notifications-' + ctx.property_id)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `property_id=eq.${ctx.property_id}` },
-      (p) => { unread += 1; setCount(unread); toast(p.new.title + (p.new.body ? ' · ' + p.new.body : '')); })
+      (p) => { unread += 1; setCount(unread); ringNotificationBells(bells); toast(p.new.title + (p.new.body ? ' · ' + p.new.body : '')); })
     .subscribe();
 }
 async function openNotifications(ctx, setCount) {

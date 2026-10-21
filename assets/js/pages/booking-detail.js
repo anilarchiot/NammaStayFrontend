@@ -108,7 +108,7 @@ page(null, async (ctx) => {
             <button type="button" class="ns-btn-ghost" id="copy-link">Copy link</button>
             ${g.phone ? `<a class="ns-btn-ghost" target="_blank" rel="noopener" href="https://wa.me/${esc(g.phone.replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi ${g.full_name.split(' ')[0]}, your booking ${b.code} at ${d.property.name} is ready. Please check in online here: ${selfLink}`)}">Send on WhatsApp</a>` : ''}
           </div></div>` : ''}
-      ${staff && g.nationality && !/^(india|indian)$/i.test(String(g.nationality).trim()) && !['cancelled', 'no_show'].includes(b.status) ? '<div id="fc-box"></div>' : ''}
+      ${staff && !ctx.isPg && g.nationality && !/^(india|indian)$/i.test(String(g.nationality).trim()) && !['cancelled', 'no_show'].includes(b.status) ? '<div id="fc-box"></div>' : ''}
     </div>
 
     <div class="ns-dialog-foot" style="padding:16px 26px;border-top:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">

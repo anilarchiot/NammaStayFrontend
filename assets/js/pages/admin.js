@@ -181,6 +181,8 @@ async function propertyView(id) {
         <div class="ns-h3" style="margin-bottom:6px">Property & owner</div>
         ${row('Owner', esc(owner?.name || '—'))}${row('Owner email', esc(owner?.email || '—'))}
         ${row('Phone', esc(p.phone || '—'))}${row('Address', esc([p.address, p.city].filter(Boolean).join(', ') || '—'))}
+        ${field('Property type', `<select class="ns-input" id="property-kind">${options([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel / guest house'], ['homestay', 'Homestay'], ['resort', 'Resort']], p.kind || 'hostel')}</select>`)}
+        <button type="button" class="ns-btn-ghost" id="save-kind" style="align-self:flex-start">Save property type</button>
         ${row('Guests recorded', u.guests)}${row('Guest payments (30d)', rupees(u.guest_payments_30d_paise))}
         ${row('UPI ID set', p.upi_id ? 'Yes' : '<span style="color:#966016">Not yet</span>')}
       </div>
@@ -224,6 +226,14 @@ async function propertyView(id) {
     $('#resend').onclick = () => inviteMessage({ name: p.name, email: waiting[0].email, owner: waiting[0].name, phone: p.phone, linked: false });
   }
   const act = async (patch, msg) => { try { await rpc('admin_set_property', { p_property: id, p: patch }); toast(msg); propertyView(id); } catch (e) { toast(e.message, { error: true }); } };
+  $('#save-kind').onclick = async (e) => {
+    const kind = $('#property-kind').value;
+    if (kind === p.kind) return toast('Property type is unchanged.');
+    if (!await confirmDialog('Change property type?', `Change ${p.name} to ${kind === 'pg' ? 'PG / Co-living' : kind === 'hotel' ? 'Hotel / guest house' : kind.charAt(0).toUpperCase() + kind.slice(1)}?`)) return;
+    e.target.disabled = true;
+    await act({ kind }, 'Property type updated.');
+    e.target.disabled = false;
+  };
   $$('[data-extend]').forEach((b) => b.onclick = () => act({ extend_days: +b.dataset.extend }, `Extended by ${b.dataset.extend} days.`));
   $('#extend-custom').onclick = () => modal({ title: 'Extend access', body: field('Days to add (negative to shorten)', '<input class="ns-input" name="days" type="number" value="15">'),
     actions: [{ label: 'Cancel' }, { label: 'Extend', kind: 'primary', onClick: async (el) => { await act({ extend_days: +el.querySelector('[name=days]').value }, 'Access updated.'); } }] });

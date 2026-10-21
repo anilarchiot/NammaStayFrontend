@@ -14,9 +14,12 @@ page('dashboard', async (ctx) => {
   const revDelta = d.revenue_yesterday ? Math.round(((d.revenue_today - d.revenue_yesterday) / d.revenue_yesterday) * 100) : null;
   const max = Math.max(d.beds_total, 1);
 
-  const stat = (label, value, sub, subColor = '#6B7280', dark = false) => `
-    <div class="ns-stat${dark ? ' is-dark' : ''}"><div class="ns-stat-label">${label}</div>
-      <div class="ns-stat-value">${value}</div><div class="ns-stat-sub" style="color:${subColor}">${sub}</div></div>`;
+  const stat = (label, value, sub, subColor = '#6B7280', dark = false, href = '') => {
+    const tag = href ? 'a' : 'div';
+    const link = href ? ` href="${href}"` : '';
+    return `<${tag} class="ns-stat${dark ? ' is-dark' : ''}${href ? ' ns-stat-link' : ''}"${link}><div class="ns-stat-label">${label}</div>
+      <div class="ns-stat-value">${value}</div><div class="ns-stat-sub" style="color:${subColor}">${sub}</div></${tag}>`;
+  };
 
   const person = (b, right) => `
     <a class="ns-list-row" href="booking-detail.html?id=${esc(b.id)}" style="color:inherit">
@@ -35,10 +38,10 @@ page('dashboard', async (ctx) => {
 
   content(`
     <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;">
-      ${stat('Occupancy today', occPct + '%', `${d.beds_occupied} / ${d.beds_total} ${W.units} ${occDelta ? (occDelta > 0 ? '▲ ' : '▼ ') + Math.abs(occDelta) : ''}`, '#1C9A6C')}
-      ${stat('Check-ins today', d.checkins_today, `${d.checkins_pending} pending arrival`)}
-      ${stat('Check-outs today', d.checkouts_today, `${d.checkouts_late} late check-out${d.checkouts_late === 1 ? '' : 's'}`, d.checkouts_late ? '#B23A3A' : '#6B7280')}
-      ${stat('Revenue today', rupees(d.revenue_today), revDelta === null ? 'No payments yesterday' : `${revDelta >= 0 ? '▲' : '▼'} ${Math.abs(revDelta)}% vs yesterday`, revDelta !== null && revDelta < 0 ? '#B23A3A' : '#1C9A6C')}
+      ${stat('Occupancy today', occPct + '%', `${d.beds_occupied} / ${d.beds_total} ${W.units} ${occDelta ? (occDelta > 0 ? '▲ ' : '▼ ') + Math.abs(occDelta) : ''}`, '#1C9A6C', false, 'calendar.html')}
+      ${stat('Check-ins today', d.checkins_today, `${d.checkins_pending} pending arrival`, '#6B7280', false, 'check-in.html')}
+      ${stat('Check-outs today', d.checkouts_today, `${d.checkouts_late} late check-out${d.checkouts_late === 1 ? '' : 's'}`, d.checkouts_late ? '#B23A3A' : '#6B7280', false, 'bookings.html?status=checked_out')}
+      ${stat('Revenue today', rupees(d.revenue_today), revDelta === null ? 'No payments yesterday' : `${revDelta >= 0 ? '▲' : '▼'} ${Math.abs(revDelta)}% vs yesterday`, revDelta !== null && revDelta < 0 ? '#B23A3A' : '#1C9A6C', false, 'payments.html')}
       ${stat('Pending dues', rupees(d.dues_paise), `${d.dues_count} unpaid booking${d.dues_count === 1 ? '' : 's'}`, '#E2A03F', true)}
     </div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;">
@@ -67,7 +70,7 @@ page('dashboard', async (ctx) => {
       </div>
     </div>`);
   // ---- Form C: foreign guests waiting for their FRRO arrival report
-  if (ctx.can('owner', 'manager', 'front_desk')) {
+  if (!ctx.isPg && ctx.can('owner', 'manager', 'front_desk')) {
     const n = await rpc('formc_due_count', { p_property: ctx.property_id }).catch(() => 0);
     if (n > 0) document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', `<a class="ns-card fc-dash" href="formc.html">
       <span><b>Form C due for ${n} foreign guest${n > 1 ? 's' : ''}</b><br><span class="ns-muted" style="font-size:12.5px">Report to FRRO within 24 hours of arrival.</span></span><span>Open Form C →</span></a>`);

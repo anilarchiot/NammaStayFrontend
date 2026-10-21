@@ -1575,7 +1575,7 @@ const RPC = {
   admin_property: ({ p_property }) => {
     const x = allProps().find((y) => y.property_id === p_property) || fail('Property not found.');
     const mine = p_property === P; const now = Date.now();
-    return { property: { id: x.property_id, name: x.name, kind: 'hostel', address: mine ? DB.properties[0].address : null, city: x.city,
+    return { property: { id: x.property_id, name: x.name, kind: mine ? (DB.pgMode ? 'pg' : DB.resortMode ? 'resort' : DB.properties[0].kind) : (x.kind || 'hostel'), address: mine ? DB.properties[0].address : null, city: x.city,
         phone: mine ? DB.properties[0].phone : '+91 98' + String(10000000 + x.beds * 7919).slice(0, 8), email: x.owner_email, upi_id: mine ? DB.properties[0].upi_id : (x.beds > 20 ? 'owner@okicici' : null), created_at: x.created_at },
       subscription: { ...x.sub, state: x.state },
       members: mine ? DB.members.map((m) => ({ name: m.display_name, email: m.email, role: m.role, last_seen_at: m.last_seen_at }))
@@ -1597,6 +1597,13 @@ const RPC = {
     if ('suspend' in p) { t.is_suspended = !!p.suspend; t.suspended_reason = p.suspend ? p.suspend_reason.trim() : null; t.suspended_at = p.suspend ? new Date().toISOString() : null;
       if (p_property === P) notify(p.suspend ? 'Account suspended' : 'Account reactivated', p.suspend ? t.suspended_reason : 'You can take new bookings again.', null); }
     if ('admin_note' in p) t.admin_note = p.admin_note || null;
+    if ('kind' in p) {
+      if (!['hostel', 'pg', 'hotel', 'homestay', 'resort'].includes(p.kind)) fail('Choose a valid property type.');
+      if (p_property === P) {
+        DB.pgMode = p.kind === 'pg'; DB.resortMode = p.kind === 'resort';
+        DB.properties[0].kind = p.kind === 'pg' ? 'hostel' : p.kind === 'resort' ? 'hotel' : p.kind;
+      } else t.kind = p.kind;
+    }
     return null;
   },
   admin_create_property: ({ p }) => {
@@ -2001,6 +2008,8 @@ const RPC = {
   pg_move_in: ({ p }) => {
     if (!DB.pgMode) fail('Tenants & rent is for PG / co-living properties. Set the property type to PG / Co-living in Settings.');
     const today = ymd(); const start = p.start_date || today;
+    const moveOut = p.move_out_on || null;
+    if (moveOut && moveOut <= start) fail('Checkout date must be after the move-in date.');
     const bed = bedOf(p.bed_id) || fail('Choose a bed.');
     if (DB.tenancies.some((t) => t.bed_id === bed.id && t.status !== 'moved_out' && (t.move_out_on || '9999') > start)) fail('Another tenant already lives in this bed. Choose another bed.');
     if (start < addDays(today, -62)) fail('The move-in date can be at most 2 months in the past.');
@@ -2009,11 +2018,11 @@ const RPC = {
     const g = { id: uuid(), property_id: P, full_name: G.full_name.trim(), phone: cleanPhone(G.phone), email: null, dob: null, nationality: G.nationality || null,
       id_type: G.id_type || null, id_number: G.id_number ? maskId(G.id_type, G.id_number) : null, id_doc_path: G.id_doc_path || null, id_doc_back_path: G.id_doc_back_path || null,
       notes: null, tags: [], consent_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    const t = { id: uuid(), guest_id: g.id, bed_id: bed.id, booking_id: null, booking_ids: [], start_date: start, move_out_on: null, notice_given_on: null, status: 'active',
+    const t = { id: uuid(), guest_id: g.id, bed_id: bed.id, booking_id: null, booking_ids: [], start_date: start, move_out_on: moveOut, notice_given_on: null, status: 'active',
       cycle: p.cycle || 'movein', rent_paise: Number(p.rent_paise), food_paise: Number(p.food_paise) || 0, deposit_paise: Number(p.deposit_paise) || 0,
       notice_days: Number(p.notice_days) || 30, note: p.note || null, settled: null, created_at: new Date().toISOString() };
     DB.guests.push(g);
-    try { const bid = pgHold(t, start, addDays(start, 365), start <= today ? 'checked_in' : 'confirmed'); t.booking_id = bid; t.booking_ids = [bid]; }
+    try { const bid = pgHold(t, start, moveOut || addDays(start, 365), start <= today ? 'checked_in' : 'confirmed'); t.booking_id = bid; t.booking_ids = [bid]; }
     catch (e) { DB.guests = DB.guests.filter((x) => x.id !== g.id); throw e; }
     DB.tenancies.push(t);
     if (t.deposit_paise > 0) {

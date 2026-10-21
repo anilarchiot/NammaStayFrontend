@@ -208,12 +208,14 @@ page('checkin', async (ctx) => {
     f('full_name').focus();
   }
   ['full_name', 'phone'].forEach((n) => f(n).addEventListener('input', debounce(() => suggest(f(n)), 300)));
-  // foreign guest → Form C reminder
-  const natHint = document.createElement('div'); natHint.className = 'ns-help fc-hint'; natHint.hidden = true;
-  natHint.innerHTML = '🌍 Foreign guest: report on <b>Form C</b> within 24 hours of arrival — take a passport photo (front &amp; visa page) below, then finish on the <a href="formc.html">Form C</a> page.';
-  f('nationality').closest('.ns-field')?.appendChild(natHint);
-  const natCheck = () => { natHint.hidden = !f('nationality').value || /^(india|indian)$/i.test(f('nationality').value); };
-  f('nationality').addEventListener('change', natCheck); natCheck();
+  if (!ctx.isPg) {
+    // foreign guest → Form C reminder
+    const natHint = document.createElement('div'); natHint.className = 'ns-help fc-hint'; natHint.hidden = true;
+    natHint.innerHTML = '🌍 Foreign guest: report on <b>Form C</b> within 24 hours of arrival — take a passport photo (front &amp; visa page) below, then finish on the <a href="formc.html">Form C</a> page.';
+    f('nationality').closest('.ns-field')?.appendChild(natHint);
+    const natCheck = () => { natHint.hidden = !f('nationality').value || /^(india|indian)$/i.test(f('nationality').value); };
+    f('nationality').addEventListener('change', natCheck); natCheck();
+  }
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-gid]'); if (b) selectGuest(b.dataset.gid); });
   document.addEventListener('click', (e) => { if (!e.target.closest('#gs-wrap, [name=full_name], [name=phone]')) hideList(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideList(); });

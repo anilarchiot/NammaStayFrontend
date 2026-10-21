@@ -45,8 +45,6 @@ page('settings', async (ctx) => {
             <div class="ns-h3">Property details</div>
             ${field('Property name', `<input class="ns-input" name="name" value="${esc(p.name)}">`)}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              ${ctx.isPg ? field('Type', '<select class="ns-input" name="kind" disabled title="Locked for PG / co-living accounts"><option value="pg" selected>PG / Co-living 🔒</option></select>', 'PG / co-living accounts can’t switch type. Contact NammaStay support if you need to.')
-                : field('Type', `<select class="ns-input" name="kind">${options([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay'], ['resort', 'Resort']], ctx.isResort ? 'resort' : p.kind)}</select>`)}
               ${field('Timezone', '<input class="ns-input" value="Asia/Kolkata (GMT+5:30)" disabled>')}
               ${field('Area / address', `<input class="ns-input" name="address" value="${esc(p.address || '')}">`)}
               ${field('City', `<input class="ns-input" name="city" value="${esc(p.city || '')}">`)}
@@ -78,14 +76,10 @@ page('settings', async (ctx) => {
         const v = Object.fromEntries($$('#prop [name], #prop2 [name]').map((i) => [i.name, i.value.trim() || null]));
         v.id_doc_retention_days = parseInt(v.id_doc_retention_days, 10) || 180;
         if (!v.name) return toast('Property name can’t be empty.', { error: true });
-        const pgNow = v.kind === 'pg'; if (pgNow) v.kind = 'hostel';            // a PG is saved as a bed property + the PG switch (031)
-        const rsNow = v.kind === 'resort'; if (rsNow) v.kind = 'hotel';          // a resort is saved as a rooms property + the resort switch (034)
         e.target.disabled = true;
         try {
           await q(sb.from('properties').update(v).eq('id', ctx.property_id));
-          if (rsNow !== !!ctx.isResort) { await rpc('resort_set_mode', { p_property: ctx.property_id, p_on: rsNow }); toast(rsNow ? 'Saved — Activities, Day visitors and Groups are now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
-          else if (pgNow !== !!ctx.isPg) { await rpc('pg_set_mode', { p_property: ctx.property_id, p_on: pgNow }); toast(pgNow ? 'Saved — Tenants & rent is now in the menu.' : 'Saved.'); setTimeout(() => location.reload(), 800); }
-          else toast('Saved.');
+          toast('Saved.');
         }
         catch (err) { toast(/upi_id/.test(err.message) ? 'That UPI ID doesn’t look right (e.g. name@okaxis).' : err.message, { error: true }); }
         finally { e.target.disabled = false; }

@@ -12,8 +12,8 @@ const monthDays = (d) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).g
 const shiftMonth = (d, n) => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1 + n, 1)); return x.toISOString().slice(0, 10); };
 const LIVE = ['pending', 'confirmed', 'checked_in'];
 let IS_PG = false;                                // PG / co-living account (032)
-const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> tap a free bed on the move-in day to move a tenant in. Rent is monthly — set it on the Move-in form.'
-  : `<b style="color:#157A56">Tip:</b> drag across a ${W.unit}’s free nights to book them — on a phone, tap the first night, then the last.`);
+const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> drag a tenant booking’s right edge to change checkout. Tap a free bed on the move-in day to move a tenant in.'
+  : `<b style="color:#157A56">Tip:</b> drag a booking’s right edge across free nights to extend the stay.`);
 
 page('calendar', async (ctx) => {
   const staff = ctx.can('owner', 'manager', 'front_desk');
@@ -43,12 +43,17 @@ page('calendar', async (ctx) => {
   const today = ymd();
   const earliest = addDays(today, -1);            // bookings can start at most yesterday
   let days = [];
+  let pgTenancyByBooking = new Map();
   const taken = new Map();                        // bed_id → Set of busy nights
 
   async function draw() {
     sel = null;
     const month = VIEW === 'month';
     DAYS = month ? monthDays(from) : WEEK_DAYS;
+    if (IS_PG) {
+      const pgData = await rpc('pg_tenants', { p_property: ctx.property_id });
+      pgTenancyByBooking = new Map((pgData.tenants || []).filter((t) => t.status !== 'moved_out' && t.booking_id).map((t) => [t.booking_id, t]));
+    }
     data = await rpc('calendar_range', { p_property: ctx.property_id, p_from: from, p_days: DAYS });
     const d = data;
     const to = addDays(from, DAYS - 1);
@@ -87,6 +92,7 @@ page('calendar', async (ctx) => {
           if (ota) return `<button type="button" class="bar cb cb-ota${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e};--ota:${ota.color}" title="${esc(ota.label)} booking (imported) — change it on ${esc(ota.label)}"><span class="cb-ico">🔗</span><span class="cb-name">${esc(ota.label)}</span></button>`;
           return `<button type="button" class="bar cb cb-maint${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e}" title="Maintenance: ${esc(k.reason)} — tap to change or remove"><span class="cb-ico">🔧</span><span class="cb-name">${esc(k.reason)}</span></button>`; }),
         ...d.bookings.filter((b) => b.bed_id === bed.id).map((b) => { const p = span(b.check_in_at, b.check_out_at);
+          const canExtend = staff && LIVE.includes(b.status) && days.includes(ymd(b.check_out_at)) && (!IS_PG || pgTenancyByBooking.has(b.id));
           const cls = b.status === 'checked_out' ? 'cb-out' : b.status === 'checked_in' ? 'cb-in' : b.status === 'pending' ? 'cb-pend' : b.balance_paise > 0 ? 'cb-due' : 'cb-conf';
           const span_ = p.e - p.s; const parts = String(b.guest || '').trim().split(/\s+/);
           const short = span_ <= (month ? 3 : 1) ? parts[0] : parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
@@ -95,10 +101,10 @@ page('calendar', async (ctx) => {
             : b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
             : b.balance_paise > 0 ? `<span class="cb-tag" title="${rupees(b.balance_paise)} due">₹</span>` : b.status !== 'pending' ? '<span class="cb-tag" title="Paid">✓</span>' : '';
           const label = { 'cb-in': 'In house', 'cb-conf': 'Confirmed · paid', 'cb-due': 'Balance due', 'cb-pend': 'Pending', 'cb-out': 'Checked out' }[cls];
-          return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}" href="${ctx.isPg ? `tenants.html?booking=${esc(b.id)}` : `booking-detail.html?id=${esc(b.id)}`}" style="grid-column:${p.s}/${p.e}"
-            title="${IS_PG ? `${esc(b.guest)} · tenant${b.status === 'confirmed' ? ` · moving in ${fmtDay(b.check_in_at)}` : b.status === 'checked_out' ? ' · moved out' : ' · living here'}`
-              : `${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}`}">
-            ${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}</a>`; }),
+          return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}"${canExtend ? ' data-extendable="true"' : ''} href="${ctx.isPg ? `tenants.html?booking=${esc(b.id)}` : `booking-detail.html?id=${esc(b.id)}`}" style="grid-column:${p.s}/${p.e}"
+            title="${IS_PG ? `${esc(b.guest)} · tenant${b.status === 'confirmed' ? ` · moving in ${fmtDay(b.check_in_at)}` : b.status === 'checked_out' ? ' · moved out' : ' · living here'}${canExtend ? ' · Drag right edge to change checkout' : ''}`
+              : `${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}${canExtend ? ' · Drag right edge to extend' : ''}`}"
+            >${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}${canExtend ? '<span class="cb-resize-handle" aria-hidden="true"></span>' : ''}</a>`; }),
       ].join('');
       return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
           <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
@@ -165,6 +171,7 @@ page('calendar', async (ctx) => {
   // ------------------------------------------------------------ move a booking: drag (mouse) or "Move…" then tap (phone)
   let mv = null;            // { b, grab, startIdx, n, x0, y0, active, ghost, target }
   let moveMode = null;      // tap-to-place: { b }
+  let ex = null;             // { b, bar, x0, y0, active, target }
   let justMoved = false;
   const dayIdx = (day) => Math.round((new Date(day + 'T12:00:00Z') - new Date(days[0] + 'T12:00:00Z')) / 864e5);
   const stayNights = (b) => Math.max(1, Math.round((new Date(ymd(b.check_out_at) + 'T12:00:00Z') - new Date(ymd(b.check_in_at) + 'T12:00:00Z')) / 864e5));
@@ -177,6 +184,50 @@ page('calendar', async (ctx) => {
     const own = bedId === b.bed_id ? ownNights(b) : new Set();
     for (let i = 0; i < n; i++) { const d = addDays(start, i); if (taken.get(bedId)?.has(d) && !own.has(d)) return 'Part of those nights is already booked or blocked.'; }
     return null;
+  }
+  function extendProblem(b, endIdx) {
+    if (!LIVE.includes(b.status) || (IS_PG && !pgTenancyByBooking.has(b.id))) return 'This stay can’t be extended from the calendar.';
+    const first = dayIdx(ymd(b.check_out_at));
+    if (first < 0 || first >= DAYS) return 'The current check-out is outside this calendar view.';
+    if (endIdx < first) return 'Drag to a free night on or after the current check-out.';
+    for (let i = first; i <= endIdx; i++) {
+      if (taken.get(b.bed_id)?.has(days[i])) return `${days[i]} is already booked or blocked.`;
+    }
+    return null;
+  }
+  function paintExtend(b, endIdx, bad = false) {
+    $$('.cal-cell.is-sel, .cal-cell.is-bad').forEach((c) => c.classList.remove('is-sel', 'is-bad'));
+    if (!b || endIdx === null) return;
+    const first = dayIdx(ymd(b.check_out_at));
+    cellsOf(b.bed_id).forEach((c) => {
+      const i = +c.dataset.i;
+      if (i >= first && i <= endIdx) c.classList.add(bad ? 'is-bad' : 'is-sel');
+    });
+  }
+  function confirmExtend(b, endIdx) {
+    const first = dayIdx(ymd(b.check_out_at));
+    const addedNights = endIdx - first + 1;
+    const oldCheckoutTime = toInputDT(b.check_out_at).slice(11);
+    const checkOut = fromInputDT(`${addDays(days[endIdx], 1)}T${oldCheckoutTime}`);
+    const tenant = IS_PG ? pgTenancyByBooking.get(b.id) : null;
+    modal({
+      title: IS_PG ? `Change ${b.guest}’s checkout?` : `Extend ${b.guest}’s stay?`, width: 460,
+      body: `<div style="display:flex;flex-direction:column;gap:12px">
+          <div class="mv-box"><div class="mv-lbl">Current check-out</div><b>${fmtDayTime(b.check_out_at)}</b></div>
+          <div class="mv-box is-new"><div class="mv-lbl">New check-out</div><b>${fmtDayTime(checkOut)}</b></div>
+          <div class="ns-muted" style="font-size:12.5px">${addedNights} additional night${addedNights === 1 ? '' : 's'} on the same ${W.unit}. ${IS_PG ? 'The planned checkout and calendar hold will update; rent remains monthly.' : 'The booking total will be recalculated.'}</div></div>`,
+      actions: [{ label: 'Cancel', onClick: () => paintExtend(null, null) },
+        { label: IS_PG ? 'Update checkout' : 'Extend stay', kind: 'primary', onClick: async () => {
+          if (IS_PG) {
+            if (!tenant) throw new Error('Tenant record not found. Refresh the calendar and try again.');
+            await rpc('pg_notice', { p_tenancy: tenant.id, p_move_out: ymd(checkOut) });
+          } else {
+            await rpc('update_booking', { p_booking: b.id, p: { check_out_at: checkOut } });
+          }
+          toast(IS_PG ? `${b.guest}’s planned checkout updated.` : `${b.guest}’s stay extended by ${addedNights} night${addedNights === 1 ? '' : 's'}.`);
+          hint(TIP()); paintExtend(null, null); draw();
+        } }],
+    }).el.querySelector('.ns-x').addEventListener('click', () => paintExtend(null, null));
   }
   function paintMove(bedId, startIdx, bad) {
     $$('.cal-cell.is-sel, .cal-cell.is-bad').forEach((c) => c.classList.remove('is-sel', 'is-bad'));
@@ -213,11 +264,18 @@ page('calendar', async (ctx) => {
       + '<button type="button" class="ns-btn-ghost" id="mv-cancel" style="height:28px;font-size:12px;margin-left:6px">Cancel</button>');
     $('#mv-cancel').onclick = (ev) => { ev.stopPropagation(); moveMode = null; paintMove(null); hint(TIP()); };
   }
-
   if (staff) {
     const host = $('.ns-content');
     host.addEventListener('dragstart', (e) => { if (e.target.closest?.('a.bar')) e.preventDefault(); });
     host.addEventListener('pointerdown', (e) => {                       // mouse: drag a booking bar to move it
+      const handle = e.target.closest('.cb-resize-handle');
+      if (handle && e.button === 0) {
+        const bar = handle.closest('a.bar[data-extendable="true"]');
+        const b = bar && data.bookings.find((x) => x.id === bar.dataset.id);
+        if (!b) return;
+        ex = { b, bar, x0: e.clientX, y0: e.clientY, active: false, target: null };
+        e.preventDefault(); e.stopPropagation(); return;
+      }
       const bar = e.target.closest('a.bar[data-id]');
       if (!bar || e.pointerType === 'touch' || e.button !== 0) return;
       const b = data.bookings.find((x) => x.id === bar.dataset.id); if (!b || b.status === 'checked_out') return;
@@ -227,6 +285,17 @@ page('calendar', async (ctx) => {
       e.preventDefault();
     });
     host.addEventListener('pointermove', (e) => {
+      if (ex) {
+        if (!ex.active) {
+          if (Math.hypot(e.clientX - ex.x0, e.clientY - ex.y0) < 6) return;
+          ex.active = true; document.body.classList.add('cal-moving'); ex.bar?.classList.add('cb-resizing');
+        }
+        const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
+        if (!c || c.dataset.bed !== ex.b.bed_id) { ex.target = null; paintExtend(null, null); return; }
+        const endIdx = +c.dataset.i;
+        const bad = extendProblem(ex.b, endIdx);
+        ex.target = { endIdx, bad }; paintExtend(ex.b, endIdx, bad); return;
+      }
       if (!mv) return;
       if (!mv.active) {
         if (Math.hypot(e.clientX - mv.x0, e.clientY - mv.y0) < 6) return;
@@ -245,6 +314,15 @@ page('calendar', async (ctx) => {
       mv.target = { bedId, startIdx, bad }; paintMove(bedId, startIdx, bad);
     });
     window.addEventListener('pointerup', () => {
+      if (ex) {
+        const x = ex; ex = null;
+        if (!x.active) return;
+        justMoved = true; setTimeout(() => { justMoved = false; }, 80);
+        x.bar?.classList.remove('cb-resizing'); document.body.classList.remove('cal-moving');
+        if (!x.target) { paintExtend(null, null); return; }
+        if (x.target.bad) { toast(x.target.bad, { error: true }); paintExtend(null, null); return; }
+        confirmExtend(x.b, x.target.endIdx); return;
+      }
       if (!mv) return;
       const m = mv; mv = null;
       if (!m.active) return;                                             // a plain click: let it open the panel
@@ -257,7 +335,7 @@ page('calendar', async (ctx) => {
     host.addEventListener('pointerdown', (e) => {                       // mouse / pen: drag
       const c = e.target.closest('.cal-cell.is-free');
       if (!c || e.pointerType === 'touch' || e.button !== 0) return;
-      if (moveMode) return;                                              // "Move…" is waiting for a tap on the new bed — not a new selection
+      if (moveMode) return;                                              // "Move…" is waiting for a tap on the new bed
       e.preventDefault();
       dragging = true; sel = { bed: c.dataset.bed, a: +c.dataset.i, b: +c.dataset.i, done: true }; paint();
     });

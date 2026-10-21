@@ -1,4 +1,4 @@
-import { W, roomsMode, fmtDayTime, page, param, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
+import { W, roomsMode, fmtDayTime, page, param, rpc, q, sb, content, setSubtitle, headerActions, esc, rupees, toPaise, modal, toast, confirmDialog, field, options, fromInputDT, ymd, addDays, $$ } from '../core.js';
 
 const STATE = {
   occupied: ['Occupied', '#FCE9E9', '#B23A3A'], reserved: ['Reserved', '#FCF0DC', '#966016'],
@@ -33,17 +33,19 @@ page('rooms', async (ctx) => {
           return `<div class="ns-card" style="display:flex;flex-direction:column;gap:14px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
               <div><div class="ns-h3">${esc(r.name)}</div><div class="ns-muted">${r.beds.length} ${r.beds.length === 1 ? W.unit : W.units}${r.description ? ' · ' + esc(r.description) : ''}</div></div>
-              ${manage ? `<button type="button" class="ns-btn-ghost" style="height:32px" data-edit="${esc(r.id)}">Edit</button>` : ''}</div>
+              ${manage ? `<div style="display:flex;gap:6px;flex-shrink:0"><button type="button" class="ns-btn-ghost" style="height:32px" data-edit="${esc(r.id)}">Edit</button><button type="button" class="ns-icon-del" style="width:32px;height:32px;border:1px solid #F0C9C9;background:#FFFFFF" data-delete-room="${esc(r.id)}" aria-label="Delete ${esc(r.name)}" title="Delete ${esc(r.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></div>` : ''}</div>
             <div class="ns-muted">From ${rates.map(rupees).join(' / ')} ${ctx.isPg ? 'a month' : 'per night'}</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
               ${r.beds.map((b) => { const [l, bg, fg] = STATE[state(b)];
                 const who = b.block ? esc(b.block) : b.booking ? esc(b.booking.guest) : '—';
                 const tag = b.booking ? 'a' : 'button';
-                return `<${tag} ${b.booking ? `href="booking-detail.html?id=${esc(b.booking.id)}"` : `type="button" data-bed="${esc(b.id)}"`}
-                  style="text-align:left;background:${bg};border:1px solid ${bg};border-radius:10px;padding:10px;color:inherit;cursor:pointer;font-family:inherit">
-                  <div style="font-size:12.5px;font-weight:800">${esc(b.label)}${R && b.max_guests > 1 ? ` <span style="font-weight:600;color:#6B7280">· ${b.max_guests}👤</span>` : ''}</div>
-                  <div style="font-size:11px;font-weight:700;color:${fg}">${l}</div>
-                  <div style="font-size:11px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${who}</div></${tag}>`; }).join('')}
+                return `<div style="position:relative;min-width:0;min-height:69px;box-sizing:border-box;background:${bg};border:1px solid ${bg};border-radius:10px;overflow:hidden">
+                  <${tag} ${b.booking ? `href="booking-detail.html?id=${esc(b.booking.id)}"` : `type="button" data-bed="${esc(b.id)}"`}
+                    style="display:block;width:100%;min-height:67px;box-sizing:border-box;text-align:left;background:transparent;border:0;border-radius:10px;padding:10px;color:inherit;cursor:pointer;font-family:inherit">
+                    <div style="font-size:12.5px;font-weight:800">${esc(b.label)}${R && b.max_guests > 1 ? ` <span style="font-weight:600;color:#6B7280">· ${b.max_guests}👤</span>` : ''}</div>
+                    <div style="font-size:11px;font-weight:700;color:${fg}">${l}</div>
+                    <div style="font-size:11px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${who}</div></${tag}>
+                </div>`; }).join('')}
             </div></div>`; }).join('') || (welcome
           ? `<div class="ns-card" style="display:flex;flex-direction:column;gap:10px;grid-column:1/-1">
               <div class="ns-h3" style="font-size:18px">Welcome to NammaStay 👋 Your free trial has started.</div>
@@ -56,6 +58,7 @@ page('rooms', async (ctx) => {
 
     document.getElementById('first-room')?.addEventListener('click', () => document.getElementById('add-room').click());
     $$('[data-edit]').forEach((btn) => btn.onclick = () => editRoom(rooms.find((r) => r.id === btn.dataset.edit)));
+    $$('[data-delete-room]').forEach((btn) => btn.onclick = () => deleteRoom(rooms.find((r) => r.id === btn.dataset.deleteRoom)));
     $$('[data-bed]').forEach((btn) => btn.onclick = () => {
       const b = beds.find((x) => x.id === btn.dataset.bed);
       if (state(b) === 'maintenance') blockList(b); else blockBed(b);
@@ -66,21 +69,22 @@ page('rooms', async (ctx) => {
     // fresh rows so we also get capacity & extra-guest settings
     const units = await q(sb.from('beds').select('*').eq('room_id', r.id).order('sort')).catch(() => r.beds);
     const f0 = units[0] || {};
-    modal({
+    const m = modal({
       title: `Edit ${r.name}`, width: R ? 680 : 560,
       body: `${field(R ? 'Room type name' : 'Room name', `<input class="ns-input" name="name" value="${esc(r.name)}">`)}
         ${field('Description', `<input class="ns-input" name="description" value="${esc(r.description || '')}" placeholder="${R ? 'King bed · AC · Balcony · Breakfast included' : 'AC · Shared bath'}">`)}
         ${R ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             ${field('Guests included in the rate', `<input class="ns-input" name="base" type="number" min="1" max="20" value="${f0.base_guests || 2}">`)}
             ${field('Extra adult ₹ / night', `<input class="ns-input" name="extra" inputmode="decimal" value="${(f0.extra_guest_paise || 0) / 100}">`, 'Children stay free.')}</div>` : ''}
-        <div style="display:grid;grid-template-columns:${R ? '1fr 100px 90px 90px' : '1fr 110px 100px'};gap:8px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">
-          <span>${W.Unit}</span><span>${ctx.isPg ? '₹ rent / month' : '₹ / night'}</span>${R ? '<span>Max guests</span>' : ''}<span>In use</span></div>
+        <div style="display:grid;grid-template-columns:${R ? 'minmax(0,1fr) 100px 90px 90px 34px' : 'minmax(0,1fr) 110px 100px 34px'};gap:8px;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase">
+          <span>${W.Unit}</span><span>${ctx.isPg ? '₹ rent / month' : '₹ / night'}</span>${R ? '<span>Max guests</span>' : ''}<span>In use</span><span></span></div>
         <div style="display:flex;flex-direction:column;gap:8px">
-        ${units.map((b) => `<div style="display:grid;grid-template-columns:${R ? '1fr 100px 90px 90px' : '1fr 110px 100px'};gap:8px;align-items:center" data-row="${esc(b.id)}">
+        ${units.map((b) => `<div style="display:grid;grid-template-columns:${R ? 'minmax(0,1fr) 100px 90px 90px 34px' : 'minmax(0,1fr) 110px 100px 34px'};gap:8px;align-items:center" data-row="${esc(b.id)}">
             <input class="ns-input" name="label" value="${esc(b.label)}" aria-label="${W.Unit} name">
             <input class="ns-input" name="rate" inputmode="decimal" value="${b.rate_paise / 100}" aria-label="${ctx.isPg ? 'Monthly rent (₹)' : 'Rate per night (₹)'}">
             ${R ? `<input class="ns-input" name="max" type="number" min="1" max="20" value="${b.max_guests || 2}" aria-label="Max guests">` : ''}
-            <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" name="active" ${b.is_active ? 'checked' : ''}> In use</label></div>`).join('')}
+            <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" name="active" ${b.is_active ? 'checked' : ''}> In use</label>
+            <button type="button" class="ns-icon-del" data-delete-bed="${esc(b.id)}" aria-label="Delete ${esc(b.label)}" title="Delete ${esc(b.label)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6M14 11v6"></path></svg></button></div>`).join('')}
         </div><div class="ns-help">${ctx.isPg ? 'Used as the rent when you move a new tenant in — tenants already living here keep their rent.' : 'Rate changes apply to new bookings only.'}</div>`,
       actions: [{ label: 'Cancel' }, { label: 'Save', kind: 'primary', onClick: async (el) => {
         const base = R ? parseInt(el.querySelector('[name=base]').value, 10) : 1;
@@ -101,6 +105,37 @@ page('rooms', async (ctx) => {
         toast('Saved.'); draw();
       } }],
     });
+    m.el.querySelectorAll('[data-delete-bed]').forEach((btn) => {
+      btn.addEventListener('click', () => deleteBed(units.find((b) => b.id === btn.dataset.deleteBed), () => { m.close(); draw(); }));
+    });
+  }
+
+  async function deleteBed(b, afterDelete) {
+    if (!manage || !b) return;
+    try {
+      const history = await q(sb.from('bookings').select('id').eq('bed_id', b.id).limit(1));
+      if (history.length) throw new Error(`${b.label} has booking history and can’t be deleted. Edit the room and turn off “In use” instead.`);
+      if (!await confirmDialog('Delete bed', `Permanently delete ${b.label}? This also removes its maintenance blocks.`, { confirmLabel: 'Delete', danger: true })) return;
+      await q(sb.from('bed_blocks').delete().eq('bed_id', b.id));
+      await q(sb.from('beds').delete().eq('id', b.id));
+      toast(`${b.label} deleted.`);
+      if (afterDelete) afterDelete(); else draw();
+    } catch (err) { toast(err.message, { error: true }); }
+  }
+
+  async function deleteRoom(r) {
+    if (!manage || !r) return;
+    try {
+      const units = await q(sb.from('beds').select('id,label').eq('room_id', r.id));
+      const ids = new Set(units.map((b) => b.id));
+      const history = ids.size ? await q(sb.from('bookings').select('id,bed_id').eq('property_id', ctx.property_id)) : [];
+      if (history.some((b) => ids.has(b.bed_id))) throw new Error(`${r.name} has beds with booking history and can’t be deleted. Edit the room and turn off “In use” on those beds instead.`);
+      if (!await confirmDialog('Delete room', `Permanently delete ${r.name} and all ${units.length} ${units.length === 1 ? W.unit : W.units}? This also removes their maintenance blocks.`, { confirmLabel: 'Delete room', danger: true })) return;
+      for (const b of units) await q(sb.from('bed_blocks').delete().eq('bed_id', b.id));
+      await q(sb.from('beds').delete().eq('room_id', r.id));
+      await q(sb.from('rooms').delete().eq('id', r.id));
+      toast(`${r.name} deleted.`); draw();
+    } catch (err) { toast(err.message, { error: true }); }
   }
 
   async function blockList(b) {

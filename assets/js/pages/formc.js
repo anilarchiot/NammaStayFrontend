@@ -22,6 +22,7 @@ const missing = (r) => {
 };
 
 page('formc', async (ctx) => {
+  if (ctx.isPg) { location.replace('dashboard.html'); return; }
   let tab = 'due'; let rows = [];
   headerActions().innerHTML = `<a class="ns-btn-ghost" href="${FRRO_URL}" target="_blank" rel="noopener">Open FRRO Form C ↗</a>`;
 
