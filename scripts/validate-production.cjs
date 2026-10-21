@@ -3,13 +3,13 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-const routesFile = path.join(root, 'src', 'assets', 'js', 'routes.js');
+const routesFile = path.join(root, 'assets', 'js', 'routes.js');
 
 if (!fs.existsSync(output) || !fs.statSync(output).isDirectory()) {
   throw new Error('Production output is missing. Run npm run build first.');
 }
 
-const sourcePages = fs.readdirSync(path.join(root, 'src', 'pages'))
+const sourcePages = fs.readdirSync(root)
   .filter((name) => name.endsWith('.html'))
   .sort();
 const builtPages = fs.readdirSync(output)
@@ -51,7 +51,7 @@ for (const route of routeEntries) {
   }
   if (!builtPages.includes(route.path)) throw new Error(`App route has no emitted page: ${route.path}`);
   const moduleFile = path.resolve(path.dirname(routesFile), route.module);
-  if (!moduleFile.startsWith(path.join(root, 'src', 'assets', 'js', 'pages') + path.sep) || !fs.existsSync(moduleFile)) {
+  if (!moduleFile.startsWith(path.join(root, 'assets', 'js', 'pages') + path.sep) || !fs.existsSync(moduleFile)) {
     throw new Error(`App route has a missing or invalid page module: ${route.module}`);
   }
   const pageHtml = fs.readFileSync(path.join(output, route.path), 'utf8');

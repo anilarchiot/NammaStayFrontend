@@ -7,8 +7,8 @@ const { minify: minifyJs } = require('terser');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 const rootFiles = fs.readdirSync(root, { withFileTypes: true });
-const sourcePages = path.join(root, 'src', 'pages');
-const sourceAssets = path.join(root, 'src', 'assets');
+const sourcePages = root;
+const sourceAssets = path.join(root, 'assets');
 
 if (fs.existsSync(output) && !fs.statSync(output).isDirectory()) {
   throw new Error('Build output path exists and is not a directory: dist');
@@ -77,7 +77,7 @@ async function build() {
     copyStaticFile(path.join(root, entry.name), path.join(output, entry.name));
   }
 
-  const headersFile = path.join(root, 'src', '_headers');
+  const headersFile = path.join(root, '_headers');
   if (fs.existsSync(headersFile)) copyStaticFile(headersFile, path.join(output, '_headers'));
 
   if (fs.existsSync(sourceAssets)) await copyAssets(sourceAssets, path.join(output, 'assets'));

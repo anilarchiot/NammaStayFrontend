@@ -124,7 +124,7 @@ Optional: **Rules → Redirect Rules** to send `www` to the bare domain (or the 
 Only after the domain works on Cloudflare:
 
 1. GitHub repo → **Settings → Pages** → set **Source** to **None** (or unpublish the site).
-2. Delete `.github/workflows/pages.yml` so pushes no longer build an unused GitHub Pages copy.
+2. GitHub Pages is configured separately in **Settings → Pages**; after switching to Cloudflare, set its source to **None** so it does not continue serving the domain.
 3. The `CNAME` file can stay in the repo; Cloudflare ignores it.
 
 ---
