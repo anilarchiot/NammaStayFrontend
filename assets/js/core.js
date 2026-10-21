@@ -334,12 +334,9 @@ export function page(key, fn) {
       showFatal(e.message || 'Something went wrong.');
     }
   })();
-  window.__NS_PAGE_RENDER__ = render;
   return render;
 }
 
-let routeLoadId = 0;
-let routeNavigationQueue = Promise.resolve();
 let pageCleanups = [];
 export function onPageLeave(cleanup) {
   if (typeof cleanup === 'function') pageCleanups.push(cleanup);
@@ -349,76 +346,6 @@ function disposeCurrentPage() {
   const cleanups = pageCleanups; pageCleanups = [];
   cleanups.forEach((cleanup) => { try { cleanup(); } catch (error) { console.warn('Page cleanup failed', error); } });
 }
-
-function spaRouteTarget(url) {
-  let route = resolveRoute(url.pathname);
-  if (!route) return null;
-  if (appContext?.isPg) {
-    const redirect = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' }[route.key];
-    if (redirect) { url = new URL(redirect, url); route = resolveRoute(url.pathname); }
-  } else if (['pgpayments', 'pgreport'].includes(route.key)) {
-    url = new URL('dashboard.html', url); route = resolveRoute(url.pathname);
-  }
-  if (appContext?.isResort === false && ['activities', 'dayvisits', 'groups'].includes(route.key)) {
-    url = new URL('dashboard.html', url); route = resolveRoute(url.pathname);
-  }
-  return { route, url };
-}
-
-async function renderSpaRoute(target, { replace = false } = {}) {
-  const url = target instanceof URL ? target : new URL(target, location.href);
-  const resolved = spaRouteTarget(url);
-  if (!resolved?.route) return false;
-  const { route } = resolved;
-  if (replace) history.replaceState(null, '', resolved.url.href);
-  else history.pushState(null, '', resolved.url.href);
-
-  const header = $('.ns-main > [style*="height:76px"]');
-  const heading = header?.children[0]?.children[0];
-  if (heading) heading.textContent = route.title;
-  const activePath = route.key === null ? 'bookings.html' : route.path;
-  $$('.ns-sidebar .ns-nav-link, .ns-mobile-nav .ns-nav-link').forEach((link) => {
-    const active = new URL(link.href, location.href).pathname.endsWith('/' + activePath);
-    link.classList.toggle('is-active', active);
-    if (active) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
-
-  document.title = `${route.title} · NammaStay`;
-  document.documentElement.classList.add('ns-booting');
-  headerActions()?.replaceChildren();
-  content('<div class="ns-card ns-empty">Loading…</div>');
-  const moduleUrl = new URL(route.module, import.meta.url);
-  moduleUrl.searchParams.set('spa', String(++routeLoadId));
-  window.__NS_PAGE_RENDER__ = null;
-  try {
-    await import(moduleUrl.href);
-    await window.__NS_PAGE_RENDER__;
-  } catch (error) {
-    console.error(error);
-    showFatal(error.message || 'This page could not be loaded.');
-  }
-  return true;
-}
-
-function queueSpaRoute(target, options) {
-  routeNavigationQueue = routeNavigationQueue.catch(() => {}).then(() => renderSpaRoute(target, options));
-  return routeNavigationQueue;
-}
-
-document.addEventListener('click', (event) => {
-  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  const link = event.target.closest('a[href]');
-  if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
-  const url = new URL(link.href, location.href);
-  if (url.origin !== location.origin || !resolveRoute(url.pathname) || !resolveRoute()) return;
-  if (url.pathname === location.pathname && url.search === location.search && url.hash === location.hash) return;
-  event.preventDefault();
-  queueSpaRoute(url).catch((error) => { console.error(error); location.assign(url.href); });
-});
-window.addEventListener('popstate', () => {
-  if (resolveRoute()) queueSpaRoute(new URL(location.href), { replace: true }).catch((error) => { console.error(error); location.reload(); });
-});
 
 // ---------------------------------------------------------------- NammaStay admin area (separate login: admin-login.html)
 const ADMIN_NAV = [
@@ -488,8 +415,7 @@ async function boot(key) {
   const ctx = await appContextPromise;
   const redirect = (target) => {
     const url = new URL(target, location.href);
-    if (resolveRoute(url.pathname) && resolveRoute()) renderSpaRoute(url, { replace: true }).catch(() => location.replace(url.href));
-    else location.replace(url.href);
+    location.replace(url.href);
     throw new Stop();
   };
   if (!ctx.isResort && ['activities', 'dayvisits', 'groups'].includes(key)) redirect('dashboard.html');
