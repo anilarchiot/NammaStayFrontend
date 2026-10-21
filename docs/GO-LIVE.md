@@ -107,7 +107,7 @@ Also open **Advisors → Security Advisor** and **Performance Advisor** in Supab
    supabaseAnonKey: 'eyJhbGciOi...',
    ```
    The anon key is meant to be public; RLS protects the data. **Never** put the `service_role` key in the website.
-3. Push to the `main` branch on GitHub. Cloudflare Pages builds (`npm test` → `dist/`) and redeploys in 1–2 minutes (set-up: [DEPLOY-CLOUDFLARE.md](./DEPLOY-CLOUDFLARE.md)).
+3. Push to the `main` branch on GitHub. GitHub Pages serves the root HTML pages and `assets/` directly.
 4. Open `https://thenammastay.in/login.html`, sign in, and you should see an empty live dashboard with 9 beds.
    (`https://thenammastay.in` itself is the marketing homepage — `index.html`.)
 

@@ -45,7 +45,7 @@ page('health', async (ctx) => {
   const gauge = `<svg class="bhx-gauge" viewBox="0 0 200 190" role="img" aria-label="Health score ${s == null ? 'not available' : s + ' out of 100'}">
     <circle cx="100" cy="100" r="80" fill="none" stroke="#24305A" stroke-width="16" stroke-linecap="round" stroke-dasharray="${arc.toFixed(1)} ${C.toFixed(1)}" transform="rotate(135 100 100)"/>
     <circle cx="100" cy="100" r="80" fill="none" stroke="${TONE[tone]}" stroke-width="16" stroke-linecap="round" stroke-dasharray="${val.toFixed(1)} ${C.toFixed(1)}" transform="rotate(135 100 100)"/>
-    <text x="100" y="106" text-anchor="middle" class="bhx-score">${s == null ? '—' : s}</text>
+    <text x="100" y="106" text-anchor="middle" class="bhx-score" fill="${TONE[tone]}">${s == null ? '—' : s}</text>
     <text x="100" y="132" text-anchor="middle" class="bhx-of">out of 100</text>
     <text x="44" y="182" text-anchor="middle" class="bhx-end">0</text><text x="156" y="182" text-anchor="middle" class="bhx-end">100</text></svg>`;
   const spark = (() => {

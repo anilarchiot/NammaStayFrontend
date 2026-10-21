@@ -6,14 +6,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "npm run build && node scripts/serve-local.cjs",
-    "build": "node scripts/build-production.cjs",
+    "dev": "node scripts/serve-local.cjs",
+    "build": "node scripts/validate-production.cjs",
     "validate:production": "node scripts/validate-production.cjs",
-    "test": "npm run build && npm run validate:production"
-  },
-  "devDependencies": {
-    "clean-css": "^5.3.3",
-    "html-minifier-terser": "^7.2.0",
-    "terser": "^5.51.2"
+    "test": "npm run build"
   }
 }

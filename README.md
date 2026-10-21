@@ -23,4 +23,4 @@ The admin pages are safe on the same site: every admin screen and every admin da
 `admin.html` are simply sent back to the admin login.
 
 ## Source structure
-HTML pages and the `assets/` directory are at the repository root and are served directly by GitHub Pages. Route metadata is in `assets/js/routes.js`. `npm test` also builds and validates a local production preview in `dist/`; GitHub Pages does not publish that folder.
+HTML pages and the `assets/` directory are at the repository root and are served directly by GitHub Pages. Route metadata is in `assets/js/routes.js`. `npm run build` validates the published root files without generating a separate `dist/` folder; `npm run dev` serves the same root site locally.
