@@ -11,7 +11,7 @@ const ago = (iso) => { if (!iso) return ''; const m = Math.round((Date.now() - n
 
 page('housekeeping', async (ctx) => {
   let filter = 'todo';
-  headerActions().innerHTML = '<button type="button" class="ns-btn-ghost" id="hk-refresh">⟳ Refresh</button>';
+  headerActions().innerHTML = '<button type="button" class="ns-btn-ghost hk-refresh-button" id="hk-refresh"><svg class="hk-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Refresh</span></button>';
 
   async function draw() {
     const beds = await rpc('hk_board', { p_property: ctx.property_id });
@@ -45,6 +45,24 @@ page('housekeeping', async (ctx) => {
     $$('[data-more]').forEach((b) => b.onclick = () => more(beds.find((x) => x.id === b.dataset.more)));
   }
 
+  let refreshing = false;
+  async function refresh() {
+    const button = $('#hk-refresh');
+    if (refreshing) return;
+    refreshing = true;
+    button.disabled = true;
+    button.querySelector('span').textContent = 'Refreshing…';
+    button.querySelector('svg').classList.add('is-spinning');
+    try { await draw(); }
+    catch (e) { toast(e.message, { error: true }); }
+    finally {
+      refreshing = false;
+      button.disabled = false;
+      button.querySelector('span').textContent = 'Refresh';
+      button.querySelector('svg').classList.remove('is-spinning');
+    }
+  }
+
   function more(b) {
     modal({
       title: `${b.room} · ${b.label}`, width: 420,
@@ -57,8 +75,8 @@ page('housekeeping', async (ctx) => {
     });
   }
 
-  $('#hk-refresh').onclick = draw;
+  $('#hk-refresh').onclick = refresh;
   await draw();
-  const refreshTimer = setInterval(() => { if (!document.querySelector('.ns-overlay')) draw(); }, 60000);
+  const refreshTimer = setInterval(() => { if (!document.querySelector('.ns-overlay')) refresh(); }, 60000);
   onPageLeave(() => clearInterval(refreshTimer));
 });
