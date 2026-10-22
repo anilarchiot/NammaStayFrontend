@@ -50,7 +50,7 @@ export const SETUP_GROUPS = [
   ] },
   { key: 'startup', title: 'Licences, launch & other start-up costs', items: [
     ['Licences & registrations (fees)', A, 'lump sum'], ['Legal, CA & documentation', A, 'lump sum'], ['Insurance (first year)', A, 'lump sum'],
-    ['Logo, branding & website', A, 'lump sum'], ['Professional photos & video', A, 'lump sum'], ['OTA / Airbnb listing setup', [H, S, O, R], 'lump sum'],
+    ['Logo, branding & website', A, 'lump sum'], ['Professional photos & video', A, 'lump sum'],
     ['Launch marketing', A, 'lump sum'], ['Staff hiring & training', [H, P, O, R], 'lump sum'], ['Uniforms', [O, R, H], 'lump sum'],
     ['Opening stock (cleaning, groceries)', A, 'lump sum'], ['Software (NammaStay subscription)', A, 'lump sum'],
   ] },

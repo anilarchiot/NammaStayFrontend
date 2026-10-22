@@ -135,8 +135,7 @@ page('setup', async (ctx) => {
       ${ctx.isPg ? item(prog.booking, 'First tenant', 'tenants.html?movein=1', 'Move one in') : item(prog.booking, 'First booking', 'check-in.html?new=1', 'Make one')}
       <div class="su-next">
         ${ctx.isPg ? '<a class="ns-btn ns-btn-lg" href="tenants.html?movein=1">➕ Move in your first tenant</a>' : '<a class="ns-btn ns-btn-lg" href="check-in.html?new=1">➕ Make your first booking</a>'}
-        ${ctx.isPg ? '<a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Monthly rent per bed</a>' : `<a class="ns-btn-ghost" href="ota.html">🔗 Connect Airbnb / Booking.com</a>
-        <a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Weekend &amp; season prices</a>`}
+        ${ctx.isPg ? '<a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Monthly rent per bed</a>' : '<a class="ns-btn-ghost" href="settings.html?tab=rooms">💰 Weekend &amp; season prices</a>'}
         ${homestay ? '<a class="ns-btn-ghost" href="settings.html?tab=rooms">🍳 Meal plans</a><a class="ns-btn-ghost" href="settings.html#guide">🏡 House guide for guests</a>' : ''}
         <a class="ns-btn-ghost" href="dashboard.html">Go to dashboard</a></div>`);
   }

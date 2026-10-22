@@ -11,14 +11,13 @@ const AREA_PATHS = {
   pricing: '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   profit: '<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="14.5" r="1.5"/>',
   cash: '<path d="M6 2h12M6 22h12M7 2c0 5 10 5 10 10S7 17 7 22M17 2c0 5-10 5-10 10s10 5 10 10"/>',
-  mix: '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
   guests: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6.4 6.5-6.4s6.5 2.8 6.5 6.4"/><circle cx="18" cy="9" r="2.3"/><path d="M15.8 13.8c2.3.5 4.2 2.5 4.2 5.4"/>',
   compliance: '<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
   payback: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
 };
 const AREA_LINK = {   // where to fix it
   occupancy: ['calendar.html', 'Open calendar'], pricing: ['settings.html?tab=rooms', 'Set prices'], profit: ['expenses.html', 'Expenses & profit'],
-  cash: ['payments.html', 'See payments'], mix: ['ota.html', 'OTA sync'], guests: ['guest-profile.html', 'See guests'],
+  cash: ['payments.html', 'See payments'], guests: ['guest-profile.html', 'See guests'],
   compliance: ['investment.html#documents', 'Documents'], payback: ['investment.html#payback', 'My business'],
 };
 const STATUS_IC = {

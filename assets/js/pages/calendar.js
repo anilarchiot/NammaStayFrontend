@@ -1,6 +1,6 @@
 // Calendar — every bed, every night. Drag across a bed's row (or tap the first
 // and last night on a phone) to create a booking for those dates.
-import { hostExtras, isResort, isHomestay, unitName, otaOf, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
+import { hostExtras, isResort, isHomestay, unitName, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, onPageLeave, $, $$ } from '../core.js';
 
 let DAYS = 9;                                     // 9 days (week view) or the days of the month (month view)
@@ -88,8 +88,6 @@ page('calendar', async (ctx) => {
       if (bed.room !== room) { room = bed.room; html += `<div style="font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;padding:14px 0 4px">${esc(room)}</div>`; }
       const bars = [
         ...d.blocks.filter((k) => k.bed_id === bed.id).map((k) => { const p = span(k.starts_at, k.ends_at);
-          const ota = otaOf(k.reason);
-          if (ota) return `<button type="button" class="bar cb cb-ota${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e};--ota:${ota.color}" title="${esc(ota.label)} booking (imported) — change it on ${esc(ota.label)}"><span class="cb-ico">🔗</span><span class="cb-name">${esc(ota.label)}</span></button>`;
           return `<button type="button" class="bar cb cb-maint${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e}" title="Maintenance: ${esc(k.reason)} — tap to change or remove"><span class="cb-ico">🔧</span><span class="cb-name">${esc(k.reason)}</span></button>`; }),
         ...d.bookings.filter((b) => b.bed_id === bed.id).map((b) => { const p = span(b.check_in_at, b.check_out_at);
           const canExtend = staff && LIVE.includes(b.status) && days.includes(ymd(b.check_out_at)) && (!IS_PG || pgTenancyByBooking.has(b.id));
@@ -132,7 +130,7 @@ page('calendar', async (ctx) => {
           ${IS_PG ? `<span><i class="lg cb-in"></i> Living here</span><span><i class="lg cb-conf"></i> Moving in</span>
           <span><i class="lg cb-out"></i> Moved out</span><span><i class="lg cb-maint"></i> Maintenance</span>` : `<span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
           <span><i class="lg cb-due"></i> Balance due</span><span><i class="lg cb-pend"></i> Pending</span>
-          <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span><span><i class="lg cb-ota"></i> 🔗 OTA booking</span>`}
+          <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span>`}
           ${staff ? '<span><i class="lg" style="background:#CDEBDC;border:1px solid #1C9A6C"></i> Your selection</span>' : ''}
         </div>
       </div>`);
@@ -391,16 +389,6 @@ page('calendar', async (ctx) => {
   function blockPanel(id) {
     const k = data.blocks.find((x) => x.id === id); if (!k) return;
     const bed = data.beds.find((x) => x.id === k.bed_id);
-    const ota = otaOf(k.reason);
-    if (ota) {
-      modal({ title: `${ota.label} booking · ${bed.room} · ${bed.label}`, width: 440,
-        body: `<div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
-            <div><span class="ota-badge" style="background:${ota.color}">${esc(ota.label)}</span></div>
-            <div><span class="ns-muted" style="font-size:13px">Dates</span><br><b>${fmtDayTime(k.starts_at)} → ${fmtDayTime(k.ends_at)}</b></div>
-            <div class="ns-muted" style="font-size:13px">Imported from ${esc(ota.label)}’s calendar, so this ${W.unit} can’t be double-booked here. To change or cancel it, do it on ${esc(ota.label)} — NammaStay updates at the next sync.</div></div>`,
-        actions: [{ label: 'Close' }, ...(ctx.can('owner', 'manager') ? [{ label: 'OTA sync settings', kind: 'primary', onClick: () => { location.href = 'ota.html'; } }] : [])] });
-      return;
-    }
     modal({
       title: `Maintenance · ${bed.room} · ${bed.label}`, width: 460,
       body: `<div style="display:flex;flex-direction:column;gap:12px">

@@ -1,7 +1,6 @@
 import { W, page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDay, ymd, addDays, downloadCsv, options, $ } from '../core.js';
 
-const SOURCE = { walk_in: 'Walk-in', direct: 'Direct', ota: 'Hostelworld / OTA', referral: 'Referral' };
-const sourceName = (k) => (k === 'ota' && W.kind === 'homestay' ? 'Airbnb / OTA' : SOURCE[k] || k);   // homestays (033)
+const SOURCE = { walk_in: 'Walk-in', direct: 'Direct', referral: 'Referral' };
 
 page('reports', async (ctx) => {
   const t = ymd();
@@ -18,7 +17,8 @@ page('reports', async (ctx) => {
     r.from = from;
     setSubtitle(`${fmtDay(from + 'T12:00:00+05:30')} – ${fmtDay(t + 'T12:00:00+05:30')} · ${ctx.property_name}`);
     const maxW = Math.max(1, ...r.weekly.map((w) => w.digital + w.cash));
-    const srcTotal = Object.values(r.sources).reduce((a, b) => a + b, 0) || 1;
+    const sources = Object.fromEntries(Object.entries(r.sources).filter(([key]) => key !== 'ota'));
+    const srcTotal = Object.values(sources).reduce((a, b) => a + b, 0) || 1;
     const natTotal = r.nationalities.reduce((a, b) => a + b.n, 0) || 1;
     const kpi = (l, v, s = '') => `<div class="ns-stat"><div class="ns-stat-label">${l}</div><div class="ns-stat-value">${v}</div>${s ? `<div class="ns-stat-sub">${s}</div>` : ''}</div>`;
     content(`
@@ -41,8 +41,8 @@ page('reports', async (ctx) => {
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
           <div class="ns-card"><div class="ns-h3" style="margin-bottom:12px">Guest source</div>
-            ${Object.entries(r.sources).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div style="margin-bottom:10px">
-              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${esc(sourceName(k))}</span><b>${Math.round((n / srcTotal) * 100)}%</b></div>
+            ${Object.entries(sources).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${esc(SOURCE[k] || k)}</span><b>${Math.round((n / srcTotal) * 100)}%</b></div>
               <div class="ns-meter" style="background:#F3EFE1"><span style="width:${(n / srcTotal) * 100}%"></span></div></div>`).join('') || '<div class="ns-muted">No bookings yet.</div>'}</div>
           <div class="ns-card-dark"><div class="ns-h3" style="color:#FBF3DE;margin-bottom:12px">Guest nationality mix</div>
             ${r.nationalities.map((x) => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#AEB6C9">
@@ -57,7 +57,7 @@ page('reports', async (ctx) => {
       ['Revenue (₹)', last.revenue / 100], ['Avg occupancy %', Math.round(last.occupancy * 100)], ['Avg length of stay', last.alos], ['RevPAB (₹)', last.revpab / 100], [],
       ['Week starting', 'UPI+card (₹)', 'Cash (₹)'], ...last.weekly.map((w) => [w.start, w.digital / 100, w.cash / 100]), [],
       ['Room type', 'Beds', 'Occupancy %', 'Revenue (₹)'], ...last.rooms.map((x) => [x.name, x.beds, Math.round(x.occupancy * 100), x.revenue / 100]), [],
-      ['Source', 'Bookings'], ...Object.entries(last.sources).map(([k, n]) => [sourceName(k), n]), [],
+      ['Source', 'Bookings'], ...Object.entries(last.sources).filter(([key]) => key !== 'ota').map(([k, n]) => [SOURCE[k] || k, n]), [],
       ['Nationality', 'Bookings'], ...last.nationalities.map((x) => [x.name, x.n])];
     downloadCsv(`report_${last.from}_to_${t}.csv`, rows);
   };

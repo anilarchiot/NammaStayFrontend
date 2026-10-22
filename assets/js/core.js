@@ -13,7 +13,7 @@ const DEMO_ON = (() => {
   } catch { return false; }
 })();
 export const DEMO = DEMO_ON;
-/** Base URL of the server functions (iCal links, OTA sync) */
+/** Base URL of the server functions */
 export const FUNCTIONS_URL = (CFG.supabaseUrl ? CFG.supabaseUrl.replace(/\/$/, '') : 'https://YOUR-PROJECT.supabase.co') + '/functions/v1';
 export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
@@ -135,11 +135,10 @@ const WORDS = {
 export let W = WORDS.hostel;
 const W_ = { get unit() { return W.unit; } };
 export const setKind = (k) => { W = WORDS[k] || WORDS.hostel; homestayWords(); return W; };
-// Homestays: a caretaker instead of a front desk, and Airbnb is the usual OTA (033)
+// Homestays use a caretaker instead of a front desk (033)
 function homestayWords() {
   const hs = W.kind === 'homestay';
   ROLE_LABEL.front_desk = hs ? 'Caretaker' : 'Front desk';
-  const ota = SOURCES.find((s) => s[0] === 'ota'); if (ota) ota[1] = hs ? 'Airbnb / OTA' : 'Hostelworld / OTA';
 }
 export const isHomestay = () => W.kind === 'homestay';
 export const isResort = () => W.kind === 'resort';                                  // resort = rooms property + resort switch (034)
@@ -279,14 +278,6 @@ export function guestFace(name = '', size = 22) {
     ${glasses ? '<g stroke="#1F2937" stroke-width="1" fill="none"><circle cx="16.2" cy="22.5" r="3"/><circle cx="23.8" cy="22.5" r="3"/><path d="M19.2 22.5h1.6"/></g>' : ''}</svg>`;
 }
 
-// ---- OTA channels (calendar sync)
-export const OTA = {
-  airbnb: { name: 'Airbnb', color: '#FF5A5F' }, booking: { name: 'Booking.com', color: '#003580' }, agoda: { name: 'Agoda', color: '#5C2D91' },
-  vrbo: { name: 'Vrbo', color: '#1E64C8' }, google: { name: 'Google Calendar', color: '#188038' }, other: { name: 'Other', color: '#6B7280' },
-};
-export const otaOf = (reason) => { const m = /^🔗 (.+?) ·/.exec(String(reason || '')); if (!m) return null;
-  const key = Object.keys(OTA).find((k) => OTA[k].name === m[1]) || 'other'; return { key, ...OTA[key], label: m[1] }; };
-
 // ---- countries (nationality dropdowns): India first, then A–Z
 export const COUNTRIES = 'Afghanistan,Albania,Algeria,Andorra,Angola,Antigua and Barbuda,Argentina,Armenia,Australia,Austria,Azerbaijan,Bahamas,Bahrain,Bangladesh,Barbados,Belarus,Belgium,Belize,Benin,Bhutan,Bolivia,Bosnia and Herzegovina,Botswana,Brazil,Brunei,Bulgaria,Burkina Faso,Burundi,Cabo Verde,Cambodia,Cameroon,Canada,Central African Republic,Chad,Chile,China,Colombia,Comoros,Congo,Costa Rica,Côte d’Ivoire,Croatia,Cuba,Cyprus,Czechia,Democratic Republic of the Congo,Denmark,Djibouti,Dominica,Dominican Republic,Ecuador,Egypt,El Salvador,Equatorial Guinea,Eritrea,Estonia,Eswatini,Ethiopia,Fiji,Finland,France,Gabon,Gambia,Georgia,Germany,Ghana,Greece,Grenada,Guatemala,Guinea,Guinea-Bissau,Guyana,Haiti,Honduras,Hong Kong,Hungary,Iceland,India,Indonesia,Iran,Iraq,Ireland,Israel,Italy,Jamaica,Japan,Jordan,Kazakhstan,Kenya,Kiribati,Kuwait,Kyrgyzstan,Laos,Latvia,Lebanon,Lesotho,Liberia,Libya,Liechtenstein,Lithuania,Luxembourg,Macau,Madagascar,Malawi,Malaysia,Maldives,Mali,Malta,Marshall Islands,Mauritania,Mauritius,Mexico,Micronesia,Moldova,Monaco,Mongolia,Montenegro,Morocco,Mozambique,Myanmar,Namibia,Nauru,Nepal,Netherlands,New Zealand,Nicaragua,Niger,Nigeria,North Korea,North Macedonia,Norway,Oman,Pakistan,Palau,Palestine,Panama,Papua New Guinea,Paraguay,Peru,Philippines,Poland,Portugal,Qatar,Romania,Russia,Rwanda,Saint Kitts and Nevis,Saint Lucia,Saint Vincent and the Grenadines,Samoa,San Marino,São Tomé and Príncipe,Saudi Arabia,Senegal,Serbia,Seychelles,Sierra Leone,Singapore,Slovakia,Slovenia,Solomon Islands,Somalia,South Africa,South Korea,South Sudan,Spain,Sri Lanka,Sudan,Suriname,Sweden,Switzerland,Syria,Taiwan,Tajikistan,Tanzania,Thailand,Timor-Leste,Togo,Tonga,Trinidad and Tobago,Tunisia,Turkey,Turkmenistan,Tuvalu,Uganda,Ukraine,United Arab Emirates,United Kingdom,United States,Uruguay,Uzbekistan,Vanuatu,Vatican City,Venezuela,Vietnam,Yemen,Zambia,Zimbabwe'.split(',');
 /** <option> list for a nationality <select>; keeps an older free-text value that isn't in the list */
@@ -353,7 +344,6 @@ function disposeCurrentPage() {
 const ADMIN_NAV = [
   ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
   ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
-  ['channel-manager.html', 'Channel manager', '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"></path>'],
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
@@ -422,7 +412,7 @@ async function boot(key) {
     throw new Stop();
   };
   if (!ctx.isResort && ['activities', 'dayvisits', 'groups'].includes(key)) redirect('dashboard.html');
-  const pgAway = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', ota: 'dashboard.html', payments: 'pg-payments.html', reports: 'pg-report.html' };
+  const pgAway = { bookings: 'tenants.html', checkin: 'tenants.html?movein=1', payments: 'pg-payments.html', reports: 'pg-report.html' };
   if (ctx.isPg && pgAway[key]) redirect(pgAway[key]);
   if (!ctx.isPg && ['pgpayments', 'pgreport'].includes(key)) redirect('dashboard.html');
   const allowed = PAGE_ROLES[key];
@@ -541,15 +531,6 @@ function applyChrome(ctx) {
       rpc('formc_due_count', { p_property: ctx.property_id }).then((n) => { const c = $('#formc-count'); if (c && n > 0) { c.textContent = n; c.hidden = false; } }).catch(() => {});
     }
   }
-  if (['owner', 'manager'].includes(ctx.role) && !$('.ns-sidebar a[href="ota.html"]')) {         // OTA calendar sync
-    const rl = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
-    if (rl) {
-      const a = document.createElement('a'); a.href = 'ota.html'; a.className = 'ns-nav-link';
-      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2"></path><path d="M3 12a9 9 0 0115.5-6.2"></path><path d="M18 2v4h-4"></path><path d="M6 22v-4h4"></path></svg><span>OTA sync</span>';
-      if (/ota\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-      rl.insertAdjacentElement('afterend', a);
-    }
-  }
   if (!ctx.allow('view_payments')) $$('a[href="payments.html"]').forEach((a) => { a.style.display = 'none'; });
   $$('.ns-mobile-nav a[href="rooms.html"], .ns-drawer a[href="rooms.html"]').forEach((a) => { const sp = a.querySelector('span') || a; sp.textContent = W.setup; });
   if (!['owner', 'manager', 'front_desk'].includes(ctx.role)) {
@@ -627,14 +608,14 @@ function applyChrome(ctx) {
   document.documentElement.classList.add('ns-chrome-ready');
 }
 
-// PG / co-living: a menu made for monthly tenants — no nightly bookings, check-in, OTA or booking payments/reports
+// PG / co-living: a menu made for monthly tenants — no nightly bookings, check-in, or booking payments/reports
 function pgMenu(ctx) {
   const side = $('.ns-sidebar .ns-nav');
   if (!ctx.isPg && $('[data-pg-link], [data-pg-hidden], [data-pg-renamed]')) {   // menu remembered from a PG property → draw this one fresh
     clearShell(); location.reload(); throw new Stop();
   }
   if (!ctx.isPg || !side) return;
-  ['bookings.html', 'check-in.html', 'ota.html', 'payments.html', 'reports.html'].forEach((h) => $$(`.ns-sidebar a[href^="${h}"], .ns-mobile-nav a[href^="${h}"]`).forEach((a) => { a.style.display = 'none'; a.dataset.pgHidden = '1'; }));
+  ['bookings.html', 'check-in.html', 'payments.html', 'reports.html'].forEach((h) => $$(`.ns-sidebar a[href^="${h}"], .ns-mobile-nav a[href^="${h}"]`).forEach((a) => { a.style.display = 'none'; a.dataset.pgHidden = '1'; }));
   $$('.ns-sidebar a[href="guest-profile.html"] span').forEach((sp) => { sp.textContent = 'Tenant profiles'; sp.parentElement.dataset.pgRenamed = '1'; });
   const ten = $('.ns-sidebar a[href="tenants.html"]'); const dash = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
   if (ten && dash && dash.nextElementSibling !== ten) dash.insertAdjacentElement('afterend', ten);
@@ -1403,7 +1384,7 @@ export const methodPill = (m) => pill(...(METHOD[m] || [m, 'grey']));
 export const METHOD_OPTIONS = [['upi', 'UPI'], ['cash', 'Cash'], ['card', 'Card'], ['bank', 'Bank transfer']];
 export const ID_TYPES = [['aadhaar', 'Aadhaar card'], ['passport', 'Passport'], ['driving_licence', 'Driving licence'],
   ['pan', 'PAN card'], ['voter_id', 'Voter ID'], ['other', 'Other']];
-export const SOURCES = [['walk_in', 'Walk-in'], ['direct', 'Direct (phone/WhatsApp/website)'], ['ota', 'Hostelworld / OTA'], ['referral', 'Referral']];
+export const SOURCES = [['walk_in', 'Walk-in'], ['direct', 'Direct (phone/WhatsApp/website)'], ['referral', 'Referral']];
 
 export function avatar(name, size = 30) {
   return `<div class="ns-avatar-sm" style="width:${size}px;height:${size}px;${size > 30 ? 'font-size:13px' : ''}">${esc(initials(name))}</div>`;

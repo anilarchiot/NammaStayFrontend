@@ -290,30 +290,6 @@ function offerPct(guestId) {
 }
 const roomGst = (mode, fixed, perNight) => (mode === 'none' ? 0 : mode === 'fixed' ? fixed : perNight <= 100000 ? 0 : perNight <= 750000 ? 5 : 18);
 function fyOf(d) { const y = Number(d.slice(0, 4)); const m = Number(d.slice(5, 7)); const s = m >= 4 ? y : y - 1; return `${s}-${String(s + 1).slice(2)}`; }
-const OTA_NAMES = { airbnb: 'Airbnb', booking: 'Booking.com', agoda: 'Agoda', vrbo: 'Vrbo', google: 'Google Calendar', other: 'OTA' };
-function demoOtaSync() {
-  const results = [];
-  for (const f of DB.feeds || []) {
-    if (/fail|broken/i.test(f.import_url)) { Object.assign(f, { last_synced_at: new Date().toISOString(), last_status: 'error', last_error: 'The OTA answered 404 — check the link is still valid.' }); results.push({ feed: f.id, error: f.last_error }); continue; }
-    let added = 0;
-    if (!DB.blocks.some((k) => k.feed_id === f.id)) {
-      let h = 0; for (const ch of f.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-      let day = addDays(ymd(), 3 + (h % 6));
-      for (let n = 0; n < 2 && day < addDays(ymd(), 60); ) {
-        const len = 2 + ((h >>> (n * 3)) % 2);
-        const a = new Date(`${day}T14:00:00+05:30`).toISOString(); const z = new Date(`${addDays(day, len)}T11:00:00+05:30`).toISOString();
-        if (!booked(f.bed_id, a, z) && !blocked(f.bed_id, a, z)) {
-          DB.blocks.push({ id: uuid(), property_id: P, bed_id: f.bed_id, starts_at: a, ends_at: z, reason: `🔗 ${OTA_NAMES[f.channel] || 'OTA'} · reserved`,
-            feed_id: f.id, external_uid: `demo-${f.id}-${n}`, created_by: null, created_at: new Date().toISOString() });
-          added++; n++; day = addDays(day, len + 4 + (h % 5));
-        } else day = addDays(day, 1);
-      }
-    }
-    Object.assign(f, { last_synced_at: new Date().toISOString(), last_status: 'ok', last_error: null, events_count: DB.blocks.filter((k) => k.feed_id === f.id).length });
-    results.push({ feed: f.id, added, updated: 0, removed: 0, clashes: 0 });
-  }
-  save(); return { synced: results.length, results };
-}
 function seedExpenses() {
   const out = []; const t = ymd(); const [y, m] = t.split('-').map(Number);
   const add = (day, category, rupee, method, vendor, note) => out.push({ id: uuid(), property_id: P, spent_on: day, category, amount_paise: rupee * 100, method, vendor, note, created_by: ME, created_at: new Date().toISOString() });
@@ -424,50 +400,6 @@ function stayRate(bed, a, z) {
       .forEach((x) => { names.add(x.name); if (x.min_nights) minN = Math.max(minN, x.min_nights); });
   }
   return { rate: Math.round(tot / n), min: minN, names: [...names].join(', ') };
-}
-// ---- two-way channel manager (demo of the Channex flow)
-function cxGroups() {
-  const out = [];
-  DB.rooms.slice().sort((a, b) => a.sort - b.sort).forEach((r) => {
-    const beds = DB.beds.filter((b) => b.room_id === r.id && b.is_active); const rates = [...new Set(beds.map((b) => b.rate_paise))];
-    rates.forEach((rate) => { const g = beds.filter((b) => b.rate_paise === rate);
-      out.push({ group_key: r.id + ':' + rate, room_id: r.id, rate_paise: rate, title: r.name + (rates.length > 1 ? ' · ₹' + (rate / 100).toLocaleString('en-IN') : ''), bed_ids: g.map((b) => b.id), count: g.length }); });
-  });
-  return out;
-}
-function cxDemo(body) {
-  DB.cx = DB.cx || { link: null, maps: [], bookings: [] };
-  const now = new Date().toISOString();
-  if (body.action === 'setup') {
-    DB.cx.link = { cx_property_id: uuid(), enabled: true, last_push_at: now, last_pull_at: null, last_error: null };
-    DB.cx.maps = cxGroups().map((g) => ({ ...g, beds: g.count, cx_room_type_id: uuid(), cx_rate_plan_id: uuid() }));
-    return { ok: true, rooms: DB.cx.maps.length, availability_updates: DB.cx.maps.length * 6, price_updates: DB.cx.maps.length * 9 };
-  }
-  if (!DB.cx.link) return { error: 'Set up the channel manager first.' };
-  if (body.action === 'iframe') return { url: 'demo' };
-  if (body.action === 'sync') {
-    let saved = 0;
-    if (!DB.cx.bookings.length) {
-      const samples = [['Lukas Becker', 'Germany', '+4915112345678', 'Booking.com', 'BDC-4417302981', 5, 2], ['Priya Nair', 'India', '+919845012345', 'MakeMyTrip', 'NH7012345678', 8, 3]];
-      for (let [name, country, phone, ota, code, inDays, n] of samples) {
-        let a; let z; let bed; let off = inDays;
-        for (; off < inDays + 45 && !bed; off++) { a = new Date(`${addDays(ymd(), off)}T14:00:00+05:30`).toISOString(); z = new Date(`${addDays(ymd(), off + n)}T11:00:00+05:30`).toISOString();
-          bed = activeBeds().find((b) => !booked(b.id, a, z) && !blocked(b.id, a, z)); }
-        if (!bed) continue; inDays = off - 1;
-        const g = { id: uuid(), property_id: P, full_name: name, phone, email: null, nationality: country, created_at: now, tags: [] }; DB.guests.push(g);
-        const rate = Math.round(stayRate(bed, a, z).rate * 1.1); const bk = { id: uuid(), property_id: P, code: 'BK-' + DB.seq.bk++, guest_id: g.id, bed_id: bed.id, visitors: 1, children: 0, extra_paise: 0,
-          check_in_at: a, check_out_at: z, nights: n, rate_paise: rate, total_paise: rate * n, paid_paise: 0, status: 'confirmed', source: 'ota', discount_pct: 0, discount_paise: 0, charges_paise: 0,
-          note: `${ota} · ${code.split('-').pop()}`, self_checkin_token: uuid(), created_at: now, updated_at: now };
-        DB.bookings.push(bk); audit(bk, 'created', { status: 'confirmed', total_paise: bk.total_paise });
-        DB.cx.bookings.unshift({ cx_booking_id: uuid(), ota, code: code.split('-').pop(), status: 'new', guest: name, arrival: addDays(ymd(), inDays), departure: addDays(ymd(), inDays + n),
-          amount: bk.total_paise / 100, currency: 'INR', problem: null, booking_ids: [bk.id], received_at: now });
-        notify(`New ${ota} booking`, `${name} · ${addDays(ymd(), inDays)} → ${addDays(ymd(), inDays + n)}`, bk.id); saved++;
-      }
-    }
-    Object.assign(DB.cx.link, { last_push_at: now, last_pull_at: now });
-    return { ok: true, saved, problems: [], availability_updates: DB.cx.maps.length * 6, price_updates: DB.cx.maps.length * 9 };
-  }
-  return { error: 'Unknown action.' };
 }
 function allProps() {
   const m = DB.billing.mine; const now = Date.now();
@@ -598,7 +530,6 @@ function businessHealth() {
     for (let d = from; d <= to; d = day((T(d) - T(today)) / 864e5 + 1)) {
       const used = new Map();
       DB.bookings.forEach((b) => { if (['confirmed', 'checked_in', 'checked_out'].includes(b.status) && ymd(b.check_in_at) <= d && d < ymd(b.check_out_at)) used.set(b.bed_id, b.source === 'ota' ? 'ota' : 'direct'); });
-      DB.blocks.forEach((k) => { if (k.feed_id && ymd(k.starts_at) <= d && d < ymd(k.ends_at) && !used.has(k.bed_id)) used.set(k.bed_id, 'ota'); });
       (DB.tenancies || []).forEach((t) => { if (t.status !== 'moved_out' && t.start_date <= d && (!t.move_out_on || d < t.move_out_on) && !used.has(t.bed_id)) used.set(t.bed_id, 'direct'); });
       occupied += used.size; if (units && used.size >= Math.max(1, Math.ceil(units * 0.95))) full++;
       used.forEach((v) => { if (v === 'ota') ota++; else direct++; });
@@ -615,7 +546,7 @@ function businessHealth() {
   const occP = o.available ? Math.round(o.occupied * 1000 / o.available) / 10 : null; const pP = op.available ? Math.round(op.occupied * 1000 / op.available) / 10 : null;
   if (occP == null) areas.push(A('occupancy', 'Occupancy', 'unknown', '—', 'No rooms or beds set up', 'Needs rooms / beds.', 'Add your rooms or beds in Setup.', 20));
   else areas.push(A('occupancy', 'Occupancy', occP >= 65 || (pP != null && occP >= pP + 5) ? 'green' : occP < 40 && (pP == null || occP <= pP) ? 'red' : 'amber', occP + '%',
-    `Last 30 days${pP != null ? ' · previous 30 days ' + pP + '%' : ''}`, `Nights sold ÷ nights available (${units} units × 30 nights), incl. OTA calendar blocks.`,
+    `Last 30 days${pP != null ? ' · previous 30 days ' + pP + '%' : ''}`, `Nights sold ÷ nights available (${units} units × 30 nights), including bookings by source.`,
     pP != null && occP < pP ? 'Occupancy is falling: run a weekday offer, refresh OTA photos and ask past guests to come back.' : 'Fill empty nights: open more OTAs, add weekday / long-stay discounts and share your booking link on WhatsApp.', 20));
   const inc = income(from, today); const pinc = income(pfrom, pto);
   if (owner) {
@@ -641,7 +572,7 @@ function businessHealth() {
     const share = Math.round(m90.ota * 100 / (m90.ota + m90.direct)); const inc90 = income(day(-89), today);
     const comm = DB.expenses.filter((x) => x.category === 'ota_commission' && x.spent_on >= day(-89)).reduce((a, x) => a + x.amount_paise, 0);
     areas.push(A('mix', 'Direct vs OTA', share <= 40 ? 'green' : share <= 65 ? 'amber' : 'red', share + '% OTA', `${100 - share}% direct / walk-in nights (90 days)${owner && comm && inc90 ? ' · OTA commission ' + Math.round(comm * 100 / inc90) + '% of income' : ''}`,
-      'OTA nights (OTA bookings + OTA calendar blocks) ÷ all sold nights, last 90 days.', 'Most guests come through OTAs: give returning guests a direct-booking discount, add your WhatsApp / booking link to your Google profile.', 10));
+      'OTA-source booking nights ÷ all sold nights, last 90 days.', 'Most guests come through OTAs: give returning guests a direct-booking discount, add your WhatsApp / booking link to your Google profile.', 10));
   } else areas.push(A('mix', 'Direct vs OTA', 'unknown', '—', 'No stays in the last 90 days', 'Needs bookings.', 'Add bookings or connect your OTA calendars.', 10));
   const made = DB.bookings.filter((b) => T(b.created_at || b.check_in_at) >= Date.now() - 90 * 864e5 && b.status !== 'pending');
   if (made.length >= 5) {
@@ -697,8 +628,16 @@ function load() {
     .map(([name, category, price_paise, unit], i) => ({ id: uuid(), property_id: P, name, category, price_paise, unit, is_active: true, sort: i + 1, created_at: new Date().toISOString() }));
   if (!DB.charges) DB.charges = [];
   DB.bookings.forEach((b) => { if (b.charges_paise == null) b.charges_paise = 0; });
-  DB.beds.forEach((b) => { if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 }); if (!b.ical_token) b.ical_token = uuid(); });
-  if (!DB.feeds) DB.feeds = [];
+  const hadIntegrationData = !!DB.feeds || !!DB.cx || (DB.blocks || []).some((block) => block.feed_id) || DB.beds.some((b) => b.ical_token);
+  DB.blocks = (DB.blocks || []).filter((block) => !block.feed_id);
+  DB.blocks.forEach((block) => { delete block.external_uid; });
+  DB.beds.forEach((b) => {
+    if (b.max_guests == null) Object.assign(b, { max_guests: 1, base_guests: 1, extra_guest_paise: 0 });
+    delete b.ical_token;
+  });
+  delete DB.feeds;
+  delete DB.cx;
+  if (hadIntegrationData) save();
   if (!DB.expenses) DB.expenses = seedExpenses();
   if (!DB.inv) DB.inv = seedInvest();                            // My investment (036)
   if (!DB.paylinks) DB.paylinks = [];
@@ -2313,26 +2252,9 @@ const RPC = {
   hk_set: ({ p_bed, p_status, p_note }) => { const b = bedOf(p_bed) || fail('Bed not found.'); Object.assign(b, { hk_status: p_status, hk_note: p_note || null, hk_updated_at: new Date().toISOString(), hk_by: ME }); return null; },
   hk_counts: () => ({ dirty: DB.beds.filter((b) => b.is_active && b.hk_status === 'dirty').length, cleaning: DB.beds.filter((b) => b.is_active && b.hk_status === 'cleaning').length,
     inspect: DB.beds.filter((b) => b.is_active && b.hk_status === 'inspect').length }),
-  cx_status: () => { DB.cx = DB.cx || { link: null, maps: [], bookings: [] };
-    return { link: DB.cx.link, maps: DB.cx.maps, groups: cxGroups(), bookings: DB.cx.bookings }; },
-  cx_set_enabled: ({ p_enabled }) => { if (DB.cx?.link) DB.cx.link.enabled = p_enabled; return null; },
   setup_progress: () => { const p0 = DB.properties[0]; return { done_at: p0.setup_done_at || null, details: !!(p0.phone && p0.address && p0.city), rooms: DB.beds.some((b) => b.is_active),
     upi: !!p0.upi_id, staff: (DB.members || []).length > 1 || true, booking: DB.bookings.length > 0 }; },
   setup_finish: ({ p_done }) => { DB.properties[0].setup_done_at = p_done ? new Date().toISOString() : null; return null; },
-  ota_overview: () => DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id).sort((a, b) => a.sort - b.sort).map((b) => ({
-    bed_id: b.id, label: b.label, room: r.name, is_active: b.is_active, token: b.ical_token,
-    feeds: (DB.feeds || []).filter((f) => f.bed_id === b.id) }))),
-  ota_feed_save: ({ p }) => {
-    const url = String(p.import_url || '').trim();
-    if (!/^https:\/\//.test(url)) fail('Paste the full calendar link — it starts with https://');
-    if (/thenammastay|\/functions\/v1\/ical/i.test(url)) fail('That’s a NammaStay link — paste the link from the OTA instead.');
-    DB.feeds = DB.feeds || [];
-    if (DB.feeds.some((f) => f.bed_id === p.bed_id && f.import_url === url)) fail('That calendar link is already added for this bed/room.');
-    const f = { id: uuid(), property_id: P, bed_id: p.bed_id, channel: p.channel || 'other', import_url: url, label: null, last_synced_at: null, last_status: null, last_error: null, events_count: 0, created_at: new Date().toISOString() };
-    DB.feeds.push(f); return f.id;
-  },
-  ota_feed_delete: ({ p_feed }) => { DB.feeds = (DB.feeds || []).filter((f) => f.id !== p_feed); DB.blocks = DB.blocks.filter((k) => k.feed_id !== p_feed); return null; },
-  ota_new_token: ({ p_bed }) => { const b = bedOf(p_bed); b.ical_token = uuid(); return b.ical_token; },
   demo_checkin_token: () => {
     const b = DB.bookings.filter((x) => ['pending', 'confirmed'].includes(x.status) && T(x.check_in_at) > Date.now() && !x.self_checkin_at)
       .sort((x, y) => T(x.check_in_at) - T(y.check_in_at))[0];
@@ -2426,8 +2348,6 @@ export function createDemoClient() {
   return {
     demo: true,
     functions: { invoke: async (name, opts) => { await new Promise((r) => setTimeout(r, 250));
-      if (name === 'ota-sync') { load(); return { data: demoOtaSync(), error: null }; }
-      if (name === 'channex') { load(); const r = cxDemo(opts?.body || {}); save(); return r.error ? { data: r, error: { message: r.error } } : { data: r, error: null }; }
       if (name === 'razorpay') { load(); const r = demoRazorpay(opts?.body || {}); save(); return r.error ? { data: r, error: { message: r.error } } : { data: r, error: null }; }
       return { data: null, error: { message: `Function ${name} isn’t available in the demo.` } }; } },
     reset: resetDemo,

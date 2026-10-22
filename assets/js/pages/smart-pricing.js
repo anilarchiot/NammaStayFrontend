@@ -47,7 +47,7 @@ async function draw() {
   }
   if (S.is_pg) { content('<div class="ns-card ns-empty">Smart pricing is for nightly stays. PG / monthly tenants keep their fixed rent.</div>'); return; }
   content(`${hero()}${pausedBar()}${suggestions()}${calendar()}
-    <div class="sp-g2">${limitsCard()}<div class="sp-col">${howCard()}${otaCard()}${datesCard()}${runsCard()}</div></div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
+    <div class="sp-g2">${limitsCard()}<div class="sp-col">${howCard()}${datesCard()}${runsCard()}</div></div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
   wire();
 }
 
@@ -159,12 +159,6 @@ function howCard() {
   return `<section class="ns-card sp-card" aria-label="How it decides"><h2 class="ns-h3" style="margin:0">How it decides</h2>
     <div class="sp-how-grid">${box(P.bed, 'green', 'How full the night is', '70%+ booked → up 5%, 85%+ → up 10%')}${box(P.trend, 'blue', 'How fast it’s filling', 'faster than your usual pace → up 5% more')}
       ${box(P.clock, 'amber', 'How close the date is', 'half empty 0–2 days before → down 10%')}${box(P.star, 'red', 'Festivals & events', 'your dates below → at least up 10%')}</div></section>`;
-}
-
-function otaCard() {
-  return S.channel_manager
-    ? `<section class="sp-note">${I(P.sync, 20)}<div><b>Channel manager connected</b><span>New prices also go to your OTAs on the next sync. Your booking page, walk-ins and invoices use them straight away.</span></div></section>`
-    : `<section class="sp-note is-amber">${I(P.alert, 20)}<div><b>OTA prices don’t change by themselves</b><span>Calendar links (iCal) share dates only, not prices. Update prices on Booking.com / Hostelworld yourself, or <a href="ota.html">connect the channel manager</a>. Your booking page, walk-ins and invoices use smart prices straight away.</span></div></section>`;
 }
 
 function datesCard() {

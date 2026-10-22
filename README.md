@@ -5,7 +5,7 @@ One repo, one website, one domain. Everything is in this folder:
 | Address | What it is |
 |---|---|
 | `thenammastay.com` (`index.html`) | Marketing homepage — pricing, features, "Request a demo" form |
-| `thenammastay.com/login.html` | **Sign in** → the hostel app (dashboard, bookings, calendar, check-in, Form C, rooms, housekeeping, OTA sync, payments, expenses, reports, settings) |
+| `thenammastay.com/login.html` | **Sign in** → the hostel app (dashboard, bookings, calendar, check-in, Form C, rooms, housekeeping, payments, expenses, reports, settings) |
 | `thenammastay.com/signup.html` | Free-trial sign-up → setup wizard (`setup.html`) |
 | `thenammastay.com/admin-login.html` | **NammaStay admin login** (link at the bottom of the sign-in page) — 2-step code login → `admin.html`, `subscribers.html`, `revenue.html`, `leads.html`, `activity.html` |
 | `thenammastay.com/self-check-in.html` | Guests' online check-in link |

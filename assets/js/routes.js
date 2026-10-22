@@ -19,7 +19,6 @@ export const ROUTES = Object.freeze([
   { key: 'activities', path: 'activities.html', title: 'Activities', module: './pages/activities.js', roles: ['owner', 'manager', 'front_desk', 'accountant'] },
   { key: 'dayvisits', path: 'day-visitors.html', title: 'Day visitors', module: './pages/day-visitors.js', roles: ['owner', 'manager', 'front_desk', 'accountant'] },
   { key: 'groups', path: 'groups.html', title: 'Groups', module: './pages/groups.js', roles: ['owner', 'manager', 'front_desk', 'accountant'] },
-  { key: 'ota', path: 'ota.html', title: 'Channel manager', module: './pages/ota.js', roles: ['owner', 'manager'] },
   { key: 'pgpayments', path: 'pg-payments.html', title: 'PG payments', module: './pages/pg-payments.js', roles: ['owner', 'manager', 'front_desk', 'accountant'] },
   { key: 'pgreport', path: 'pg-report.html', title: 'PG report', module: './pages/pg-report.js', roles: ['owner', 'manager', 'accountant'] },
   { key: 'reports', path: 'reports.html', title: 'Reports', module: './pages/reports.js', roles: ['owner', 'manager', 'accountant'] },

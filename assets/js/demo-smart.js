@@ -147,7 +147,7 @@ export function smartDemo(name, args, h) {
       const fut = Object.values(S.nights).filter((n) => n.night >= today && !n.locked && !n.owner_rule);
       return { is_pg: false, today,
         settings: { mode: st.mode, max_step_pct: st.max_step_pct, no_weekend_discount: st.no_weekend_discount, paused_until: st.paused_until && st.paused_until >= today ? st.paused_until : null, last_run_at: st.last_run_at },
-        channel_manager: !!(DB.cx && DB.cx.link), groups: G, nights, prices, suggestions,
+        groups: G, nights, prices, suggestions,
         stats: { extra_30_paise: extra, up_nights_30: upN, discount_nights_30: downN, up_now: new Set(fut.filter((n) => n.auto_pct > 0).map((n) => n.night)).size, down_now: new Set(fut.filter((n) => n.auto_pct < 0).map((n) => n.night)).size },
         runs: S.runs.slice(0, 8).map((r) => ({ id: r.id, ran_at: r.ran_at, kind: r.kind, up: r.up, down: r.down, suggested: r.suggested, undone: !!r.undone_at,
           can_undo: !r.undone_at && r.undo.length > 0 && Date.now() - new Date(r.ran_at).getTime() < 7 * 864e5 })),

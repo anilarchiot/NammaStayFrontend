@@ -519,7 +519,7 @@ async function razorpayCard(ctx) {
         ${field('Key ID', `<input class="ns-input" name="rzp_id" placeholder="rzp_live_XXXXXXXX" value="${esc(st.connected ? '' : '')}" autocomplete="off">`, st.connected ? 'Saved — type a new one only to change it.' : 'Razorpay → Account & Settings → API Keys')}
         ${field('Key Secret', `<input class="ns-input" type="password" name="rzp_secret" placeholder="${st.connected ? '•••••••• saved' : 'Shown once when you create the key'}" autocomplete="new-password">`)}
         ${field('Webhook secret (recommended)', `<input class="ns-input" type="password" name="rzp_hook" placeholder="${st.webhook ? '•••••••• saved' : 'Any long password you choose'}" autocomplete="new-password">`)}</div>
-      <details class="ota-howto"><summary>Set up the webhook (payments show as paid within seconds)</summary>
+      <details><summary>Set up the webhook (payments show as paid within seconds)</summary>
         <div style="font-size:12.5px;line-height:1.6;margin-top:8px">Razorpay → Account & Settings → <b>Webhooks</b> → <b>Add new webhook</b>:<br>
           URL: <input class="ns-input" readonly value="${esc(hook)}" style="height:34px;font-size:12px;margin:4px 0" id="rzp-hook-url"><br>
           Secret: the same <b>Webhook secret</b> as above · Events: tick <b>payment_link.paid</b>, <b>payment_link.expired</b>, <b>payment_link.cancelled</b>.<br>

@@ -18,7 +18,6 @@ const GUIDES = {
   activities: ['Review recent activity across the property.', 'Use the available filters to narrow the timeline.', 'Open a linked record when you need more context.'],
   dayvisits: ['Review today’s day visitors and their status.', 'Record a visitor with the correct visit details.', 'Update the entry when the visit ends.'],
   groups: ['Review group bookings and their stay dates.', 'Open a group to check its booking and guest details.', 'Keep room assignments and payment status up to date.'],
-  ota: ['Use the NammaStay link to export availability to an OTA.', 'Add an OTA calendar link to import its bookings.', 'Use Sync now to check calendars; use the channel manager for two-way OTA syncing.'],
   pgpayments: ['Review rent and other tenant payments.', 'Filter the list to find a tenant or payment period.', 'Open a payment record to review its details.'],
   pgreport: ['Review rent, occupancy, and dues for the selected period.', 'Use the report to identify tenants who need follow-up.', 'Open the related tenant record to take action.'],
   reports: ['Choose a period to review property performance.', 'Compare bookings, revenue, and payments.', 'Export the report when you need to share or retain it.'],
@@ -120,11 +119,6 @@ const TARGETS = {
     { selectors: ['.ns-content table tbody tr'], label: 'Group bookings' },
     { selectors: ['.ns-content .pf-kpi'], label: 'Group totals and payments' },
     { selectors: ['.ns-content table'], label: 'Rooms in the group' },
-  ],
-  ota: [
-    { selectors: ['.ns-content .ota-export'], label: 'Export NammaStay calendar' },
-    { selectors: ['.ns-content .ota-add'], label: 'Import an OTA calendar' },
-    { selectors: ['.ns-main #sync-now', '.ns-content #cx-sync'], label: 'Sync calendars and channel manager' },
   ],
   pgpayments: [
     { selectors: ['.ns-content .pf-kpi'], label: 'Rent payment summary' },
