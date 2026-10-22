@@ -3,6 +3,7 @@ export const ROUTES = Object.freeze([
   { key: 'dashboard', path: 'dashboard.html', title: 'Dashboard', module: './pages/dashboard.js' },
   { key: 'bookings', path: 'bookings.html', title: 'Bookings', module: './pages/bookings.js' },
   { key: 'calendar', path: 'calendar.html', title: 'Calendar', module: './pages/calendar.js' },
+  { key: 'ota', path: 'ota.html', title: 'OTA sync', module: './pages/ota.js', roles: ['owner', 'manager'] },
   { key: 'rooms', path: 'rooms.html', title: 'Rooms', module: './pages/rooms.js' },
   { key: 'payments', path: 'payments.html', title: 'Payments', module: './pages/payments.js' },
   { key: null, path: 'booking-detail.html', title: 'Booking details', module: './pages/booking-detail.js' },

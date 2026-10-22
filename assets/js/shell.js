@@ -19,7 +19,7 @@
   // Show the finished menu from the previous page straight away (core.js saves it once the login is
   // checked), so the sidebar doesn't jump from this page's placeholder menu to the real one.
   (function restoreChrome() {
-    var area = ['admin.html', 'subscribers.html', 'revenue.html', 'leads.html', 'activity.html'].indexOf(file) >= 0 ? 'admin' : 'app';
+    var area = ['admin.html', 'subscribers.html', 'revenue.html', 'leads.html', 'activity.html', 'connections.html'].indexOf(file) >= 0 ? 'admin' : 'app';
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell') || 'null'); } catch (e) { saved = null; }
     if (!saved || saved.area !== area || !saved.nav) return;
