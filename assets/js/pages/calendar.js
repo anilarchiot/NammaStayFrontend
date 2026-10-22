@@ -11,6 +11,14 @@ const monthStart = (d) => d.slice(0, 8) + '01';
 const monthDays = (d) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate();
 const shiftMonth = (d, n) => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1 + n, 1)); return x.toISOString().slice(0, 10); };
 const LIVE = ['pending', 'confirmed', 'checked_in'];
+// Where a booking came from: Booking.com, Agoda, another OTA, or walk-in / direct.
+const srcOf = (b) => {
+  if (b.source !== 'ota') return { cls: 'src-wi', short: 'W', name: b.source === 'direct' ? 'Direct booking' : 'Walk-in' };
+  const n = String(b.channel || '');
+  if (/booking/i.test(n)) return { cls: 'src-bk', short: 'B', name: 'Booking.com' };
+  if (/agoda/i.test(n)) return { cls: 'src-ag', short: 'A', name: 'Agoda' };
+  return { cls: 'src-ot', short: 'O', name: n || 'OTA' };
+};
 let IS_PG = false;                                // PG / co-living account (032)
 const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> drag a tenant booking’s right edge to change checkout. Tap a free bed on the move-in day to move a tenant in.'
   : `<b style="color:#157A56">Tip:</b> drag a booking’s right edge across free nights to extend the stay.`);
@@ -98,11 +106,13 @@ page('calendar', async (ctx) => {
           const tag = IS_PG ? (b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="Living here">●</span>' : '')   // PG: rent is on Tenants & rent, not the bar
             : b.status === 'checked_in' ? '<span class="cb-tag cb-live" title="In house">●</span>'
             : b.balance_paise > 0 ? `<span class="cb-tag" title="${rupees(b.balance_paise)} due">₹</span>` : b.status !== 'pending' ? '<span class="cb-tag" title="Paid">✓</span>' : '';
+          const src = IS_PG ? null : srcOf(b);
+          const srcBadge = src ? `<span class="cb-src ${src.cls}" title="${esc(src.name)}" aria-label="${esc(src.name)}">${src.short}</span>` : '';
           const label = { 'cb-in': 'In house', 'cb-conf': 'Confirmed · paid', 'cb-due': 'Balance due', 'cb-pend': 'Pending', 'cb-out': 'Checked out' }[cls];
           return `<a draggable="false" class="bar cb ${cls}${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-id="${esc(b.id)}"${canExtend ? ' data-extendable="true"' : ''} href="${ctx.isPg ? `tenants.html?booking=${esc(b.id)}` : `booking-detail.html?id=${esc(b.id)}`}" style="grid-column:${p.s}/${p.e}"
             title="${IS_PG ? `${esc(b.guest)} · tenant${b.status === 'confirmed' ? ` · moving in ${fmtDay(b.check_in_at)}` : b.status === 'checked_out' ? ' · moved out' : ' · living here'}${canExtend ? ' · Drag right edge to change checkout' : ''}`
-              : `${esc(b.guest)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}${canExtend ? ' · Drag right edge to extend' : ''}`}"
-            >${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}${canExtend ? '<span class="cb-resize-handle" aria-hidden="true"></span>' : ''}</a>`; }),
+              : `${esc(b.guest)} · ${esc(src.name)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}${canExtend ? ' · Drag right edge to extend' : ''}`}"
+            >${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : srcBadge}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}${canExtend ? '<span class="cb-resize-handle" aria-hidden="true"></span>' : ''}</a>`; }),
       ].join('');
       return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
           <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
@@ -131,6 +141,8 @@ page('calendar', async (ctx) => {
           <span><i class="lg cb-out"></i> Moved out</span><span><i class="lg cb-maint"></i> Maintenance</span>` : `<span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
           <span><i class="lg cb-due"></i> Balance due</span><span><i class="lg cb-pend"></i> Pending</span>
           <span><i class="lg cb-out"></i> Checked out</span><span><i class="lg cb-maint"></i> Maintenance</span>`}
+          ${IS_PG ? '' : `<span><b class="cb-src src-bk">B</b> Booking.com</span><span><b class="cb-src src-ag">A</b> Agoda</span>
+          <span><b class="cb-src src-ot">O</b> Other OTA</span><span><b class="cb-src src-wi">W</b> Walk-in / direct</span>`}
           ${staff ? '<span><i class="lg" style="background:#CDEBDC;border:1px solid #1C9A6C"></i> Your selection</span>' : ''}
         </div>
       </div>`);

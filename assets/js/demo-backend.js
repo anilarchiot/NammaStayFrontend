@@ -1029,7 +1029,8 @@ const RPC = {
       beds: beds.map(({ b, r }) => ({ id: b.id, label: b.label, room: r.name, room_id: r.id })),
       bookings: DB.bookings.filter((b) => OCC_ST.includes(b.status) && overlaps(b.check_in_at, b.check_out_at, a, z))
         .map((b) => ({ id: b.id, bed_id: b.bed_id, guest: guestOf(DB, b).full_name, status: b.status, balance_paise: balance(b), paid_paise: b.paid_paise,
-          check_in_at: b.check_in_at, check_out_at: b.check_out_at })),
+          check_in_at: b.check_in_at, check_out_at: b.check_out_at, source: b.source || 'walk_in',
+          channel: b.source === 'ota' ? String(b.note || '').split('\n')[0].split(' · ')[0].trim() || null : null })),
       blocks: DB.blocks.filter((k) => overlaps(k.starts_at, k.ends_at, a, z)),
     };
   },
