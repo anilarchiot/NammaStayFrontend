@@ -18,7 +18,7 @@ const HOWTO = [
 page('ota', async (ctx) => {
   if (!ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
   const canEdit = ctx.allow('manage_rooms');
-  headerActions().innerHTML = '<button type="button" class="ns-btn" id="sync-now">⟳ Sync now</button>';
+  headerActions().innerHTML = '<button type="button" class="ns-btn ns-refresh-button" id="sync-now"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>';
 
   async function draw() {
     const beds = await rpc('ota_overview', { p_property: ctx.property_id });
@@ -62,12 +62,12 @@ page('ota', async (ctx) => {
                   <span class="ota-badge" style="background:${(OTA[f.channel] || OTA.other).color}">${esc((OTA[f.channel] || OTA.other).name)}</span>
                   <span class="ota-feed-main"><span class="ota-url">${esc(f.import_url)}</span>
                     <span class="ota-status">${f.last_status === 'error' ? `⚠ ${esc(f.last_error || 'Sync failed')}` : `✓ ${ago(f.last_synced_at)} · ${f.events_count} upcoming booking${f.events_count === 1 ? '' : 's'}`}</span></span>
-                  ${canEdit ? `<button type="button" class="ns-icon-del" data-del-feed="${esc(f.id)}" aria-label="Remove ${esc((OTA[f.channel] || OTA.other).name)} calendar" title="Remove">✕</button>` : ''}</div>`).join('')
-                : '<div class="ns-muted" style="font-size:12.5px">No OTA calendar yet.</div>'}
+                  ${canEdit ? `<button type="button" class="ns-icon-del" data-del-feed="${esc(f.id)}" aria-label="Remove ${esc((OTA[f.channel] || OTA.other).name)} calendar" title="Remove">✕</button>` : ''}</div>`).join('') : ''}
               ${canEdit ? `<div class="ota-add">
                 <select class="ns-input" data-add-ch aria-label="OTA">${options(Object.entries(OTA).map(([k, v]) => [k, v.name]), 'airbnb')}</select>
                 <input class="ns-input" data-add-url placeholder="Paste the OTA’s calendar link (https://…ics)" aria-label="OTA calendar link">
                 <button type="button" class="ns-btn" data-add>Add</button></div>` : ''}
+              ${!b.feeds.length ? '<div class="ns-muted" style="font-size:12.5px">No OTA calendar yet.</div>' : ''}
             </div>
           </div></div>`;
       }).join('') || '<div class="ns-card ns-empty">Add your rooms and beds first (Rooms).</div>'}`);
@@ -103,7 +103,9 @@ page('ota', async (ctx) => {
   }
 
   async function syncNow(quiet = false) {
-    const btn = $('#sync-now'); btn.disabled = true; btn.textContent = '⟳ Syncing…';
+    const btn = $('#sync-now'); btn.disabled = true;
+    btn.querySelector('span').textContent = 'Syncing…';
+    btn.querySelector('svg').classList.add('is-spinning');
     try {
       const { data, error } = await sb.functions.invoke('ota-sync', { body: { property_id: ctx.property_id } });
       if (error) throw new Error(error.message || 'Sync failed.');
@@ -112,7 +114,12 @@ page('ota', async (ctx) => {
       if (!quiet || bad || clash) toast(`Synced ${r.length} calendar${r.length === 1 ? '' : 's'} · ${add} new booking${add === 1 ? '' : 's'}${clash ? ` · ⚠ ${clash} clash${clash > 1 ? 'es' : ''} — see notifications` : ''}${bad ? ` · ${bad} failed` : ''}`, { error: !!(bad || clash) });
     } catch (e) {
       toast(DEMO ? e.message : `${e.message} — check the ota-sync function is deployed (docs/GO-LIVE.md §35).`, { error: true });
-    } finally { btn.disabled = false; btn.textContent = '⟳ Sync now'; draw(); }
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('span').textContent = 'Sync now';
+      btn.querySelector('svg').classList.remove('is-spinning');
+      draw();
+    }
   }
   $('#sync-now').onclick = () => syncNow();
   await draw();
@@ -142,7 +149,7 @@ async function cxCard(ctx) {
       <div class="cx-stats"><span>Prices &amp; availability sent <b>${ago(link.last_push_at)}</b></span><span>Bookings checked <b>${ago(link.last_pull_at)}</b></span><span>${mapped.length} ${mapped.length === 1 ? 'room type' : 'room types'} linked</span></div>
       ${link.last_error ? `<div class="cx-err">⚠ ${esc(link.last_error)}</div>` : ''}
       ${unmappedGroups.length ? `<div class="cx-err" style="background:#FFF7E8;border-color:#F3D9A6;color:#7A4F0F">${unmappedGroups.length} new ${unmappedGroups.length === 1 ? 'room/price group isn’t' : 'room/price groups aren’t'} on the channel manager yet — tap <b>Update rooms</b>.</div>` : ''}
-      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-connect">🔗 Connect your OTAs</button><button type="button" class="ns-btn-ghost" id="cx-sync">⟳ Sync now</button>
+      <div class="cx-acts"><button type="button" class="ns-btn" id="cx-connect">🔗 Connect your OTAs</button><button type="button" class="ns-btn-ghost cx-sync-button" id="cx-sync"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>
         ${unmappedGroups.length ? '<button type="button" class="ns-btn-ghost" id="cx-setup">Update rooms</button>' : ''}
         ${owner ? `<button type="button" class="ns-btn-ghost" id="cx-toggle" style="margin-left:auto">${link.enabled ? 'Pause' : 'Resume'}</button>` : ''}</div>
       <details class="cx-adv"><summary>Rooms on the channel manager (${mapped.length})</summary>
@@ -169,10 +176,18 @@ async function cxCard(ctx) {
     try { await call({ action: 'setup', cx_property_id: id }); toast('Linked.'); cxCard(ctx); } catch (err) { toast(err.message, { error: true }); done(e.target); }
   });
   host.querySelector('#cx-sync')?.addEventListener('click', async (e) => {
-    busy(e.target, 'Syncing…');
+    const button = e.currentTarget;
+    button.disabled = true;
+    button.querySelector('span').textContent = 'Syncing…';
+    button.querySelector('svg').classList.add('is-spinning');
     try { const r = await call({ action: 'sync' });
       toast(`Synced — ${r.saved} OTA booking update${r.saved === 1 ? '' : 's'}, prices & availability sent.${r.problems?.length ? ' ⚠ ' + r.problems.length + ' need attention' : ''}`, { error: !!r.problems?.length }); cxCard(ctx); }
-    catch (err) { toast(err.message, { error: true }); done(e.target); }
+    catch (err) {
+      toast(err.message, { error: true });
+      button.disabled = false;
+      button.querySelector('span').textContent = 'Sync now';
+      button.querySelector('svg').classList.remove('is-spinning');
+    }
   });
   host.querySelector('#cx-connect')?.addEventListener('click', async (e) => {
     busy(e.target, 'Opening…');

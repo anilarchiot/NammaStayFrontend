@@ -11,7 +11,7 @@ const ago = (iso) => { if (!iso) return ''; const m = Math.round((Date.now() - n
 
 page('housekeeping', async (ctx) => {
   let filter = 'todo';
-  headerActions().innerHTML = '<button type="button" class="ns-btn-ghost hk-refresh-button" id="hk-refresh"><svg class="hk-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Refresh</span></button>';
+  headerActions().innerHTML = '<button type="button" class="ns-btn-ghost hk-refresh-button" id="hk-refresh"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Refresh</span></button>';
 
   async function draw() {
     const beds = await rpc('hk_board', { p_property: ctx.property_id });
