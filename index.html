@@ -79,6 +79,59 @@
   .browser-bar{height:30px;background:#F3EEDD;display:flex;align-items:center;gap:6px;padding:0 12px}
   .browser-bar i{width:9px;height:9px;border-radius:50%;background:#DAD2B6}
   .browser-bar b{margin-left:10px;height:16px;flex:1;max-width:260px;border-radius:6px;background:#fff;font:600 10.5px/16px 'Manrope',sans-serif;color:#9AA3B5;padding:0 8px;overflow:hidden}
+  .demo-app{display:grid;grid-template-columns:120px minmax(0,1fr);min-height:330px;background:#F7F7F4;color:var(--ink);font-size:10px;line-height:1.4}
+  .demo-sidebar{padding:14px 10px;background:var(--navy);color:#D6DDED}
+  .demo-logo{display:flex;align-items:center;gap:6px;margin-bottom:20px;color:#fff;font-size:10px;font-weight:800}
+  .demo-logo i{width:16px;height:16px;border-radius:5px;background:var(--green);display:grid;place-items:center;font-style:normal;font-size:9px}
+  .demo-nav{display:grid;gap:5px}
+  .demo-nav span{padding:6px 7px;border-radius:5px}
+  .demo-nav .active{background:var(--green);color:#fff;font-weight:800}
+  .demo-main{min-width:0;padding:14px}
+  .demo-topline{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+  .demo-name{min-width:0}
+  .demo-name small{display:block;color:var(--muted);font-size:8px}
+  .demo-name strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .demo-new{flex:none;border:0;border-radius:5px;background:var(--green);color:#fff;padding:7px 9px;font:800 8px 'Manrope',sans-serif}
+  .demo-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+  .demo-tab{border:1px solid #E6E5DE;border-radius:999px;background:#fff;color:var(--muted);padding:5px 8px;font:800 8px 'Manrope',sans-serif;cursor:pointer}
+  .demo-tab[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+  .demo-content{transition:opacity .22s ease,transform .22s ease}
+  .demo-content.is-changing{opacity:.35;transform:translateY(3px)}
+  .demo-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .demo-metric,.demo-chart,.demo-activity{background:#fff;border:1px solid #ECEAE2;border-radius:7px}
+  .demo-metric{padding:9px 8px;min-width:0}
+  .demo-metric span{display:block;color:var(--muted);font-size:8px}
+  .demo-metric strong{display:block;margin-top:4px;font:800 15px 'Sora',sans-serif;white-space:nowrap}
+  .demo-metric em{display:block;margin-top:3px;color:var(--green-d);font-size:7px;font-style:normal;font-weight:800}
+  .demo-lower{display:grid;grid-template-columns:1.1fr 1fr;gap:8px;margin-top:8px}
+  .demo-chart,.demo-activity{padding:9px}
+  .demo-panel-title{display:flex;justify-content:space-between;gap:6px;margin-bottom:8px;font-weight:800}
+  .demo-panel-title small{color:var(--muted);font-size:7px;font-weight:600}
+  .demo-bars{height:72px;display:flex;align-items:end;gap:6px;border-bottom:1px solid #E7E5DD;padding:0 4px}
+  .demo-bars i{flex:1;min-width:4px;height:var(--bar);border-radius:3px 3px 0 0;background:#BFE7D5}
+  .demo-bars i:last-child{background:var(--green)}
+  .demo-days{display:flex;justify-content:space-between;margin-top:4px;color:var(--muted);font-size:7px}
+  .demo-guest{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 0;border-top:1px solid #F0EEE8}
+  .demo-avatar{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#E9F5EE;color:var(--green-d);font-size:7px;font-weight:800}
+  .demo-guest strong,.demo-guest small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .demo-guest strong{font-size:8px}
+  .demo-guest small{color:var(--muted);font-size:7px}
+  .demo-status{padding:3px 5px;border-radius:999px;background:#E9F5EE;color:var(--green-d);font-size:6px;font-weight:800}
+  @media (max-width:640px){
+    .demo-app{grid-template-columns:62px minmax(0,1fr);min-height:280px}
+    .demo-sidebar{padding:10px 5px}
+    .demo-logo{justify-content:center;margin-bottom:14px}
+    .demo-logo span{display:none}
+    .demo-nav span{padding:6px 3px;text-align:center;font-size:7px}
+    .demo-main{padding:10px 8px}
+    .demo-metrics{gap:4px}
+    .demo-metric{padding:7px 5px}
+    .demo-metric strong{font-size:12px}
+    .demo-lower{grid-template-columns:1fr;gap:6px;margin-top:6px}
+    .demo-chart{display:none}
+    .demo-activity{padding:7px}
+    .demo-guest{padding:4px 0}
+  }
   .phone{position:absolute;right:-14px;bottom:0;width:25%;max-width:170px;border-radius:26px;border:6px solid var(--navy);background:var(--navy);box-shadow:0 24px 60px rgba(14,27,61,.35);overflow:hidden}
   .phone img{border-radius:19px;width:100%;aspect-ratio:9/17;object-fit:cover;object-position:top}
 
@@ -249,6 +302,7 @@
     .btn-primary{animation:none}
     .eyebrow i,.eyebrow-visual::after{animation:none}
     .eyebrow-visual::after{display:none}
+    .demo-content{transition:none}
   }
 
   /* responsive */
@@ -321,9 +375,47 @@
         <p class="hero-note">No card needed · One flat price per property · Pay by UPI</p>
       </div>
       <div class="shot-stack">
-        <div class="browser">
+        <div class="browser hero-demo">
           <div class="browser-bar"><i></i><i></i><i></i><b>thenammastay.com/dashboard</b></div>
-          <img src="assets/img/screens/dashboard.webp" width="1600" height="1000" alt="NammaStay dashboard showing today's occupancy, check-ins, revenue and pending dues">
+          <div class="demo-app">
+            <aside class="demo-sidebar" aria-hidden="true">
+              <div class="demo-logo"><i>N</i><span>NammaStay</span></div>
+              <nav class="demo-nav" data-demo-nav aria-label="Dashboard preview navigation">
+                <span class="active">Dashboard</span><span>Bookings</span><span>Calendar</span><span>Guests</span><span>Check-in</span><span>Rooms &amp; Beds</span><span>Payments</span><span>Reports</span>
+              </nav>
+            </aside>
+            <div class="demo-main">
+              <div class="demo-topline">
+                <div class="demo-name"><small>LIVE PRODUCT TOUR</small><strong data-demo-property>Social Backpackers Hostel</strong></div>
+                <button class="demo-new" type="button" tabindex="-1" aria-hidden="true">+ New booking</button>
+              </div>
+              <div class="demo-tabs" role="group" aria-label="Preview property type">
+                <button class="demo-tab" type="button" data-demo-tab="0" aria-pressed="true">Hostel</button>
+                <button class="demo-tab" type="button" data-demo-tab="1" aria-pressed="false">PG</button>
+                <button class="demo-tab" type="button" data-demo-tab="2" aria-pressed="false">Hotel / Resort</button>
+              </div>
+              <div class="demo-content" data-demo-content>
+                <div class="demo-metrics">
+                  <div class="demo-metric"><span data-demo-label="0">Beds occupied</span><strong data-demo-value="0">67%</strong><em data-demo-note="0">6 / 9 beds</em></div>
+                  <div class="demo-metric"><span data-demo-label="1">Check-ins today</span><strong data-demo-value="1">3</strong><em data-demo-note="1">1 pending arrival</em></div>
+                  <div class="demo-metric"><span data-demo-label="2">Payments today</span><strong data-demo-value="2">₹11,200</strong><em data-demo-note="2">↑ 26% this week</em></div>
+                </div>
+                <div class="demo-lower">
+                  <div class="demo-chart">
+                    <div class="demo-panel-title"><span data-demo-chart-title>Bed occupancy — last 7 days</span><small data-demo-chart-note>Today</small></div>
+                    <div class="demo-bars" aria-hidden="true"><i style="--bar:46%"></i><i style="--bar:57%"></i><i style="--bar:43%"></i><i style="--bar:68%"></i><i style="--bar:61%"></i><i style="--bar:78%"></i><i style="--bar:88%"></i></div>
+                    <div class="demo-days" aria-hidden="true"><span>Sat</span><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span></div>
+                  </div>
+                  <div class="demo-activity">
+                    <div class="demo-panel-title"><span data-demo-list-title>Arriving today</span><small>View all</small></div>
+                    <div class="demo-guest"><span class="demo-avatar" data-demo-initial="0">AR</span><div><strong data-demo-guest="0">Aarav R.</strong><small data-demo-detail="0">Lower A1 · Check-in</small></div><span class="demo-status">Today</span></div>
+                    <div class="demo-guest"><span class="demo-avatar" data-demo-initial="1">VK</span><div><strong data-demo-guest="1">Vikram R.</strong><small data-demo-detail="1">Bed C3 · Check-in</small></div><span class="demo-status">Today</span></div>
+                    <div class="demo-guest"><span class="demo-avatar" data-demo-initial="2">HB</span><div><strong data-demo-guest="2">Hannah Berg</strong><small data-demo-detail="2">Upper B2 · Check-in</small></div><span class="demo-status">Today</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="phone"><img src="assets/img/screens/selfcheckin.webp" width="560" height="1212" alt="Guest online check-in form on a phone"></div>
       </div>
@@ -806,6 +898,116 @@ var NS_SITE = {
     document.querySelectorAll('[data-walkthrough]').forEach(function (a) { a.href = href; if (href.indexOf('http') === 0) { a.target = '_blank'; a.rel = 'noopener'; } });
   })();
   document.getElementById('yr').textContent = new Date().getFullYear();
+
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-demo-tab]'));
+    var content = document.querySelector('[data-demo-content]');
+    if (!tabs.length || !content) return;
+
+    var demos = [
+      {
+        property: 'Social Backpackers Hostel',
+        labels: ['Beds occupied', 'Check-ins today', 'Payments today'],
+        values: ['67%', '3', '₹11,200'],
+        notes: ['6 / 9 beds', '1 pending arrival', '↑ 26% this week'],
+        chart: 'Bed occupancy — last 7 days',
+        list: 'Arriving today',
+        navigation: ['Dashboard', 'Bookings', 'Calendar', 'Guests', 'Check-in', 'Rooms & Beds', 'Payments', 'Reports'],
+        guests: [['AR', 'Aarav R.', 'Lower A1 · Check-in'], ['VK', 'Vikram R.', 'Bed C3 · Check-in'], ['HB', 'Hannah Berg', 'Upper B2 · Check-in']],
+        bars: [46, 57, 43, 68, 61, 78, 88]
+      },
+      {
+        property: 'GreenNest PG · Chennai',
+        labels: ['Beds occupied', 'Move-ins today', 'Payments today'],
+        values: ['92%', '4', '₹8,400'],
+        notes: ['46 / 50 beds', '2 arrivals pending', '↑ 12% this month'],
+        chart: 'Occupancy by floor — last 7 days',
+        list: 'Expected move-ins',
+        navigation: ['Dashboard', 'Residents', 'Bed calendar', 'Move-ins', 'Room allocation', 'Payments', 'Dues', 'Reports'],
+        guests: [['NP', 'Nisha P.', 'Floor 2 · Room 204'], ['AM', 'Aditya M.', 'Floor 3 · Room 307'], ['MS', 'Meera S.', 'Floor 1 · Room 108']],
+        bars: [72, 84, 76, 91, 82, 94, 88]
+      },
+      {
+        property: 'Palm Grove Resort',
+        labels: ['Rooms occupied', 'Guest arrivals', 'Revenue today'],
+        values: ['78%', '8', '₹42,600'],
+        notes: ['31 / 40 rooms', '3 check-ins pending', '↑ 18% today'],
+        chart: 'Room occupancy — last 7 days',
+        list: 'Arrivals & departures',
+        navigation: ['Dashboard', 'Reservations', 'Calendar', 'Guests', 'Check-in', 'Housekeeping', 'Rooms', 'Payments', 'Reports'],
+        guests: [['NK', 'Neha K.', 'Suite 04 · Check-in'], ['SD', 'Sean D.', 'Room 12 · Check-in'], ['IV', 'Isha V.', 'Cottage 2 · Checkout']],
+        bars: [55, 63, 76, 68, 84, 72, 91]
+      }
+    ];
+    var active = 0;
+    var timer;
+    var changeTimer;
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function selectDemo(index) {
+      if (index === active) return;
+      active = index;
+      tabs.forEach(function (tab, i) { tab.setAttribute('aria-pressed', i === active ? 'true' : 'false'); });
+      window.clearTimeout(changeTimer);
+      if (reduceMotion) {
+        paintDemo(demos[active]);
+        return;
+      }
+      content.classList.add('is-changing');
+      changeTimer = window.setTimeout(function () {
+        paintDemo(demos[active]);
+        content.classList.remove('is-changing');
+      }, 180);
+    }
+
+    function paintDemo(demo) {
+      document.querySelector('[data-demo-property]').textContent = demo.property;
+      var dashboardNav = document.querySelector('[data-demo-nav]');
+      dashboardNav.replaceChildren.apply(dashboardNav, demo.navigation.map(function (label, i) {
+        var item = document.createElement('span');
+        item.textContent = label;
+        if (i === 0) item.className = 'active';
+        return item;
+      }));
+      demo.labels.forEach(function (value, i) { document.querySelector('[data-demo-label="' + i + '"]').textContent = value; });
+      demo.values.forEach(function (value, i) { document.querySelector('[data-demo-value="' + i + '"]').textContent = value; });
+      demo.notes.forEach(function (value, i) { document.querySelector('[data-demo-note="' + i + '"]').textContent = value; });
+      demo.guests.forEach(function (guest, i) {
+        document.querySelector('[data-demo-initial="' + i + '"]').textContent = guest[0];
+        document.querySelector('[data-demo-guest="' + i + '"]').textContent = guest[1];
+        document.querySelector('[data-demo-detail="' + i + '"]').textContent = guest[2];
+      });
+      document.querySelector('[data-demo-chart-title]').textContent = demo.chart;
+      document.querySelector('[data-demo-list-title]').textContent = demo.list;
+      document.querySelectorAll('.demo-bars i').forEach(function (bar, i) { bar.style.setProperty('--bar', demo.bars[i] + '%'); });
+    }
+
+    function startRotation() {
+      if (reduceMotion || timer || document.hidden) return;
+      timer = window.setInterval(function () { selectDemo((active + 1) % demos.length); }, 5200);
+    }
+    function stopRotation() {
+      window.clearInterval(timer);
+      timer = null;
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        selectDemo(Number(tab.getAttribute('data-demo-tab')));
+      });
+    });
+    content.parentElement.addEventListener('mouseenter', stopRotation);
+    content.parentElement.addEventListener('mouseleave', startRotation);
+    content.parentElement.addEventListener('focusin', stopRotation);
+    content.parentElement.addEventListener('focusout', function (event) {
+      if (!content.parentElement.contains(event.relatedTarget)) startRotation();
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stopRotation();
+      else startRotation();
+    });
+    startRotation();
+  })();
 
   var nav = document.getElementById('nav');
   var onScroll = function () { nav.classList.toggle('is-scrolled', window.scrollY > 8); };
