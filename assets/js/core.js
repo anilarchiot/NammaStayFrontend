@@ -1,6 +1,7 @@
 // NammaStay — shared front-end core (ES module, no build step).
 // Every page script imports from here.
 import { PAGE_ROLES, NAV_KEY, ROUTE_BY_KEY, resolveRoute } from './routes.js';
+import { mountPageStepper } from './page-stepper.js';
 const CFG = window.NAMMASTAY_CONFIG || {};
 /** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
 const DEMO_ON = (() => {
@@ -327,6 +328,7 @@ export function page(key, fn) {
     try {
       const ctx = await boot(key);
       await fn(ctx);
+      mountPageStepper(ctx, route);
       reveal();
     } catch (e) {
       if (e instanceof Stop) return;
