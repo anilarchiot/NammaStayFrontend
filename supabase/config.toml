@@ -1,0 +1,9 @@
+# Supabase CLI project settings. Contains no secrets.
+# Project dashboard: https://supabase.com/dashboard/project/skcqpfyshbxcyyamsgtj
+project_id = "skcqpfyshbxcyyamsgtj"
+
+[db]
+major_version = 15
+
+[db.migrations]
+enabled = true

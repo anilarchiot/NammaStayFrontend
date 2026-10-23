@@ -76,6 +76,21 @@ App Store/TestFlight distribution requires Apple signing credentials and an Appl
 cannot be built or signed on Windows or Linux. After changing website pages or assets, the mobile commands sync
 the web app into each native project automatically.
 
+## Supabase
+The backend is the Supabase project `skcqpfyshbxcyyamsgtj`
+([dashboard](https://supabase.com/dashboard/project/skcqpfyshbxcyyamsgtj),
+[SQL editor](https://supabase.com/dashboard/project/skcqpfyshbxcyyamsgtj/sql)). The site connects with the public
+URL and anon key in `assets/js/config.js`; never put the service-role key or database password in this repository.
+
+Migrations live in `supabase/migrations/` (rollbacks in `supabase/rollbacks/`). To manage the project from the
+command line, install the [Supabase CLI](https://supabase.com/docs/guides/cli), then:
+
+```bash
+supabase login
+supabase link --project-ref skcqpfyshbxcyyamsgtj   # asks for the database password
+supabase db push                                    # applies migrations that are not applied yet
+```
+
 ## Source structure
 ```
 .
