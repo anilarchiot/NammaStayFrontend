@@ -76,7 +76,7 @@ async function overview() {
   const drawStorage = async () => {
     const host = document.getElementById('storage-card'); if (!host) return;
     const u = await rpc('admin_storage_usage').catch(() => null);
-    if (u === null) { host.remove(); return; }                                      // database not updated yet (042)
+    if (u === null) { host.remove(); return; }                                      // database not updated yet (052)
     const size = (bytes) => {
       const n = Number(bytes) || 0;
       if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
@@ -105,7 +105,7 @@ async function overview() {
     const old = Number(u.archivable_bookings) || 0;
     box.innerHTML = `
       <div class="pl-row" style="gap:10px;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>ID photos past retention</b><br>
-        <span class="ns-muted" style="font-size:12px">${exp === null ? 'Run 043_storage_hygiene.sql to enable this check.'
+        <span class="ns-muted" style="font-size:12px">${exp === null ? 'Run 053_storage_hygiene.sql to enable this check.'
           : `${Number(exp.expired_count).toLocaleString('en-IN')} file${exp.expired_count === 1 ? '' : 's'} older than ${exp.retention_days} days (+${exp.grace_days} days grace).`}</span></span>
         ${exp && exp.expired_count > 0 ? '<button type="button" class="ns-btn-ghost" id="purge-ids" style="height:32px;font-size:12px">Delete expired photos</button>' : ''}</div>
       <div class="pl-row" style="gap:10px;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Archive old bookings</b><br>
