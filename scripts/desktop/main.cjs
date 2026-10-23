@@ -1,5 +1,5 @@
 const path = require('node:path');
-const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell } = require('electron');
 const { createLocalServer } = require('../local-server.cjs');
 const { createLocalStore } = require('./local-store.cjs');
 
@@ -35,6 +35,22 @@ function registerLocalStoreIpc() {
     if (typeof namespace !== 'string' || !VALID_KEY.test(namespace)) throw new TypeError('Invalid local data namespace.');
     return localStore.list(namespace);
   });
+  ipcMain.handle('desktop-window:minimize', (event) => {
+    assertTrustedSender(event);
+    BrowserWindow.fromWebContents(event.sender)?.minimize();
+  });
+  ipcMain.handle('desktop-window:toggle-maximize', (event) => {
+    assertTrustedSender(event);
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) throw new Error('The application window is unavailable.');
+    if (window.isMaximized()) window.unmaximize();
+    else window.maximize();
+    return window.isMaximized();
+  });
+  ipcMain.handle('desktop-window:close', (event) => {
+    assertTrustedSender(event);
+    BrowserWindow.fromWebContents(event.sender)?.close();
+  });
 }
 
 function openExternal(url) {
@@ -56,6 +72,8 @@ async function createWindow() {
     height: 960,
     minWidth: 900,
     minHeight: 640,
+    frame: false,
+    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -65,7 +83,10 @@ async function createWindow() {
       webSecurity: true,
     },
   });
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    window.maximize();
+    window.show();
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     openExternal(url);
     return { action: 'deny' };
@@ -82,6 +103,7 @@ async function createWindow() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  Menu.setApplicationMenu(null);
   app.whenReady().then(createWindow).catch((error) => {
     dialog.showErrorBox('NammaStay could not start', error.message);
     app.quit();

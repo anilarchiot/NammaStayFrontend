@@ -35,7 +35,8 @@
       "scripts/local-server.cjs",
       "CNAME",
       "_headers",
-      "robots.txt"
+      "robots.txt",
+      "!www"
     ],
     "directories": {
       "output": "release"

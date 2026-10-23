@@ -9,7 +9,8 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 
 for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-  if (entry.isFile() && allowedRootFile.test(entry.name)) {
+  if (entry.isFile() && allowedRootFile.test(entry.name)
+      && !['package.json', 'package-lock.json'].includes(entry.name)) {
     fs.copyFileSync(path.join(root, entry.name), path.join(output, entry.name));
   }
 }

@@ -35,6 +35,8 @@ The Windows installer is written to `release/`. The desktop app uses the same Su
 sign-in and all current property, booking, and calendar operations. Its local SQLite store encrypts record values
 with a key protected by Windows system encryption; the desktop Supabase session is stored there. The database is
 kept in Electron's per-user application data folder, not in the install directory.
+It opens maximized without the standard Windows title/menu bar and uses a NammaStay-styled top strip with window
+controls.
 
 Build the installer on Windows with `npm run desktop:build:win`. The GitHub Actions workflow
 `Build Windows desktop app` also builds the installer and publishes it as a downloadable workflow artifact.
