@@ -10,6 +10,9 @@
 # Node modules and dependency files
 /node_modules/
 /yarn.lock
+/release/
+/electron-builder.yaml
+/electron-builder.yml
 
 # Environment files
 /.env

@@ -2,13 +2,52 @@
   "name": "nammastay-frontend",
   "private": true,
   "version": "1.0.0",
+  "description": "NammaStay website and Windows desktop app",
+  "author": "NammaStay",
   "engines": {
     "node": ">=20"
   },
+  "main": "scripts/desktop/main.cjs",
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
+    "desktop:dev": "electron .",
+    "desktop:build:win": "electron-builder --win nsis",
     "build": "node scripts/validate-production.cjs",
     "validate:production": "node scripts/validate-production.cjs",
-    "test": "npm run build"
+    "test:desktop": "node --test scripts/desktop/*.test.cjs",
+    "test": "npm run build && npm run test:desktop"
+  },
+  "build": {
+    "appId": "com.nammastay.desktop",
+    "productName": "NammaStay",
+    "asar": true,
+    "files": [
+      "*.html",
+      "*.js",
+      "assets/**/*",
+      "scripts/desktop/**/*",
+      "scripts/local-server.cjs",
+      "CNAME",
+      "_headers",
+      "robots.txt"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "sql.js": "^1.15.1"
   }
 }

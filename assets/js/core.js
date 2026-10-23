@@ -17,8 +17,15 @@ export const DEMO = DEMO_ON;
 export const FUNCTIONS_URL = (CFG.supabaseUrl ? CFG.supabaseUrl.replace(/\/$/, '') : 'https://YOUR-PROJECT.supabase.co') + '/functions/v1';
 export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
+const authStorage = window.NS_DESKTOP ? {
+  getItem: (key) => window.NS_DESKTOP.localStore.get('auth', key),
+  setItem: (key, value) => window.NS_DESKTOP.localStore.set('auth', key, value),
+  removeItem: (key) => window.NS_DESKTOP.localStore.delete('auth', key).then(() => undefined),
+} : undefined;
 export const sb = LIVE
-  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey)
+  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
+    auth: authStorage ? { storage: authStorage } : undefined,
+  })
   : DEMO ? (await import('./demo-backend.js')).createDemoClient() : null;
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
 export const SITE_URL = LIVE ? (CFG.siteUrl || location.origin).replace(/\/$/, '') : HERE;
