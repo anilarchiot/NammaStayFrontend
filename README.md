@@ -45,5 +45,34 @@ internet connection. Keep using the website or desktop app online until the loca
 offline booking/calendar status behavior are completed. Do not treat the current desktop build as an offline
 backup of guest or property records.
 
+## Android and iOS apps
+The Android and iOS projects package the existing responsive NammaStay app with Capacitor. They use the same
+Supabase project and online behavior as the website; these projects do not add offline business-data storage or
+offline booking/calendar updates.
+
+```bash
+npm install
+npm run mobile:android
+# or, with an Android device/emulator selected:
+npm run mobile:run:android
+```
+
+The Android project is in `android/`. Run these commands on a computer with Android Studio and its SDK installed.
+Android Studio can build and run a debug APK; a Play Store release needs a signed Android App Bundle and Play
+Console account.
+
+Run iOS commands on macOS with Xcode and CocoaPods installed:
+
+```bash
+npm run mobile:ios
+# or, with an iPhone simulator/device selected:
+npm run mobile:run:ios
+```
+
+The iOS project is in `ios/App/App.xcworkspace`. Xcode can run the app in an iPhone simulator or on a device;
+App Store/TestFlight distribution requires Apple signing credentials and an Apple Developer account. iOS apps
+cannot be built or signed on Windows or Linux. After changing website pages or assets, the mobile commands sync
+the web app into each native project automatically.
+
 ## Source structure
 HTML pages and the `assets/` directory are at the repository root and are served directly by GitHub Pages. Route metadata is in `assets/js/routes.js`. `npm run build` validates the published root files without generating a separate `dist/` folder; `npm run dev` serves the same root site locally.

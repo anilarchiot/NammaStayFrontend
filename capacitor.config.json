@@ -1,0 +1,9 @@
+{
+  "appId": "com.nammastay.app",
+  "appName": "NammaStay",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  }
+}

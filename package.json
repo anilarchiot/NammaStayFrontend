@@ -12,10 +12,16 @@
     "dev": "node scripts/serve-local.cjs",
     "desktop:dev": "electron .",
     "desktop:build:win": "electron-builder --win nsis --publish never",
+    "mobile:build-web": "node scripts/build-mobile-web.cjs",
+    "mobile:sync": "npm run mobile:build-web && cap sync",
+    "mobile:android": "npm run mobile:sync && cap open android",
+    "mobile:ios": "npm run mobile:sync && cap open ios",
+    "mobile:run:android": "npm run mobile:sync && cap run android",
+    "mobile:run:ios": "npm run mobile:sync && cap run ios",
     "build": "node scripts/validate-production.cjs",
     "validate:production": "node scripts/validate-production.cjs",
     "test:desktop": "node --test scripts/desktop/*.test.cjs",
-    "test": "npm run build && npm run test:desktop"
+    "test": "npm run build && npm run test:desktop && npm run mobile:build-web"
   },
   "build": {
     "appId": "com.nammastay.desktop",
@@ -44,10 +50,14 @@
     }
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
     "electron": "^45.0.0",
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "sql.js": "^1.15.1"
   }
 }
