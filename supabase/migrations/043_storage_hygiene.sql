@@ -1,5 +1,5 @@
 -- =====================================================================
--- NammaStay · 041_storage_hygiene.sql — ID-photo retention check, booking archive export, blob check
+-- NammaStay · 043_storage_hygiene.sql — ID-photo retention check, booking archive export, blob check
 --
 -- Three read-only, platform-admin-only functions that back the "Storage" card on the admin page:
 --   1. admin_expired_id_files(limit)   ID photos stored longer than every property's retention setting
@@ -9,7 +9,7 @@
 --   3. admin_blob_columns()            table columns that can hold large binary data (should be none).
 --
 -- ADD-ON ONLY — new functions, no tables, columns or data change.
--- Safe to run more than once. Rollback: supabase/rollbacks/041_storage_hygiene.sql
+-- Safe to run more than once. Rollback: supabase/rollbacks/043_storage_hygiene.sql
 -- =====================================================================
 
 -- 1. ID photos kept longer than the longest retention period configured on any property (+ grace days).

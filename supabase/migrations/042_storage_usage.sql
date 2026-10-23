@@ -1,5 +1,5 @@
 -- =====================================================================
--- NammaStay · 040_storage_usage.sql — database & file storage size report (platform admin only)
+-- NammaStay · 042_storage_usage.sql — database & file storage size report (platform admin only)
 --
 -- Adds one read-only function, admin_storage_usage(), used by the "Storage" card on the admin page:
 --   • total database size, the plan limit and the percentage used
@@ -8,7 +8,7 @@
 --   • how many bookings are old enough to archive (report only — nothing is changed or deleted)
 --
 -- ADD-ON ONLY — one new function. No tables, columns or data change.
--- Safe to run more than once. Rollback: supabase/rollbacks/040_storage_usage.sql
+-- Safe to run more than once. Rollback: supabase/rollbacks/042_storage_usage.sql
 -- =====================================================================
 
 create or replace function public.admin_storage_usage(
