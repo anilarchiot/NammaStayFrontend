@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
     "desktop:dev": "electron .",
-    "desktop:build:win": "electron-builder --win nsis",
+    "desktop:build:win": "electron-builder --win nsis --publish never",
     "build": "node scripts/validate-production.cjs",
     "validate:production": "node scripts/validate-production.cjs",
     "test:desktop": "node --test scripts/desktop/*.test.cjs",
