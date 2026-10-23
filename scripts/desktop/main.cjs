@@ -12,7 +12,9 @@ let localStore;
 let server;
 
 function assertTrustedSender(event) {
-  if (!event.senderFrame || new URL(event.senderFrame.url).origin !== ORIGIN) {
+  const senderUrl = event.senderFrame?.url || event.sender?.getURL?.() || '';
+  const senderOrigin = senderUrl ? new URL(senderUrl).origin : '';
+  if (senderOrigin !== ORIGIN) {
     throw new Error('Local data requests are only accepted from the NammaStay desktop app.');
   }
 }
