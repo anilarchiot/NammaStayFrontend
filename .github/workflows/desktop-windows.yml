@@ -9,6 +9,8 @@ on:
       - "*.js"
       - "assets/**"
       - "scripts/**"
+      - "desktop/**"
+      - "mobile/build-web.cjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/desktop-windows.yml"

@@ -7,20 +7,20 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "scripts/desktop/main.cjs",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
     "desktop:dev": "electron .",
     "desktop:build:win": "electron-builder --win nsis --publish never",
-    "mobile:build-web": "node scripts/build-mobile-web.cjs",
-    "mobile:sync": "npm run mobile:build-web && cap sync",
-    "mobile:android": "npm run mobile:sync && cap open android",
-    "mobile:ios": "npm run mobile:sync && cap open ios",
-    "mobile:run:android": "npm run mobile:sync && cap run android",
-    "mobile:run:ios": "npm run mobile:sync && cap run ios",
+    "mobile:build-web": "node mobile/build-web.cjs",
+    "mobile:sync": "npm run mobile:build-web && cd mobile && cap sync",
+    "mobile:android": "npm run mobile:sync && cd mobile && cap open android",
+    "mobile:ios": "npm run mobile:sync && cd mobile && cap open ios",
+    "mobile:run:android": "npm run mobile:sync && cd mobile && cap run android",
+    "mobile:run:ios": "npm run mobile:sync && cd mobile && cap run ios",
     "build": "node scripts/validate-production.cjs",
     "validate:production": "node scripts/validate-production.cjs",
-    "test:desktop": "node --test scripts/desktop/*.test.cjs",
+    "test:desktop": "node --test desktop/*.test.cjs",
     "test": "npm run build && npm run test:desktop && npm run mobile:build-web"
   },
   "build": {
@@ -29,9 +29,8 @@
     "asar": true,
     "files": [
       "*.html",
-      "*.js",
       "assets/**/*",
-      "scripts/desktop/**/*",
+      "desktop/**/*",
       "scripts/local-server.cjs",
       "CNAME",
       "_headers",

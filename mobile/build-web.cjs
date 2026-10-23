@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const output = path.join(root, 'www');
+const output = path.join(__dirname, 'www');
 const allowedRootFile = /\.(?:html|js|css|png|jpe?g|webp|svg|ico|json|txt|woff2?)$/i;
 
 fs.rmSync(output, { recursive: true, force: true });

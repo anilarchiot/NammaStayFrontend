@@ -1,0 +1,17 @@
+# Keep non-website folders out of the Cloudflare static-asset upload.
+.github
+.vscode
+desktop
+docs
+mobile
+node_modules
+release
+scripts
+supabase
+dist
+www
+package.json
+package-lock.json
+README.md
+LICENSE
+wrangler.jsonc

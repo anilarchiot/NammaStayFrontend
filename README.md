@@ -59,7 +59,7 @@ npm run mobile:android
 npm run mobile:run:android
 ```
 
-The Android project is in `android/`. Run these commands on a computer with Android Studio and its SDK installed.
+The Android project is in `mobile/android/`. Run these commands on a computer with Android Studio and its SDK installed.
 Android Studio can build and run a debug APK; a Play Store release needs a signed Android App Bundle and Play
 Console account.
 
@@ -71,10 +71,32 @@ npm run mobile:ios
 npm run mobile:run:ios
 ```
 
-The iOS project is in `ios/App/App.xcworkspace`. Xcode can run the app in an iPhone simulator or on a device;
+The iOS project is in `mobile/ios/App/App.xcworkspace` (run `pod install` in `mobile/ios/App` first). Xcode can run the app in an iPhone simulator or on a device;
 App Store/TestFlight distribution requires Apple signing credentials and an Apple Developer account. iOS apps
 cannot be built or signed on Windows or Linux. After changing website pages or assets, the mobile commands sync
 the web app into each native project automatically.
 
 ## Source structure
-HTML pages and the `assets/` directory are at the repository root and are served directly by GitHub Pages. Route metadata is in `assets/js/routes.js`. `npm run build` validates the published root files without generating a separate `dist/` folder; `npm run dev` serves the same root site locally.
+```
+.
+├── *.html, assets/        Website pages and shared front-end code (deployed as-is)
+│   └── assets/js/         shell, core, routes and one script per screen (pages/)
+├── desktop/               Windows app (Electron): main, window, ipc, config, preload, local store
+├── mobile/                Android and iOS apps (Capacitor): android/, ios/, build-web.cjs
+├── scripts/               Shared local dev server and production checks
+├── supabase/              Database migrations and rollbacks
+├── docs/                  Deployment and go-live guides
+└── .github/workflows/     CI (Windows installer build)
+```
+
+| App | Where | Commands |
+|---|---|---|
+| Web | repository root | `npm run dev`, `npm run build` |
+| Windows desktop (.exe) | `desktop/` | `npm run desktop:dev`, `npm run desktop:build:win` |
+| Android and iOS | `mobile/` | `npm run mobile:android`, `npm run mobile:ios` |
+
+The website stays at the repository root so Cloudflare and GitHub Pages deploy it unchanged (`.assetsignore` keeps the
+desktop, mobile and tooling folders out of the upload). The desktop and mobile apps load the same pages;
+`mobile/build-web.cjs` copies them into `mobile/www/` (git-ignored) for the native projects. Route metadata is in
+`assets/js/routes.js`. `npm run build` validates the published files; `npm run dev` serves the same site locally.
+Use Node 20 or later (`.nvmrc`).
