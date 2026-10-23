@@ -2177,6 +2177,14 @@ const RPC = {
   },
   formc_due_count: () => DB.bookings.filter((b) => { const g = guestOf(DB, b); return b.status === 'checked_in' && g?.nationality && !/^(india|indian)$/i.test(g.nationality)
     && !DB.formc.some((x) => x.booking_id === b.id && x.arrival_at); }).length,
+  admin_expired_id_files: () => ({ retention_days: 180, grace_days: 7, expired_count: 0, paths: [] }),
+  admin_archivable_bookings: () => [],
+  admin_blob_columns: () => [],
+  admin_storage_usage: () => ({
+    db_bytes: 96 * 1024 * 1024, limit_bytes: 8 * 1024 ** 3, used_pct: 1.2,
+    tables: [{ name: 'bookings', bytes: 31 * 1024 * 1024, approx_rows: 18400 }, { name: 'guests', bytes: 18 * 1024 * 1024, approx_rows: 9100 }],
+    files_bytes: 212 * 1024 * 1024, files_count: 1130, archive_years: 3, archivable_bookings: 0,
+  }),
   admin_health: () => {
     const P0 = DB.properties[0];
     const mine = { property_id: P, name: P0.name, city: P0.city, kind: P0.kind || 'hostel', state: 'complimentary', last_seen_at: new Date().toISOString(),

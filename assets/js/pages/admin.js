@@ -1,7 +1,7 @@
 // NammaStay admin panel — every property using NammaStay, what needs attention,
 // and one screen per property with owner contact, usage, subscription and actions.
 import { adminPage, openPlatformInvoice, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, fmtDate, fmtDayTime, pill, modal, confirmDialog,
-  toast, field, options, showFatal, param, uuidOk, waNumber, ROLE_LABEL, SITE_URL, $, $$ } from '../core.js';
+  toast, field, options, showFatal, param, uuidOk, waNumber, ROLE_LABEL, SITE_URL, sb, downloadCsv, $, $$ } from '../core.js';
 
 const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'],
   complimentary: ['Complimentary', 'grey'], suspended: ['Suspended', 'red'] };
@@ -72,6 +72,84 @@ async function overview() {
     host.querySelector('#hl-all')?.addEventListener('click', () => drawHealth(true));
   };
   setTimeout(drawHealth, 0);
+  // ---- storage: how full the database is, and what takes the space
+  const drawStorage = async () => {
+    const host = document.getElementById('storage-card'); if (!host) return;
+    const u = await rpc('admin_storage_usage').catch(() => null);
+    if (u === null) { host.remove(); return; }                                      // database not updated yet (040)
+    const size = (bytes) => {
+      const n = Number(bytes) || 0;
+      if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
+      if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+      return `${Math.round(n / 1024)} KB`;
+    };
+    const pct = Math.min(100, Number(u.used_pct) || 0);
+    const tone = pct >= 85 ? 'red' : pct >= 70 ? 'amber' : 'green';
+    host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="ns-h3">Storage</div>
+        <span class="ns-pill ${tone}">${pct}% of database used</span></div>
+      <div class="ns-muted" style="font-size:12.5px">Database ${size(u.db_bytes)} of ${size(u.limit_bytes)}${pct >= 70 ? ' — plan an upgrade or archive old records soon.' : '.'}
+        ID photos &amp; files: ${size(u.files_bytes)} (${Number(u.files_count).toLocaleString('en-IN')} files, stored separately).</div>
+      <div style="height:8px;border-radius:999px;background:#EFE9D6;overflow:hidden"><div style="height:100%;width:${pct}%;background:${{ green: '#1C9A6C', amber: '#E2A03F', red: '#C42B1C' }[tone]}"></div></div>
+      ${(u.tables || []).map((t) => `<div class="pl-row" style="gap:10px"><span style="flex:1"><b>${esc(t.name)}</b></span>
+        <span class="ns-muted" style="font-size:12.5px">${Number(t.approx_rows).toLocaleString('en-IN')} rows · ${size(t.bytes)}</span></div>`).join('')}
+      <div id="hygiene" style="display:flex;flex-direction:column;gap:8px"></div>`;
+    drawHygiene(host.querySelector('#hygiene'), u, size);
+  };
+  // ---- housekeeping: expired ID photos, old-booking CSV export, binary columns
+  const drawHygiene = async (box, u, size) => {
+    const [exp, blobs] = await Promise.all([
+      rpc('admin_expired_id_files', { p_limit: 200 }).catch(() => null),
+      rpc('admin_blob_columns').catch(() => null),
+    ]);
+    const old = Number(u.archivable_bookings) || 0;
+    box.innerHTML = `
+      <div class="pl-row" style="gap:10px;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>ID photos past retention</b><br>
+        <span class="ns-muted" style="font-size:12px">${exp === null ? 'Run 041_storage_hygiene.sql to enable this check.'
+          : `${Number(exp.expired_count).toLocaleString('en-IN')} file${exp.expired_count === 1 ? '' : 's'} older than ${exp.retention_days} days (+${exp.grace_days} days grace).`}</span></span>
+        ${exp && exp.expired_count > 0 ? '<button type="button" class="ns-btn-ghost" id="purge-ids" style="height:32px;font-size:12px">Delete expired photos</button>' : ''}</div>
+      <div class="pl-row" style="gap:10px;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Archive old bookings</b><br>
+        <span class="ns-muted" style="font-size:12px">${old.toLocaleString('en-IN')} bookings checked out more than ${u.archive_years} years ago. Export to CSV and keep it somewhere safe. Nothing is deleted automatically.</span></span>
+        ${old > 0 ? '<button type="button" class="ns-btn-ghost" id="export-old" style="height:32px;font-size:12px">Export CSV</button>' : ''}</div>
+      ${blobs === null ? '' : `<div class="ns-muted" style="font-size:12px">${blobs.length
+        ? `⚠ Binary data is stored in table columns (${blobs.map((b) => esc(`${b.table}.${b.column}`)).join(', ')}). Move files to Storage and keep only the path.`
+        : '✓ No files are stored inside table columns — images and PDFs live in Storage.'}</div>`}`;
+    box.querySelector('#purge-ids')?.addEventListener('click', async (e) => {
+      const ok = await confirmDialog('Delete expired ID photos?',
+        `This permanently deletes ${Number(exp.expired_count).toLocaleString('en-IN')} ID photo${exp.expired_count === 1 ? '' : 's'} stored longer than the retention period. This can’t be undone.`,
+        { confirmLabel: 'Delete photos', danger: true });
+      if (!ok) return;
+      e.target.disabled = true;
+      try {
+        let removed = 0;
+        for (let i = 0; i < 25; i += 1) {                                           // up to 5,000 files per click
+          const batch = await rpc('admin_expired_id_files', { p_limit: 200 });
+          if (!batch.paths.length) break;
+          const { error } = await sb.storage.from('guest-ids').remove(batch.paths);
+          if (error) throw new Error(error.message);
+          removed += batch.paths.length;
+        }
+        toast(`${removed.toLocaleString('en-IN')} expired ID photos deleted.`);
+        drawStorage();
+      } catch (err) { toast(err.message, { error: true }); e.target.disabled = false; }
+    });
+    box.querySelector('#export-old')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        const rows = [];
+        for (let offset = 0; offset < 100000; offset += 1000) {
+          const page = await rpc('admin_archivable_bookings', { p_years: u.archive_years, p_limit: 1000, p_offset: offset });
+          rows.push(...page);
+          if (page.length < 1000) break;
+        }
+        const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+        downloadCsv(`nammastay-bookings-before-${new Date().getFullYear() - u.archive_years}.csv`, [cols, ...rows.map((r) => cols.map((c) => r[c]))]);
+        toast(`${rows.length.toLocaleString('en-IN')} bookings exported.`);
+      } catch (err) { toast(err.message, { error: true }); }
+      e.target.disabled = false;
+    });
+  };
+  setTimeout(drawStorage, 0);
   const c = d.counts;
   setSubtitle(`${d.total} properties on NammaStay`);
   const stat = (l, v, sub = '', dark = false) => `<div class="ns-stat${dark ? ' is-dark' : ''}"><div class="ns-stat-label">${l}</div><div class="ns-stat-value">${v}</div>${sub ? `<div class="ns-stat-sub">${sub}</div>` : ''}</div>`;
@@ -107,6 +185,7 @@ async function overview() {
     </div>
     <div class="ns-card" id="rem-card" style="display:flex;flex-direction:column;gap:8px"></div>
     <div class="ns-card" id="health-card" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="ns-card" id="storage-card" style="display:flex;flex-direction:column;gap:8px"></div>
     ${att('Not using NammaStay lately', d.inactive, (r) => `last active ${ago(r.last_seen_at || r.last_booking_at).toLowerCase()}`, 'Everyone has been active in the last 2 weeks.')}
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
