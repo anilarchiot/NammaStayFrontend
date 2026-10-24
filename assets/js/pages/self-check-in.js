@@ -91,6 +91,8 @@ async function init() {
     const err = document.getElementById('err'); err.hidden = true;
     const fail = (m) => { err.textContent = m; err.hidden = false; e.target.disabled = false; step(1, 'Your details'); };
     if (!v('full_name').value.trim() || !v('dob').value || !v('id_type').value) return fail('Please fill in your name, date of birth and ID type.');
+    const em = v('email').value.trim();
+    if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return fail('Please check the email address.');
     if (!v('consent').checked) return fail('Please tick the box to confirm.');
     e.target.disabled = true;
     try {
