@@ -354,8 +354,6 @@ const ADMIN_NAV = [
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
-  ['connections.html', 'NammaStay Connect', '<path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"></path>'],
-  ['ota.html', 'OTA sync (owner view)', '<path d="M21 12a9 9 0 11-3-6.7"></path><path d="M21 4v5h-5"></path>'],
 ];
 const hostelHref = (page) => page;
 function adminChrome(user, hasProperty) {
@@ -510,15 +508,6 @@ function applyChrome(ctx) {
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
-  if (['owner', 'manager'].includes(ctx.role) && !$('.ns-sidebar a[href="ota.html"]')) {
-    const after = $('.ns-sidebar .ns-nav-link[href="calendar.html"]');
-    if (after) {
-      const a = document.createElement('a'); a.href = 'ota.html'; a.className = 'ns-nav-link';
-      a.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"></path></svg><span>OTA sync</span>';
-      if (/ota\.html$/.test(__PATH())) { a.classList.add('is-active'); a.setAttribute('aria-current', 'page'); }
-      after.insertAdjacentElement('afterend', a);
-    }
-  }
   const so = $('.ns-sidebar a[href="login.html"], .ns-sidebar [data-signout], .ns-sidebar button:last-of-type');
   const LANG_STYLE = 'width:100%;height:34px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 8px';
   const oldLang = $('.ns-sidebar .ns-lang');
