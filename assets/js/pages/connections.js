@@ -69,6 +69,7 @@ adminPage(async (ctx) => {
               ${c.status === 'live' ? `<button type="button" class="ns-btn-ghost" data-retry="${c.id}">Retry now</button>` : ''}
               ${c.ota === 'test' ? `<button type="button" class="ns-btn-ghost" data-sim="${c.id}">Simulate booking</button><button type="button" class="ns-btn-ghost" data-view="${c.id}">OTA view</button>` : ''}</div></td></tr>`; }).join('')}
         </tbody></table></div>` : '<div class="ns-muted" style="font-size:13px;margin-top:6px">No connections yet. Owners connect OTAs from <b>OTA sync → NammaStay Connect</b>. To test, open your own property’s OTA sync page and connect the <b>Test OTA</b>.</div>'}</div>
+      <div class="ns-card" id="cn-allres"><div class="ns-h3">OTA reservations</div><div class="ns-muted" style="font-size:12.5px;margin-top:6px">Loading…</div></div>
       <div class="ns-card"><div class="ns-h3">Before applying to an OTA — what the Test OTA proves</div>
         <ol style="margin:8px 0 0 18px;font-size:13.5px;line-height:1.7">
           <li>Full refresh: 365 nights of availability, price and minimum stay arrive (<b>OTA view</b>).</li>
@@ -78,6 +79,7 @@ adminPage(async (ctx) => {
           <li>Overbooking and unmatched rooms raise an owner alert instead of failing silently.</li>
           <li>Failures retry with back-off (2 → 64 min) and show here.</li></ol></div>`);
 
+    loadReservations();
     document.querySelectorAll('[data-ota]').forEach((b) => b.addEventListener('click', async () => {
       const o = d.otas.find((x) => x.ota === b.dataset.ota); const on = b.dataset.on === '1';
       if (!(await confirmDialog(on ? `Switch ${o.name} on?` : `Switch ${o.name} off?`,
@@ -207,6 +209,21 @@ adminPage(async (ctx) => {
         const maps = [...ov.querySelectorAll('[data-g]')].map((r) => ({ group_key: r.dataset.g, ota_room_id: r.querySelector('select').value }));
         await rpc('cn_b24_admin_map', { p_connection: c.id, p_maps: maps }); toast('Saved.'); draw(); back();
       } }] });
+  }
+
+  // Every reservation fetched from every OTA, across all properties.
+  async function loadReservations() {
+    const host = document.getElementById('cn-allres'); if (!host) return;
+    let rows;
+    try { rows = await rpc('cn_admin_reservations', { p_limit: 200 }); }
+    catch (e) { host.innerHTML = `<div class="ns-h3">OTA reservations</div><div class="ns-muted" style="margin-top:6px">${esc(e.message)}</div>`; return; }
+    host.innerHTML = `<div class="ns-h3">OTA reservations <span class="ns-muted" style="font-weight:600">(${rows.length})</span></div>
+      ${rows.length ? `<div class="cn-wrap"><table class="cn-tbl"><thead><tr><th>Property</th><th>OTA</th><th>Guest</th><th>Stay</th><th>Code</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td><b>${esc(r.property)}</b></td><td>${esc(r.ota_name)}</td><td>${esc(r.guest || '')}</td>
+          <td>${day(r.arrival)} → ${day(r.departure)}</td><td>${esc(r.code)}</td>
+          <td>${r.amount ? (!r.currency || r.currency === 'INR' ? rupees(Math.round(Number(r.amount) * 100)) : esc(r.currency) + ' ' + esc(r.amount)) : ''}</td>
+          <td><span class="ns-pill ${r.problem ? 'red' : r.status === 'cancelled' ? 'grey' : 'green'}">${r.problem ? 'Problem' : r.status === 'cancelled' ? 'Cancelled' : r.status === 'modified' ? 'Changed' : 'New'}</span></td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="ns-muted" style="font-size:13px;margin-top:6px">No OTA reservations yet.</div>'}`;
   }
 
   async function showLog(c) {
