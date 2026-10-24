@@ -354,7 +354,8 @@ const ADMIN_NAV = [
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
   ['activity.html', 'Activity log', '<path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle>'],
-  ['connections.html', 'OTA sync', '<path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"></path>'],
+  ['connections.html', 'NammaStay Connect', '<path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"></path>'],
+  ['ota.html', 'OTA sync (owner view)', '<path d="M21 12a9 9 0 11-3-6.7"></path><path d="M21 4v5h-5"></path>'],
 ];
 const hostelHref = (page) => page;
 function adminChrome(user, hasProperty) {
