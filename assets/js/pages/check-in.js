@@ -254,7 +254,7 @@ page('checkin', async (ctx) => {
           property_id: ctx.property_id,
           guest_id: guestId,
           guest: guestId ? null : {
-            full_name: f('full_name').value.trim(), phone: f('phone').value, email: f('email').value,
+            full_name: f('full_name').value.trim(), phone: f('phone').value, email: f('email').value.trim() || null,
             dob: f('dob').value, nationality: f('nationality').value, id_type: f('id_type').value,
             id_number: f('id_number').value, id_doc_path: ids.id_doc_path || null, id_doc_back_path: ids.id_doc_back_path || null,
           },
