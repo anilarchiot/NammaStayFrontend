@@ -54,7 +54,7 @@ adminPage(async (ctx) => {
       <div class="ns-card"><div class="ns-h3">OTAs</div>
         <div class="ns-muted" style="font-size:12.5px;margin:4px 0 10px">Switch an OTA on <b>only after</b> it has approved NammaStay as a connectivity partner and its credentials are saved as Supabase secrets for the <b>connect</b> function. Waiting connections then go live by themselves.</div>
         <div class="cn-wrap"><table class="cn-tbl"><thead><tr><th>OTA</th><th>Connections</th><th>Waiting</th><th>Status</th><th></th></tr></thead><tbody>
-          ${d.otas.map((o) => `<tr><td><b>${esc(o.name)}</b></td><td>${o.connections}</td><td>${o.waiting}</td>
+          ${d.otas.filter((o) => !['booking', 'airbnb'].includes(o.ota)).map((o) => `<tr><td><b>${esc(o.name)}</b></td><td>${o.connections}</td><td>${o.waiting}</td>
             <td><span class="ns-pill ${o.enabled ? 'green' : 'grey'}">${o.enabled ? 'Switched on' : 'Off — awaiting approval'}</span></td>
             <td style="text-align:right"><button type="button" class="ns-btn-ghost" data-ota="${esc(o.ota)}" data-on="${o.enabled ? 0 : 1}" style="height:32px">${o.enabled ? 'Switch off' : 'Switch on'}</button></td></tr>`).join('')}
         </tbody></table></div></div>

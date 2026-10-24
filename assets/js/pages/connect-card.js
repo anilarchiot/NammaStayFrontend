@@ -5,6 +5,7 @@ import { rpc, sb, esc, toast, modal, confirmDialog, fmtDate, rupees, field, W, F
 
 const COL = { booking: '#003580', mmt: '#E8352E', agoda: '#5C2D91', expedia: '#1B2B5A', hostelworld: '#F25621', test: '#6B7280', beds24: '#0E1B3D' };
 const STATUS = { setup: ['amber', 'Setting up'], waiting: ['blue', 'Waiting for OTA approval'], live: ['green', 'Live'], paused: ['grey', 'Paused'] };
+const BEDS24_ONLY = new Set(['booking', 'airbnb']);   // Booking.com & Airbnb go through Beds24; NammaStay Connect handles every other OTA
 const B24_OTAS = [['booking', 'Booking.com'], ['agoda', 'Agoda'], ['goibibo', 'Goibibo / MakeMyTrip'], ['other', 'Other Beds24 channels']];
 const ago = (iso) => { if (!iso) return 'never'; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + 'T12:00:00+05:30') : '');
@@ -87,9 +88,9 @@ export async function cnCard(ctx) {
   css();
   const owner = ctx.can('owner');
   const b24c = st.connections.find((c) => c.ota === 'beds24');
-  const others = st.connections.filter((c) => c.ota !== 'beds24');
+  const others = st.connections.filter((c) => c.ota !== 'beds24' && !BEDS24_ONLY.has(c.ota));
   const used = new Set(st.connections.map((c) => c.ota));
-  const free = st.otas.filter((o) => !used.has(o.ota) && o.ota !== 'beds24');
+  const free = st.otas.filter((o) => !used.has(o.ota) && o.ota !== 'beds24' && !BEDS24_ONLY.has(o.ota));
   host.innerHTML = `<div class="ns-card">
     <div class="cx-head"><div><div class="ns-h3">🔗 Beds24 OTA sync</div>
       <div class="ns-muted" style="font-size:12.5px">NammaStay sends availability and rates to Beds24; Beds24 distributes them to channels enabled and mapped in your Beds24 account. Reservations return to your calendar.</div></div>
