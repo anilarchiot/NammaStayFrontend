@@ -13,8 +13,19 @@
 .ns-orb.b{width:240px;height:240px;background:#E2A03F;bottom:-60px;left:42%;animation-delay:-6s}
 .feature,.pain,.step{transition:transform .2s ease,box-shadow .2s ease,opacity .6s ease}
 .feature:hover,.pain:hover,.step:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(16,26,61,.12)}
+.motion-enter{animation:nsRise .65s cubic-bezier(.2,.7,.2,1) both}
+.nav-links a{transition:color .2s ease,transform .2s ease}
+.price-tabs button{transition:background .2s ease,color .2s ease,transform .2s ease}
+.frame img,.phone img{transition:transform .45s cubic-bezier(.2,.7,.2,1)}
 .btn-primary{position:relative;overflow:hidden}
 .btn-primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:nsSweep 4.5s 1.5s infinite}
+.btn-primary:active,.price-tabs button:active{transform:scale(.97)}
+@media (hover:hover){
+  .frame:hover img,.phone:hover img{transform:scale(1.025)}
+  .nav-links a:hover{transform:translateY(-2px)}
+  footer nav a{transition:color .2s ease,transform .2s ease}
+  footer nav a:hover{transform:translateY(-2px)}
+}
 @keyframes nsRise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes nsZoom{from{opacity:0;transform:translateY(30px) scale(.94)}to{opacity:1;transform:none}}
 @keyframes nsShine{to{background-position:-220% 0}}
@@ -24,4 +35,6 @@
   .ns-progress,.ns-orb{display:none}
   .hero .wrap > div:first-child > *,.hero .shot-stack,.hero h1 em,.btn-primary::after{animation:none}
   .hero h1 em{-webkit-text-fill-color:currentColor;color:var(--green);background:none}
+  .motion-enter,.frame img,.phone img{animation:none;transition:none}
+  .feature,.pain,.step,.nav-links a,.price-tabs button,.btn-primary:active{transition:none;transform:none}
 }
