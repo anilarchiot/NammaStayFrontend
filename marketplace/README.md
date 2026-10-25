@@ -32,3 +32,11 @@ The NammaStay app talks to nammaBookings through NammaStay Connect as the `namma
 
 - App → nammaBookings: room units and rates are pushed (`/availability`).
 - nammaBookings → App: marketplace bookings are pulled into Connect reservations (`/reservations`).
+
+## Protected live build (hidden API + obfuscated code)
+
+`npm run build:live` writes `live/site` and `live/stays` with all JavaScript obfuscated, HTML minified, and the app
+pointed at its own `/api` proxy ([worker/index.js](../worker/index.js)). The Supabase URL and anon key are not in the shipped
+files; they live in the Worker (`SUPABASE_URL` var, `SUPABASE_ANON_KEY` secret). Deploy with `npm run deploy:live` after
+`wrangler secret put SUPABASE_ANON_KEY --config wrangler.live.jsonc` (and `--config marketplace/wrangler.live.jsonc`).
+Note: this makes code and traffic much harder to read, but anything a browser runs can still be inspected.
