@@ -12,6 +12,8 @@
     "dev": "node scripts/serve-local.cjs",
     "stays:dev": "npx --yes http-server marketplace -p 4174 -c-1",
     "stays:deploy": "wrangler deploy --config marketplace/wrangler.jsonc",
+    "build:live": "node scripts/build-live.cjs",
+    "deploy:live": "npm run build:live && wrangler deploy --config wrangler.live.jsonc && wrangler deploy --config marketplace/wrangler.live.jsonc",
     "desktop:dev": "electron .",
     "desktop:build:win": "electron-builder --win nsis --publish never",
     "mobile:build-web": "node mobile/build-web.cjs",
@@ -54,7 +56,10 @@
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",
     "electron": "^45.0.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "html-minifier-terser": "^7.2.0",
+    "javascript-obfuscator": "^5.9.0",
+    "terser": "^5.51.2"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

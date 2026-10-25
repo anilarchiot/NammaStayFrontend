@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Protected production deploy of the main site: run `npm run build:live` first.
+  // Set once:  wrangler secret put SUPABASE_ANON_KEY --config wrangler.live.jsonc
+  "name": "nammastayfrontend",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "vars": { "SUPABASE_URL": "https://skcqpfyshbxcyyamsgtj.supabase.co" },
+  "assets": {
+    "directory": "live/site",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  }
+}

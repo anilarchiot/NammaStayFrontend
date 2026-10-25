@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Protected production deploy of nammaBookings: run `npm run build:live` first.
+  // Set once:  wrangler secret put SUPABASE_ANON_KEY --config marketplace/wrangler.live.jsonc
+  "name": "nammabookings",
+  "main": "../worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "vars": { "SUPABASE_URL": "https://skcqpfyshbxcyyamsgtj.supabase.co" },
+  "assets": {
+    "directory": "../live/stays",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+}
