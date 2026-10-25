@@ -13,6 +13,7 @@
 <link rel="icon" href="assets/img/favicon.png">
 <script src="assets/js/config.js" data-no-boot></script>
 <link rel="stylesheet" href="assets/css/home-motion.css">
+<link rel="stylesheet" href="assets/css/product-tour.css">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -492,7 +493,18 @@
             <li>Two staff can’t book the same bed — the database refuses it</li>
           </ul>
         </div>
-        <div class="frame fit"><img src="assets/img/screens/calendar.webp" width="1400" height="783" loading="lazy" alt="NammaStay calendar with guest faces, colour-coded stays and a daily occupancy meter"></div>
+        <div class="tour-window tour-calendar" data-tour="calendar" role="img" aria-label="Animated calendar preview showing bed-level reservations, open nights, a maintenance block, and a new booking added to a free bed">
+          <div class="tour-head"><div><strong>Calendar</strong><small>1 Oct – 4 Oct · Social Backpackers Hostel</small></div><span class="tour-head-action">‹ Prev　 Today　 Next ›</span></div>
+          <div class="calendar-board">
+            <div class="calendar-row calendar-days"><b>BED</b><span>THU<small>1 Oct</small></span><span>FRI<small>2 Oct</small></span><span>SAT<small>3 Oct</small></span><span>SUN<small>4 Oct</small></span></div>
+            <div class="calendar-row"><b>Lower A1</b><div class="calendar-track"><i class="stay stay-green" style="--start:0%;--span:42%">Aarav R. · 2n</i><i class="stay stay-amber" style="--start:50%;--span:25%">Farah A. · 1n</i></div></div>
+            <div class="calendar-row"><b>Upper A1</b><div class="calendar-track"><i class="stay stay-green" style="--start:0%;--span:70%">Deepa S. · 3n</i></div></div>
+            <div class="calendar-row"><b>Lower A2</b><div class="calendar-track"><i class="stay stay-amber" style="--start:25%;--span:42%">Tom B. · 2n</i><i class="stay stay-green" style="--start:75%;--span:25%">Ben C.</i></div></div>
+            <div class="calendar-row"><b>Upper A2</b><div class="calendar-track"><i class="stay stay-blue" style="--start:0%;--span:25%">Paid</i><i class="stay stay-green" style="--start:50%;--span:25%">Julia W.</i></div></div>
+            <div class="calendar-row"><b>Lower B1</b><div class="calendar-track"><i class="stay stay-maintenance" style="--start:25%;--span:25%">Repair</i><i class="stay stay-green calendar-new-stay" style="--start:50%;--span:42%">Vikram R. · 2n</i><span class="calendar-empty">Free bed</span></div></div>
+          </div>
+          <div class="calendar-footer"><span><i class="legend-green"></i>In house</span><span><i class="legend-amber"></i>Balance due</span><span><i class="legend-blue"></i>Paid</span><span class="calendar-confirmed">✓ Booking saved</span></div>
+        </div>
       </div>
 
       <div class="deep flip reveal" id="payments">
@@ -507,7 +519,27 @@
             <li>Checkout warns you if a balance is still due</li>
           </ul>
         </div>
-        <div class="frame fit"><img src="assets/img/screens/detail.webp" width="1400" height="1260" loading="lazy" alt="Booking with the record payment dialog open"></div>
+        <div class="tour-window tour-booking" data-tour="booking" role="img" aria-label="Animated booking preview showing a confirmed guest reservation and a UPI payment recorded against the remaining balance">
+          <div class="tour-head"><div><strong>Booking BK-1149</strong><small>Created just now · Social Backpackers Hostel</small></div><span class="booking-state"><i class="booking-before">Draft</i><i class="booking-confirmed">Confirmed</i></span></div>
+          <div class="booking-layout">
+            <div class="booking-details">
+              <div class="booking-guest"><span class="booking-avatar">AM</span><span><b>Arjun Mehta</b><small>arjun@gmail.com · India</small></span><i class="booking-check">✓</i></div>
+              <div class="booking-field"><small>Room / Bed</small><b>6-Bed Mixed Dorm · Lower A1</b><span class="field-check">✓</span></div>
+              <div class="booking-dates"><div class="booking-field"><small>Check-in</small><b>15 Oct 2026</b></div><div class="booking-field"><small>Check-out</small><b>17 Oct 2026</b></div></div>
+              <div class="booking-total"><span>2 nights · Total</span><b>₹2,800</b></div>
+              <div class="booking-success"><i>✓</i><span><b>Booking confirmed</b><small>Bed reserved · Confirmation ready to share</small></span></div>
+            </div>
+            <div class="payment-card">
+              <div class="payment-title"><b>Record payment</b><span>BK-1149</span></div>
+              <div class="payment-input"><small>Amount (₹)</small><b>1,400</b></div>
+              <div class="payment-input"><small>Method</small><b>UPI <span>⌄</span></b></div>
+              <div class="payment-input"><small>Reference (UTR)</small><b>6138 2047 1192</b></div>
+              <div class="payment-balance"><span>Remaining balance</span><b>₹1,400</b></div>
+              <div class="payment-save"><span>Cancel</span><b><i>✓</i> Payment saved</b></div>
+            </div>
+          </div>
+          <div class="booking-toast"><i>✓</i> Booking saved · UPI payment recorded</div>
+        </div>
       </div>
 
       <div class="deep reveal">
@@ -521,9 +553,29 @@
             <li>You get an alert the moment it’s submitted</li>
           </ul>
         </div>
-        <div class="phone-pair">
-          <div class="phone"><img src="assets/img/screens/selfcheckin.webp" width="560" height="1212" loading="lazy" alt="Guest self check-in form"></div>
-          <div class="phone"><img src="assets/img/screens/mobile-dash.webp" width="560" height="1212" loading="lazy" alt="NammaStay dashboard on a phone"></div>
+        <div class="tour-checkin" data-tour="checkin" role="img" aria-label="Animated self check-in preview showing a guest completing their details, uploading an ID, and the front desk receiving a checked-in confirmation">
+          <div class="checkin-phone">
+            <div class="checkin-notch"></div>
+            <div class="checkin-brand"><i>N</i><b>Namma<span>Stay</span></b></div>
+            <small class="checkin-property">SOCIAL BACKPACKERS HOSTEL</small>
+            <h4>Self check-in</h4>
+            <div class="checkin-progress"><i></i><i></i><i></i></div>
+            <small class="checkin-step"><span class="checkin-before">Step 1 of 3 — Your details</span><span class="checkin-after">Step 3 of 3 — Complete</span></small>
+            <div class="checkin-booking"><b>Booking BK-1110</b><span>3-Bed Dorm · Lower C1</span><span>26 Sep – 30 Sep 2026 · 4 nights</span></div>
+            <div class="checkin-field"><small>Full name (as on your ID)</small><b>Vikram Rao</b></div>
+            <div class="checkin-field"><small>Date of birth</small><b>14 / 02 / 1995</b></div>
+            <div class="checkin-field"><small>Nationality</small><b>India</b></div>
+            <div class="checkin-upload"><i>✓</i><span><b>Identity photo uploaded</b><small>Document received securely</small></span></div>
+            <div class="checkin-submit">Submit check-in details <i>→</i></div>
+            <div class="checkin-done"><i>✓</i><b>You’re checked in!</b><small>Your details are with the front desk.</small></div>
+          </div>
+          <div class="checkin-reception">
+            <div class="reception-head"><span><i>N</i> Front desk</span><small>LIVE UPDATE</small></div>
+            <div class="reception-alert"><i>✓</i><span><b>Guest checked in</b><small>Vikram Rao · Lower C1</small></span></div>
+            <div class="reception-status"><span>Booking status</span><b><i></i> Checked in</b></div>
+            <div class="reception-status"><span>Guest details</span><b><i></i> Complete</b></div>
+            <div class="reception-status"><span>ID document</span><b><i></i> Received</b></div>
+          </div>
         </div>
       </div>
 
@@ -540,9 +592,9 @@
           </ul>
           <p style="font-size:12.5px;color:var(--muted);margin-top:18px">Your team reviews and submits on the official FRRO portal; NammaStay prepares the record and tracks completion.</p>
         </div>
-        <div class="formc-preview" role="img" aria-label="NammaStay Form C dashboard showing foreign guest arrival reports, deadlines, missing details and filing actions">
+        <div class="formc-preview tour-frro" data-tour="frro" role="img" aria-label="Animated Form C preview showing due and overdue foreign guest reports being completed, filed with FRRO, and assigned acknowledgement numbers">
           <div class="formc-bar">
-            <div><div class="formc-title">Form C</div><div class="formc-meta">2 arrival reports due · 1 departure report</div></div>
+            <div><div class="formc-title">Form C</div><div class="formc-meta">Foreign guest filing queue · Live status</div></div>
             <span class="formc-open">Open FRRO Form C ↗</span>
           </div>
           <div class="formc-body">
@@ -561,7 +613,7 @@
                 <span class="formc-avatar">ER</span>
                 <div style="min-width:0"><div class="formc-name">Elena Rossi</div><div class="formc-detail">Italy · Female Dorm · Lower B1 · NS-1042</div></div>
               </div>
-              <div class="formc-state"><span class="formc-pill amber">4h 18m left</span><span class="formc-pill green">Details complete</span></div>
+              <div class="formc-state frro-state"><span class="formc-pill amber frro-before">4h 18m left</span><span class="formc-pill green frro-after">Filed ✓ · C-2026-18431</span></div>
               <div class="formc-actions"><span class="formc-action">Passport &amp; visa</span><span class="formc-action primary">Copy for FRRO</span></div>
             </div>
             <div class="formc-row">
@@ -569,7 +621,7 @@
                 <span class="formc-avatar" style="background:#EEF1FA;color:#43558A">MD</span>
                 <div style="min-width:0"><div class="formc-name">Malik Diallo</div><div class="formc-detail">France · Mixed Dorm · Upper A2 · NS-1045</div></div>
               </div>
-              <div class="formc-state"><span class="formc-pill red">Overdue by 1h 07m</span><span class="formc-pill amber">2 details missing</span></div>
+              <div class="formc-state frro-state"><span class="formc-pill red frro-before">Overdue · 2 details missing</span><span class="formc-pill green frro-after">Filed ✓ · C-2026-18432</span></div>
               <div class="formc-actions"><span class="formc-action">Complete details</span><span class="formc-action primary">Copy for FRRO</span></div>
             </div>
             <div class="formc-row">
@@ -577,7 +629,7 @@
                 <span class="formc-avatar" style="background:#FFF3D7;color:#8A5B00">KM</span>
                 <div style="min-width:0"><div class="formc-name">Kenji Mori</div><div class="formc-detail">Japan · Private Room 2 · NS-1038</div></div>
               </div>
-              <div class="formc-state"><span class="formc-pill green">Arrival filed ✓</span><span class="formc-pill green">C-2026-18427</span></div>
+              <div class="formc-state"><span class="formc-pill green">Filed ✓ · C-2026-18427</span></div>
               <div class="formc-actions"><span class="formc-action">View record</span></div>
             </div>
             <div class="formc-foot"><i></i><span>Deadlines and filing status stay visible to the whole front-desk team.</span></div>
@@ -596,6 +648,46 @@
           </ul>
         </div>
         <div class="frame fit"><img src="assets/img/screens/reports.webp" width="1400" height="1057" loading="lazy" alt="Reports with revenue by week and guest nationality mix"></div>
+      </div>
+
+      <div class="deep flip reveal">
+        <div class="deep-copy">
+          <div class="kicker">Expenses</div>
+          <h3>Know what you earned — and what needs attention.</h3>
+          <p class="sub">See income and costs together. Spot a healthy month at a glance, and catch a category that’s running over budget before it grows.</p>
+          <ul class="ticks">
+            <li>Compare income, expenses and net operating result</li>
+            <li>Track costs by category, date and payment method</li>
+            <li>Get a clear warning when a category exceeds its budget</li>
+          </ul>
+        </div>
+        <div class="tour-window tour-expenses" data-tour="expenses" role="img" aria-label="Animated expenses preview showing a healthy positive net of 27,680 rupees and a red warning for supplies exceeding its budget by 1,200 rupees">
+          <div class="tour-head"><div><strong>Expenses &amp; cash flow</strong><small>Social Backpackers Hostel · October</small></div><span class="tour-head-action">This month⌄</span></div>
+          <div class="expense-summary">
+            <div class="expense-metric"><small>Total income</small><b>₹42,500</b><span class="good">↑ 12% vs last month</span></div>
+            <div class="expense-metric"><small>Total expenses</small><b>₹14,820</b><span>Across 5 categories</span></div>
+            <div class="expense-metric expense-net"><small>Net operating result</small><b>+₹27,680</b><span class="good"><i>✓</i> Healthy month</span></div>
+          </div>
+          <div class="expense-body">
+            <div class="expense-chart">
+              <div class="expense-chart-title"><b>Income vs expenses</b><small>₹ per week</small></div>
+              <div class="expense-bars">
+                <div><i class="income-bar" style="--height:74%"></i><i class="cost-bar" style="--height:32%"></i><small>Week 1</small></div>
+                <div><i class="income-bar" style="--height:92%"></i><i class="cost-bar" style="--height:41%"></i><small>Week 2</small></div>
+                <div><i class="income-bar" style="--height:66%"></i><i class="cost-bar" style="--height:28%"></i><small>Week 3</small></div>
+                <div><i class="income-bar" style="--height:84%"></i><i class="cost-bar cost-alert" style="--height:62%"></i><small>Week 4</small></div>
+              </div>
+              <div class="expense-legend"><span><i></i>Income</span><span><i></i>Expenses</span></div>
+            </div>
+            <div class="expense-list">
+              <div class="expense-list-title"><b>Category budget</b><small>Status</small></div>
+              <div class="expense-item"><span><b>Utilities</b><small>₹3,200 of ₹4,000</small></span><i class="budget-track"><b style="--spent:80%"></b></i><em class="good">On track</em></div>
+              <div class="expense-item"><span><b>Food &amp; supplies</b><small>₹5,200 of ₹4,000</small></span><i class="budget-track over"><b style="--spent:100%"></b></i><em class="bad">₹1,200 over</em></div>
+              <div class="expense-item"><span><b>Cleaning</b><small>₹1,450 of ₹2,000</small></span><i class="budget-track"><b style="--spent:72%"></b></i><em class="good">On track</em></div>
+            </div>
+          </div>
+          <div class="expense-alert"><i>!</i><span><b>Needs attention:</b> Food &amp; supplies is ₹1,200 over its monthly budget.</span><span class="alert-label">Review</span></div>
+        </div>
       </div>
     </div>
   </section>
@@ -751,6 +843,7 @@
 </footer>
 
 <script src="assets/js/home-motion.js" defer></script>
+<script src="assets/js/product-tour.js" defer></script>
 <script>
 /* ============ EDIT THESE ============
  * The early-access form saves to your Supabase database automatically once

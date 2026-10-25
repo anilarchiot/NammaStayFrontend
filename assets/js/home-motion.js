@@ -67,7 +67,7 @@
   progress();
 
   revealWithin(document);
-  document.querySelectorAll('.nav-links a,.nav-cta > *').forEach(function (el, i) {
+  document.querySelectorAll('.nav .brand,.nav-links a,.nav-cta > *').forEach(function (el, i) {
     el.classList.add('motion-enter');
     el.style.animationDelay = (i * 70) + 'ms';
   });
@@ -91,20 +91,24 @@
     }
   }
 
-  document.querySelectorAll('.strip ul,.pains,.features,.trust,.steps,.who,.price-grid,.price-incl,.faq').forEach(function (group) {
+  function staggerChildren(group) {
     Array.prototype.forEach.call(group.children, function (el, i) {
       el.style.setProperty('--ns-reveal-delay', Math.min(i, 5) * 75 + 'ms');
-      el.addEventListener('transitionend', function clearRevealDelay() {
-        if (el.classList.contains('in')) {
+      el.addEventListener('transitionend', function clearRevealDelay(event) {
+        if (event.target === el && el.classList.contains('in')) {
           el.style.removeProperty('--ns-reveal-delay');
           el.removeEventListener('transitionend', clearRevealDelay);
         }
       });
     });
-  });
+  }
+  document.querySelectorAll('.strip ul,.pains,.features,.trust,.steps,.who,.price-grid,.price-incl,.faq').forEach(staggerChildren);
 
   var priceGrid = document.getElementById('price-grid');
   if (priceGrid && 'MutationObserver' in window) {
-    new MutationObserver(function () { revealWithin(priceGrid); }).observe(priceGrid, { childList: true });
+    new MutationObserver(function () {
+      staggerChildren(priceGrid);
+      revealWithin(priceGrid);
+    }).observe(priceGrid, { childList: true });
   }
 })();

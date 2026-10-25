@@ -11,6 +11,7 @@
 .ns-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.35;pointer-events:none;animation:nsDrift 14s ease-in-out infinite}
 .ns-orb.a{width:300px;height:300px;background:#1C9A6C;top:-90px;left:-70px}
 .ns-orb.b{width:240px;height:240px;background:#E2A03F;bottom:-60px;left:42%;animation-delay:-6s}
+.reveal{transition-delay:var(--ns-reveal-delay,0ms)!important}
 .feature,.pain,.step{transition:transform .2s ease,box-shadow .2s ease,opacity .6s ease}
 .feature:hover,.pain:hover,.step:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(16,26,61,.12)}
 .motion-enter{animation:nsRise .65s cubic-bezier(.2,.7,.2,1) both}
@@ -37,4 +38,7 @@
   .hero h1 em{-webkit-text-fill-color:currentColor;color:var(--green);background:none}
   .motion-enter,.frame img,.phone img{animation:none;transition:none}
   .feature,.pain,.step,.nav-links a,.price-tabs button,.btn-primary:active{transition:none;transform:none}
+  .feature:hover,.pain:hover,.step:hover,.price-tabs button:active{transform:none!important;box-shadow:none!important}
+  .reveal{transition-delay:0ms!important}
+  .nav-links a:hover,footer nav a:hover,.frame:hover img,.phone:hover img{transform:none}
 }
