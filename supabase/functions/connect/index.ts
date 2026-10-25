@@ -71,7 +71,11 @@ Deno.serve(async (req) => {
       const { data: maps } = await db.from('cn_room_map').select('group_key, ota_room_id, ota_rate_id').eq('connection_id', c.id).neq('ota_room_id', '');
       let reservations: Res[] = [];
       if (c.ota !== 'test') {
-        await partner(c.ota, 'availability', { hotel_id: c.ota_hotel_id, full: !!body.full, rooms: maps ?? [] });
+        // Send live unit counts and rates with the room mapping so the OTA can update its inventory.
+        const { data: groups } = await db.rpc('_cn_groups', { p_property: c.property_id });
+        const byKey = new Map(((groups ?? []) as { group_key: string; units: number; rate_paise: number }[]).map((g) => [g.group_key, g]));
+        const rooms = (maps ?? []).map((m) => ({ ...m, units: byKey.get(m.group_key)?.units, rate_paise: byKey.get(m.group_key)?.rate_paise }));
+        await partner(c.ota, 'availability', { hotel_id: c.ota_hotel_id, full: !!body.full, rooms });
         reservations = (await partner(c.ota, 'reservations', { hotel_id: c.ota_hotel_id })).reservations ?? [];
       }
       await db.from('cn_connections').update({ last_push_at: new Date().toISOString(), last_pull_at: new Date().toISOString(), last_error: null, fails: 0, retry_at: null }).eq('id', c.id);

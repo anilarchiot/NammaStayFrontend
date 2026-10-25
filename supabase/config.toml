@@ -7,3 +7,6 @@ major_version = 15
 
 [db.migrations]
 enabled = true
+
+[functions.marketplace-api]
+verify_jwt = false

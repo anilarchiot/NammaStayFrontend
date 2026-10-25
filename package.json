@@ -10,6 +10,8 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
+    "stays:dev": "npx --yes http-server marketplace -p 4174 -c-1",
+    "stays:deploy": "wrangler deploy --config marketplace/wrangler.jsonc",
     "desktop:dev": "electron .",
     "desktop:build:win": "electron-builder --win nsis --publish never",
     "mobile:build-web": "node mobile/build-web.cjs",

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Host dashboard — nammaBookings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E1B3D">
+<link rel="icon" href="favicon.png">
+</head>
+<body>
+<header><a class="logo" href="./"><img src="logo.png" alt="">namma<span>Bookings</span></a><nav><a href="find.html">Browse stays</a> <a href="#" id="out" hidden>Sign out</a></nav></header>
+<main>
+  <div id="msg"></div>
+  <div id="auth" class="card" hidden>
+    <h2>Become a host</h2>
+    <p class="mute">Register, list your property and get bookings. Already use the NammaStay app? Sync both with your listing code.</p>
+    <form id="login">
+      <label>Email</label><input name="email" type="email" required>
+      <label>Password</label><input name="password" type="password" minlength="8" required>
+      <div id="nameRow" hidden><label>Your name</label><input name="name"><label>Phone</label><input name="phone" type="tel"></div>
+      <p class="row"><button>Sign in</button><button type="button" class="ghost" id="toggle">New host? Register</button></p>
+    </form>
+  </div>
+  <div id="app" hidden>
+    <div class="card">
+      <h3>Add a property</h3>
+      <form id="add">
+        <label>Property name</label><input name="title" required minlength="3" maxlength="120">
+        <div class="row"><div><label>Type</label><select name="type"><option>Homestay</option><option>Hotel</option><option>Resort</option><option>PG / Hostel</option><option>Villa</option><option>Apartment</option></select></div>
+        <div><label>City</label><input name="city" required></div><div><label>State</label><input name="state"></div></div>
+        <label>Address</label><input name="address">
+        <label>Description</label><textarea name="description"></textarea>
+        <label>Amenities (comma separated)</label><input name="amenities" placeholder="WiFi, Parking, Breakfast">
+        <label>Photos</label><input name="photos" type="file" accept="image/*" multiple>
+        <h4>Rooms</h4><div id="roomRows"></div>
+        <p class="row"><button type="button" class="ghost" id="addRoom">+ Add room type</button><button>Publish property</button></p>
+      </form>
+    </div>
+    <div id="listings"></div>
+  </div>
+</main>
+<script src="config.js"></script>
+<script type="module" src="host.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "nammaBookings",
+  "short_name": "nammaBookings",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FBF3DE",
+  "theme_color": "#0E1B3D",
+  "icons": [{ "src": "icon.png", "sizes": "any", "type": "image/png" }]
+}
