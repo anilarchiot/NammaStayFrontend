@@ -5,30 +5,6 @@
 .tour-head small{margin-top:3px;color:var(--muted);font-size:10px}
 .tour-head-action{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
 
-.calendar-board{padding:14px 16px 8px}
-.calendar-row{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:center;min-height:43px;border-bottom:1px solid #F0EEE8}
-.calendar-row b{font-size:10px}
-.calendar-days{grid-template-columns:86px repeat(4,minmax(0,1fr));min-height:48px;text-align:center}
-.calendar-days>b{text-align:left;color:var(--muted)}
-.calendar-days>span{font-size:9px;font-weight:800}
-.calendar-days>span small{display:block;margin-top:2px;color:var(--muted);font-size:8px;font-weight:500}
-.calendar-track{position:relative;height:29px;overflow:hidden;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),#ECEAE2 calc(25% - 1px),#ECEAE2 25%)}
-.stay{position:absolute;top:4px;left:var(--start);width:var(--span);height:21px;padding:4px 6px;border-radius:7px;overflow:hidden;color:#fff;font-size:8px;font-style:normal;font-weight:800;white-space:nowrap;text-overflow:ellipsis}
-.stay-green{background:#1C9A6C}
-.stay-amber{background:#E2A03F;color:#432A08}
-.stay-blue{background:#536DB4}
-.stay-maintenance{background:repeating-linear-gradient(135deg,#ECE8DC 0,#ECE8DC 4px,#D8D0BB 4px,#D8D0BB 7px);color:#665E4D}
-.calendar-empty{position:absolute;top:7px;left:51%;color:#9299A7;font-size:8px;opacity:0}
-.calendar-footer{min-height:42px;padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-top:1px solid #F0EEE8;color:var(--muted);font-size:9px}
-.calendar-footer>span{display:inline-flex;align-items:center;gap:5px}
-.calendar-footer i{width:8px;height:8px;border-radius:3px}
-.legend-green{background:#1C9A6C}.legend-amber{background:#E2A03F}.legend-blue{background:#536DB4}
-.calendar-confirmed{margin-left:auto;color:var(--green-d);font-weight:800}
-.calendar-new-stay{transform-origin:left center}
-.tour-calendar.is-playing .calendar-new-stay{animation:calendarBook 8s ease-in-out infinite}
-.tour-calendar.is-playing .calendar-empty{animation:calendarFree 8s ease-in-out infinite}
-.tour-calendar.is-playing .calendar-confirmed{animation:tourConfirm 8s ease-in-out infinite}
-
 .tour-booking{position:relative}
 .booking-confirmed{padding:5px 9px;border-radius:999px;background:#E9F5EE;color:var(--green-d);font-size:9px;font-weight:800}
 .booking-state{position:relative;min-width:74px;min-height:25px}
@@ -69,11 +45,6 @@
 .payment-save b{padding:7px 9px;border-radius:7px;background:var(--green);color:#fff;font-size:8px}
 .payment-save i{font-style:normal}
 .booking-toast{display:flex;align-items:center;gap:8px;margin:0 16px 14px;padding:8px 10px;border:1px solid #CDE7D8;border-radius:9px;background:#F1F8F4;color:var(--green-d);font-size:9px;font-weight:800}
-.tour-booking.is-playing .booking-before{display:inline-flex;animation:bookingBefore 7s ease-in-out infinite}
-.tour-booking.is-playing .booking-confirmed{animation:bookingConfirmed 7s ease-in-out infinite}
-.tour-booking.is-playing .payment-save b{animation:tourConfirm 7s ease-in-out infinite}
-.tour-booking.is-playing .booking-toast{animation:bookingToast 7s ease-in-out infinite}
-
 .tour-checkin{display:grid;grid-template-columns:minmax(210px,.9fr) minmax(190px,1.1fr);gap:18px;align-items:center;padding:22px;background:radial-gradient(circle at 20% 10%,#F1F8F4,transparent 43%),#FBF3DE}
 .checkin-phone{position:relative;max-width:275px;width:100%;justify-self:center;padding:14px 14px 16px;border:5px solid var(--navy);border-radius:28px;background:#FFFCF3;box-shadow:0 16px 34px rgba(14,27,61,.2)}
 .checkin-notch{position:absolute;top:4px;left:50%;width:58px;height:8px;transform:translateX(-50%);border-radius:0 0 8px 8px;background:var(--navy)}
@@ -118,23 +89,10 @@
 .reception-status>span{color:var(--muted)}
 .reception-status>b{display:flex;align-items:center;gap:5px;color:var(--green-d);font-size:8px}
 .reception-status i{width:6px;height:6px;border-radius:50%;background:var(--green)}
-.tour-checkin.is-playing .checkin-before{animation:checkinBefore 8s ease-in-out infinite}
-.tour-checkin.is-playing .checkin-after{display:inline;animation:checkinAfter 8s ease-in-out infinite}
-.tour-checkin.is-playing .checkin-progress i{animation:checkinProgress 8s ease-in-out infinite}
-.tour-checkin.is-playing .checkin-progress i:nth-child(2){animation-delay:.18s}
-.tour-checkin.is-playing .checkin-progress i:nth-child(3){animation-delay:.36s}
-.tour-checkin.is-playing .checkin-submit{animation:checkinSubmit 8s ease-in-out infinite}
-.tour-checkin.is-playing .checkin-done{animation:checkinComplete 8s ease-in-out infinite}
-.tour-checkin.is-playing .reception-alert{animation:receptionArrival 8s ease-in-out infinite}
-
-.tour-frro .frro-before{display:none}
-.tour-frro .frro-after{display:inline-flex}
-.tour-frro .frro-state{position:relative;min-height:22px;justify-content:center}
-.tour-frro .frro-state .frro-before,.tour-frro .frro-state .frro-after{position:absolute;top:0;left:0}
-.tour-frro.is-playing .frro-before{display:inline-flex;animation:frroBefore 9s ease-in-out infinite}
-.tour-frro.is-playing .frro-after{display:inline-flex;animation:frroAfter 9s ease-in-out infinite}
-.tour-frro.is-playing .formc-action.primary{animation:frroAction 9s ease-in-out infinite}
-
+.tour-frro .frro-state{display:grid;grid-template-columns:max-content;align-content:center;justify-content:start;min-height:24px}
+.tour-frro .frro-state .frro-before,.tour-frro .frro-state .frro-after{grid-area:1/1;align-self:center}
+.tour-frro .frro-before{visibility:hidden;opacity:0}
+.tour-frro .frro-after{visibility:visible;opacity:1}
 .tour-expenses{padding-bottom:12px}
 .expense-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 16px 10px}
 .expense-metric{min-width:0;padding:11px;border:1px solid #ECEAE2;border-radius:10px;background:#fff}
@@ -176,44 +134,13 @@
 .expense-alert>i{width:16px;height:16px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;background:#D96A62;color:#fff;font-size:10px;font-style:normal;font-weight:800}
 .expense-alert b{color:#A13E37}
 .alert-label{margin-left:auto;color:#A13E37;font-size:7px;font-weight:800}
-.tour-expenses.is-playing .income-bar,.tour-expenses.is-playing .cost-bar{animation:expenseGrow 6s cubic-bezier(.2,.7,.2,1) both}
-.tour-expenses.is-playing .expense-alert,.tour-expenses.is-playing .expense-item .bad{animation:expenseWarn 6s ease-in-out infinite}
-
-@keyframes calendarBook{0%,18%{opacity:.25;transform:scaleX(0)}30%,76%{opacity:1;transform:scaleX(1)}90%,100%{opacity:.25;transform:scaleX(0)}}
-@keyframes calendarFree{0%,18%{opacity:1}30%,78%{opacity:0}90%,100%{opacity:1}}
-@keyframes tourConfirm{0%,28%{transform:scale(.96);opacity:.75}42%,100%{transform:scale(1);opacity:1}}
-@keyframes bookingToast{0%,22%{opacity:.45;transform:translateY(4px)}35%,100%{opacity:1;transform:none}}
-@keyframes bookingBefore{0%,29%{opacity:1;transform:none}38%,100%{opacity:0;transform:translateY(-3px)}}
-@keyframes bookingConfirmed{0%,32%{opacity:0;transform:translateY(3px)}42%,100%{opacity:1;transform:none}}
-@keyframes receptionArrival{0%,35%{box-shadow:none;transform:translateY(3px);opacity:.7}48%,100%{box-shadow:0 0 0 3px rgba(28,154,108,.12);transform:none;opacity:1}}
-@keyframes checkinBefore{0%,40%{opacity:1}48%,100%{opacity:0}}
-@keyframes checkinAfter{0%,42%{opacity:0}52%,100%{opacity:1}}
-@keyframes checkinProgress{0%,38%{background:#DFE3EB}48%,100%{background:var(--green)}}
-@keyframes checkinSubmit{0%,39%{opacity:1;transform:scale(1)}48%,100%{opacity:0;transform:scale(.96)}}
-@keyframes checkinComplete{0%,43%{opacity:0;transform:translateY(5px)}53%,100%{opacity:1;transform:none}}
-@keyframes frroBefore{0%,35%{opacity:1;transform:none}45%,100%{opacity:0;transform:translateY(-3px)}}
-@keyframes frroAfter{0%,38%{opacity:0;transform:translateY(3px)}50%,100%{opacity:1;transform:none}}
-@keyframes frroAction{0%,35%{transform:scale(1)}42%{transform:scale(.95)}52%,100%{transform:scale(1)}}
-@keyframes expenseGrow{0%{transform:scaleY(.08)}100%{transform:scaleY(1)}}
-@keyframes expenseWarn{0%,35%,100%{opacity:.75}48%,72%{opacity:1}}
-
 @media(max-width:900px){
-  .calendar-row{grid-template-columns:72px minmax(0,1fr)}
-  .calendar-days{grid-template-columns:72px repeat(4,minmax(0,1fr))}
   .tour-checkin{grid-template-columns:1fr 1fr;gap:12px;padding:16px}
   .checkin-phone{padding:12px;border-width:4px}
   .expense-body{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   .tour-head{padding:10px 12px}
-  .calendar-board{padding:10px 8px 6px}
-  .calendar-row{grid-template-columns:58px minmax(0,1fr);min-height:38px}
-  .calendar-days{grid-template-columns:58px repeat(4,minmax(0,1fr))}
-  .calendar-row>b{font-size:8px}
-  .stay{padding:5px 3px;font-size:6px}
-  .calendar-empty{font-size:6px}
-  .calendar-footer{gap:8px;padding:8px;font-size:7px}
-  .calendar-confirmed{margin-left:0}
   .booking-layout{grid-template-columns:1fr;padding:11px;gap:10px}
   .payment-card{width:100%}
   .booking-toast{margin:0 11px 11px}
@@ -231,18 +158,14 @@
   .expense-item>span small{font-size:6px}
   .expense-alert{margin:9px 10px 0}
 }
-@media(prefers-reduced-motion:reduce){
-  .tour-window *,.tour-checkin *{animation:none!important;scroll-behavior:auto!important}
-  .tour-calendar .calendar-new-stay{opacity:1;transform:none}
-  .tour-calendar .calendar-confirmed,.tour-booking .booking-toast,.tour-booking .booking-confirmed,
-  .tour-booking .payment-save b,.tour-checkin .checkin-done,.tour-checkin .reception-alert,
-  .tour-frro .frro-before,.tour-frro .formc-action.primary,.tour-expenses .expense-alert,
-  .tour-expenses .expense-item .bad{opacity:1;transform:none}
-  .tour-frro .frro-before{display:none}
-  .tour-frro .frro-after{display:inline-flex}
-  .tour-checkin .checkin-before{display:none}
-  .tour-checkin .checkin-after{display:inline}
-  .tour-checkin .checkin-progress i{background:var(--green)}
-  .tour-checkin .checkin-submit{display:none}
-  .tour-expenses .income-bar,.tour-expenses .cost-bar{transform:none}
-}
+.tour-booking .booking-toast,.tour-booking .booking-confirmed,
+.tour-booking .payment-save b,.tour-checkin .checkin-done,.tour-checkin .reception-alert,
+.tour-frro .frro-before,.tour-frro .formc-action.primary,.tour-expenses .expense-alert,
+.tour-expenses .expense-item .bad{opacity:1;transform:none}
+.tour-frro .frro-before{visibility:hidden;opacity:0}
+.tour-frro .frro-after{visibility:visible;opacity:1}
+.tour-checkin .checkin-before{display:none}
+.tour-checkin .checkin-after{display:inline}
+.tour-checkin .checkin-progress i{background:var(--green)}
+.tour-checkin .checkin-submit{display:none}
+.tour-expenses .income-bar,.tour-expenses .cost-bar{transform:none}

@@ -3,135 +3,195 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>nammaBookings — list your stay, get direct bookings</title>
-<meta name="description" content="nammaBookings is the booking site for homestays, hotels and resorts in India. List your property free and sync it with the NammaStay app.">
-<link rel="manifest" href="manifest.webmanifest">
+<title>nammaBookings — stays, booked direct</title>
+<meta name="description" content="Find hostels and PGs across South India. Book direct, pay at the property, and discover real stays on NammaStay Search. Owners can list free.">
 <meta name="theme-color" content="#0E1B3D">
+<link rel="canonical" href="https://nammabookings.com/">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="travel.css">
 </head>
-<body>
-<header><a class="logo" href="./"><img src="logo.png" alt="">namma<span>Bookings</span></a>
-  <nav><a href="find.html">Find a stay</a><a href="host.html">Host sign in</a></nav></header>
+<body class="home-page">
+<header class="site-header">
+  <a class="logo" href="./" aria-label="nammaBookings home"><img src="logo.png" alt="">namma<span>Bookings</span></a>
+  <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">☰</button>
+  <nav id="site-nav">
+    <a href="#how">How it works</a>
+    <a href="#screens">Explore the app</a>
+    <a href="stays.html">Hostels &amp; PGs</a>
+    <a href="find.html">Find a stay</a>
+    <a href="host.html">Host sign in</a>
+    <a class="nav-cta" href="owner.html">List your property</a>
+  </nav>
+</header>
 
-<section class="hero big">
-  <i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i>
-  <div class="wrap">
-    <h1>Fill your rooms. <span class="rot" id="rot">Keep your guests.</span></h1>
-    <p>nammaBookings is a booking site built for Indian homestays, hotels, resorts and PGs. List your property in minutes and get direct bookings — and it syncs automatically with your NammaStay app.</p>
-    <p class="row"><a class="cta" href="host.html">List your property</a><a class="cta alt" href="find.html">Browse stays</a></p>
-  </div>
-</section>
-
-<section class="band">
-  <div class="wrap stats">
-    <div><b>₹0</b><span>to list your property</span></div>
-    <div><b>2 min</b><span>to go live</span></div>
-    <div><b>1 click</b><span>sync with NammaStay</span></div>
-    <div><b>Direct</b><span>guests call you, no middleman</span></div>
-  </div>
-</section>
-
-<section class="wrap sec reveal">
-  <h2>On the web and in your pocket</h2>
-  <p class="mute">Guests book on any browser or phone. You see it instantly in your dashboard and in the NammaStay app.</p>
-  <div class="devices">
-    <div class="laptop" aria-label="nammaBookings web app preview">
-      <div class="lscreen">
-        <div class="bar"><i></i><i></i><i></i><span class="url">nammabookings.in</span></div>
-        <div class="wbody">
-          <div class="wnav"><b>namma<span>Bookings</span></b><em>List your property</em></div>
-          <div class="wsearch"><span class="typing">Coorg</span><span>12 Nov</span><span>14 Nov</span><u>Search</u></div>
-          <div class="wcards">
-            <div class="wc c1"><s style="background-image:url(img/homestay.jpg)"></s><b>Blue Mountain Homestay</b><small>from ₹2,400</small></div>
-            <div class="wc c2"><s style="background-image:url(img/villa.jpg)"></s><b>Backwater Houseboat</b><small>from ₹4,100</small></div>
-            <div class="wc c3"><s style="background-image:url(img/estate.jpg)"></s><b>Tea Hills Stay</b><small>from ₹3,200</small></div>
-          </div>
-          <div class="wtoast">✓ Booked! Ref 7A3F9C21</div>
-        </div>
+<main>
+  <section class="hero-home">
+    <div class="hero-copy">
+      <div class="eyebrow"><span></span> A better way to stay in South India</div>
+      <h1>Find your place.<br><em>Book direct.</em></h1>
+      <p>Hostels for tonight. A PG for the next chapter. Real beds, clear prices and no booking fee — all connected to the people who run the place.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="stays.html">Find a hostel or PG <span>→</span></a>
+        <a class="text-link" href="owner.html">I have a property <span>↗</span></a>
       </div>
-      <div class="lbase"></div>
+      <div class="hero-promises"><span>✓ No booking fee</span><span>✓ Pay at the property</span><span>✓ Real availability</span></div>
     </div>
-    <div class="phone" aria-label="NammaStay mobile app preview">
-      <div class="notch"></div>
-      <div class="pscreen">
-        <div class="phead">NammaStay</div>
-        <div class="pnotif"><b>New booking · nammaBookings</b><span>Misty Hills · 2 nights · ₹4,800</span></div>
-        <div class="pcal">
-          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-          <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-          <i></i><i></i><i class="fill f1"></i><i class="fill f2"></i><i></i><i></i><i></i>
-        </div>
-        <div class="pstat"><div><b>12</b><small>Rooms</small></div><div><b class="count">8</b><small>Booked</small></div><div><b>₹38k</b><small>Today</small></div></div>
-        <div class="psync">⟳ Synced with nammaBookings</div>
-      </div>
+    <a class="hero-preview" href="screens/desktop-search.png" data-lightbox aria-label="View the NammaStay desktop search preview">
+      <img src="screens/desktop-search.png" alt="NammaStay Search desktop results showing hostel listings and map" fetchpriority="high">
+      <span class="preview-label"><span class="live-dot"></span> A little preview of the experience</span>
+    </a>
+    <div class="hero-sun" aria-hidden="true"></div>
+  </section>
+
+  <section class="trust-strip" aria-label="NammaBookings benefits">
+    <div><b>₹0</b><span>booking fee</span></div>
+    <div><b>Direct</b><span>with your host</span></div>
+    <div><b>Live</b><span>beds &amp; rooms</span></div>
+    <div><b>Made here</b><span>for stays in India</span></div>
+  </section>
+
+  <section class="search-callout" id="explore">
+    <div>
+      <span class="eyebrow">Start with where you're going</span>
+      <h2>Your next stay is a search away.</h2>
+      <p>Search backpacker hostels by the night, or find a PG that feels like home by the month.</p>
     </div>
-  </div>
-</section>
+    <div class="search-actions">
+      <a class="button button-primary" href="stays.html">Search hostels &amp; PGs <span>→</span></a>
+      <a class="button button-light" href="find.html">Browse homestays &amp; hotels</a>
+    </div>
+  </section>
 
-<section class="wrap sec reveal">
-  <h2>Stays guests will love</h2>
-  <p class="mute">A taste of what hosts list on nammaBookings (sample properties; photos from Wikimedia Commons).</p>
-  <div class="grid">
-    <div class="tile"><img src="img/homestay.jpg" alt="Homestay in Coorg"><div><b>Blue Mountain Homestay</b><div class="mute">Homestay · Coorg</div><div class="price">from ₹2,400 <span class="mute">/ night</span></div></div></div>
-    <div class="tile"><img src="img/villa.jpg" alt="Houseboat on the Alleppey backwaters"><div><b>Backwater Houseboat</b><div class="mute">Houseboat · Alleppey</div><div class="price">from ₹4,100 <span class="mute">/ night</span></div></div></div>
-    <div class="tile"><img src="img/estate.jpg" alt="Tea plantations in Munnar"><div><b>Tea Hills Stay</b><div class="mute">Hill stay · Munnar</div><div class="price">from ₹3,200 <span class="mute">/ night</span></div></div></div>
-    <div class="tile"><img src="img/resort.jpg" alt="Beach cabins in South Goa"><div><b>Cola Beach Cabins</b><div class="mute">Beach resort · Goa</div><div class="price">from ₹5,600 <span class="mute">/ night</span></div></div></div>
-  </div>
-</section>
+  <section class="section" id="how">
+    <div class="section-heading">
+      <div><span class="eyebrow">A stay, made simple</span><h2>Good trips start with the right bed.</h2></div>
+      <p>From finding a free bed to getting directions after your host confirms — everything is straightforward.</p>
+    </div>
+    <div class="journey-grid">
+      <a class="journey-card" href="screens/search.png" data-lightbox>
+        <span class="step-number">01</span><img src="screens/search.png" alt="Mobile NammaStay Search home screen with hostel and PG options" loading="lazy">
+        <div><h3>Tell us where</h3><p>Choose your city, dates and the kind of stay you need.</p></div>
+      </a>
+      <a class="journey-card" href="screens/results.png" data-lightbox>
+        <span class="step-number">02</span><img src="screens/results.png" alt="Hostel search results with availability and prices" loading="lazy">
+        <div><h3>See what's free</h3><p>Compare live beds and owner-confirmed stays, with prices upfront.</p></div>
+      </a>
+      <a class="journey-card" href="screens/bed-picker.png" data-lightbox>
+        <span class="step-number">03</span><img src="screens/bed-picker.png" alt="Hostel room and bed selector with availability" loading="lazy">
+        <div><h3>Choose your bed</h3><p>Know what is available, what it costs, and what the place offers.</p></div>
+      </a>
+      <a class="journey-card" href="screens/booked.png" data-lightbox>
+        <span class="step-number">04</span><img src="screens/booked.png" alt="Booking success screen with host contact and directions" loading="lazy">
+        <div><h3>Go meet your host</h3><p>Your confirmed booking, host contact and directions in one place.</p></div>
+      </a>
+    </div>
+  </section>
 
-<section class="wrap sec reveal">
-  <h2>Why hosts choose nammaBookings</h2>
-  <div class="grid3">
-    <div class="card"><h3>List in minutes</h3><p>Add photos, rooms, prices and amenities. Your property is live on the site the moment you publish.</p></div>
-    <div class="card"><h3>Synced with NammaStay</h3><p>Enter your listing code in the NammaStay app. Room counts and rates flow out; bookings flow back in. No double entry, no overbooking.</p></div>
-    <div class="card"><h3>Direct guest contact</h3><p>Every booking comes with the guest's name and phone number so you can confirm and welcome them yourself.</p></div>
-    <div class="card"><h3>Always in control</h3><p>Change prices, close rooms or cancel a booking from your host dashboard whenever you like.</p></div>
-    <div class="card"><h3>Made for India</h3><p>Prices in ₹, built for homestays, resorts, villas and PGs — from Coorg to Goa to Jaipur.</p></div>
-    <div class="card"><h3>Your own API key</h3><p>NammaStay talks to nammaBookings with its own secure key — never shared with anyone else.</p></div>
-  </div>
-</section>
+  <section class="split-feature">
+    <div class="split-copy">
+      <span class="eyebrow">For the longer stay</span>
+      <h2>More than a room.<br>A place to settle in.</h2>
+      <p>Looking for a PG? Browse monthly rents, choose the bed that suits you, and schedule a visit before you decide.</p>
+      <ul><li>Monthly prices, clearly shown</li><li>Rooms and beds with live availability</li><li>Visit first. Decide with confidence.</li></ul>
+      <a class="button button-primary" href="stays.html#/results?city=Chennai&kind=pg">Explore PGs <span>→</span></a>
+    </div>
+    <a class="split-image" href="screens/pg-bed-picker.png" data-lightbox><img src="screens/pg-bed-picker.png" alt="PG listing with monthly room prices, move-in details, and schedule a visit action" loading="lazy"></a>
+  </section>
 
-<section class="wrap sec reveal">
-  <h2>Why nammaBookings beats Booking.com and other OTAs</h2>
-  <p class="mute">Big OTAs typically charge hosts a commission on every booking (often 15% or more) and own the guest relationship. nammaBookings is built the other way round.</p>
-  <div class="card" style="overflow-x:auto"><table class="cmp">
-    <tr><th></th><th class="us">nammaBookings</th><th>Booking.com &amp; other OTAs</th></tr>
-    <tr><td>Commission per booking</td><td class="us">None</td><td>Typically 15%+ of every booking</td></tr>
-    <tr><td>Listing fee</td><td class="us">Free</td><td>Free, but you pay when you sell</td></tr>
-    <tr><td>Guest contact</td><td class="us">Name and phone shared with you directly</td><td>Often masked or limited until close to arrival</td></tr>
-    <tr><td>Sync with your property software</td><td class="us">Built in with the NammaStay app</td><td>Needs a separate channel manager (extra cost)</td></tr>
-    <tr><td>Overbooking protection</td><td class="us">Live room counts from NammaStay</td><td>Depends on your channel manager</td></tr>
-    <tr><td>Built for</td><td class="us">Indian homestays, resorts, villas, PGs</td><td>Global hotel inventory</td></tr>
-    <tr><td>Your API key</td><td class="us">NammaStay's own, never shared</td><td>Shared partner credentials via third parties</td></tr>
-  </table></div>
-  <p class="mute">OTA terms vary by country, plan and property. Check your own contract for exact rates.</p>
-</section>
+  <section class="section" id="screens">
+    <div class="section-heading">
+      <div><span class="eyebrow">See how it all fits together</span><h2>Thought through, screen by screen.</h2></div>
+      <p>Explore the guest journey, the host tools, and how NammaStay Search connects to the app.</p>
+    </div>
+    <div class="gallery-toolbar" role="group" aria-label="Filter product screenshots">
+      <button class="gallery-filter active" data-filter="all" aria-pressed="true">Everything <span>31</span></button>
+      <button class="gallery-filter" data-filter="guest" aria-pressed="false">For guests</button>
+      <button class="gallery-filter" data-filter="owner" aria-pressed="false">For hosts</button>
+      <button class="gallery-filter" data-filter="system" aria-pressed="false">NammaStay app</button>
+      <button class="gallery-filter" data-filter="pg" aria-pressed="false">PG stays</button>
+    </div>
+    <div class="screens-grid">
+      <a class="screen-card" data-category="guest" href="screens/search.png" data-lightbox><img src="screens/search.png" alt="Search hostels and PGs" loading="lazy"><span>Guest search</span></a>
+      <a class="screen-card" data-category="guest" href="screens/results.png" data-lightbox><img src="screens/results.png" alt="Hostel results with live beds" loading="lazy"><span>Search results</span></a>
+      <a class="screen-card" data-category="guest" href="screens/bed-picker.png" data-lightbox><img src="screens/bed-picker.png" alt="Hostel bed picker" loading="lazy"><span>Pick a bed</span></a>
+      <a class="screen-card" data-category="guest" href="screens/confirm.png" data-lightbox><img src="screens/confirm.png" alt="Review booking details and confirm" loading="lazy"><span>Booking details</span></a>
+      <a class="screen-card" data-category="guest" href="screens/booked.png" data-lightbox><img src="screens/booked.png" alt="Booking confirmation and next steps" loading="lazy"><span>You're booked</span></a>
+      <a class="screen-card" data-category="system" href="screens/subscriber-search.png" data-lightbox><img src="screens/subscriber-search.png" alt="NammaStay Search integration in property settings" loading="lazy"><span>Search in NammaStay</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-filters.png" data-lightbox><img src="screens/guest-filters.png" alt="Guest filters for women-only dorms and 360 degree views" loading="lazy"><span>Filters &amp; reviews</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-map.png" data-lightbox><img src="screens/guest-map.png" alt="Map view of available hostels" loading="lazy"><span>Search on a map</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-reviews.png" data-lightbox><img src="screens/guest-reviews.png" alt="Hostel listing with verified guest reviews" loading="lazy"><span>Reviews from real stays</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-360.png" data-lightbox><img src="screens/guest-360.png" alt="Interactive 360 degree hostel room view" loading="lazy"><span>360° room view</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-request.png" data-lightbox><img src="screens/guest-request.png" alt="Owner-confirmation booking request status" loading="lazy"><span>Request to book</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-community.png" data-lightbox><img src="screens/guest-community.png" alt="Confirmed guest details and host community links" loading="lazy"><span>Meet the community</span></a>
+      <a class="screen-card" data-category="guest" href="screens/guest-review.png" data-lightbox><img src="screens/guest-review.png" alt="Guest review form after a completed stay" loading="lazy"><span>Share your stay</span></a>
+      <a class="screen-card" data-category="owner" href="screens/host-signup.png" data-lightbox><img src="screens/host-signup.png" alt="Free property listing signup form" loading="lazy"><span>List your property free</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-review.png" data-lightbox><img src="screens/owner-review.png" alt="Listing verification checklist for the NammaStay team" loading="lazy"><span>Trust &amp; verification</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-live.png" data-lightbox><img src="screens/owner-live.png" alt="Owner confirmation that a listing is live" loading="lazy"><span>Go live</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-bookings.png" data-lightbox><img src="screens/owner-bookings.png" alt="Host booking requests and responses" loading="lazy"><span>Booking requests</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-no-reply.png" data-lightbox><img src="screens/owner-no-reply.png" alt="Owner request status and response guidance" loading="lazy"><span>Never miss a request</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-full-dates.png" data-lightbox><img src="screens/owner-full-dates.png" alt="Owner availability and full dates controls" loading="lazy"><span>Manage availability</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-tools.png" data-lightbox><img src="screens/owner-tools.png" alt="Host listing tools for beds, 360 photos, community links and reviews" loading="lazy"><span>Your listing, your way</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-full-app.png" data-lightbox><img src="screens/owner-full-app.png" alt="Full NammaStay app features for property owners" loading="lazy"><span>The full app</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-monthly-bill.png" data-lightbox><img src="screens/owner-monthly-bill.png" alt="Monthly host bill and payment breakdown" loading="lazy"><span>Simple monthly bills</span></a>
+      <a class="screen-card" data-category="owner" href="screens/owner-bill-savings.png" data-lightbox><img src="screens/owner-bill-savings.png" alt="Bill savings compared with the NammaStay subscription plan" loading="lazy"><span>See what you save</span></a>
+      <a class="screen-card" data-category="system" href="screens/admin-review.png" data-lightbox><img src="screens/admin-review.png" alt="Admin listing review checklist" loading="lazy"><span>Listing review console</span></a>
+      <a class="screen-card" data-category="system" href="screens/admin-bills.png" data-lightbox><img src="screens/admin-bills.png" alt="Admin monthly billing dashboard" loading="lazy"><span>Billing console</span></a>
+      <a class="screen-card" data-category="system" href="screens/connect-setup.jpeg" data-lightbox><img src="screens/connect-setup.jpeg" alt="NammaStay team setup guide for OTA sync" loading="lazy"><span>Connect setup</span></a>
+      <a class="screen-card" data-category="system" href="screens/ota-sync.jpeg" data-lightbox><img src="screens/ota-sync.jpeg" alt="NammaStay owner OTA sync dashboard" loading="lazy"><span>OTA sync in the app</span></a>
+      <a class="screen-card" data-category="pg" href="screens/pg-results.png" data-lightbox><img src="screens/pg-results.png" alt="Monthly PG search results" loading="lazy"><span>Find a PG</span></a>
+      <a class="screen-card" data-category="pg" href="screens/pg-bed-picker.png" data-lightbox><img src="screens/pg-bed-picker.png" alt="PG monthly bed selection with price details" loading="lazy"><span>Choose a monthly bed</span></a>
+      <a class="screen-card" data-category="pg" href="screens/pg-visit.png" data-lightbox><img src="screens/pg-visit.png" alt="Schedule a PG visit" loading="lazy"><span>Schedule a visit</span></a>
+      <a class="screen-card" data-category="system" href="screens/desktop-search.png" data-lightbox><img src="screens/desktop-search.png" alt="Desktop NammaStay Search with filters and map results" loading="lazy"><span>Desktop search</span></a>
+    </div>
+    <p class="gallery-note">Screens show the NammaStay Search experience and sample listings.</p>
+  </section>
 
-<section class="wrap sec reveal">
-  <h2>How it works</h2>
-  <div class="grid3 steps">
-    <div class="card"><span class="n">1</span><h3>Register</h3><p>Create a free host account with your email.</p></div>
-    <div class="card"><span class="n">2</span><h3>Add your property</h3><p>Upload photos, set room types and nightly rates.</p></div>
-    <div class="card"><span class="n">3</span><h3>Get bookings</h3><p>Guests search and book. Connect NammaStay to keep everything in sync.</p></div>
-  </div>
-</section>
+  <section class="owner-band" id="hosts">
+    <div class="owner-band-copy">
+      <span class="eyebrow">A welcome mat for independent stays</span>
+      <h2>Your place deserves direct bookings.</h2>
+      <p>List a hostel or PG for free. Set your prices, reply to requests and welcome guests directly. Already on NammaStay? Keep beds in sync with your calendar.</p>
+      <a class="button button-cream" href="owner.html">List your hostel or PG <span>→</span></a>
+      <a class="owner-login" href="host.html">Already listed on nammaBookings? Host sign in</a>
+    </div>
+    <a class="owner-band-image" href="screens/owner-bookings.png" data-lightbox><img src="screens/owner-bookings.png" alt="A host reviewing and responding to guest booking requests" loading="lazy"></a>
+  </section>
 
-<section class="hero cta-band reveal">
-  <div class="wrap">
-    <h2>Ready to get more direct bookings?</h2>
-    <p class="row" style="justify-content:center"><a class="cta" href="host.html">Start listing — it's free</a></p>
-  </div>
-</section>
+  <section class="section" id="difference">
+    <div class="section-heading">
+      <div><span class="eyebrow">Travel more like a local</span><h2>Good for guests. Fair to hosts.</h2></div>
+      <p>No mystery charges for guests. No marketplace commission on NammaStay Search for subscribers.</p>
+    </div>
+    <div class="value-grid">
+      <article><span>01</span><h3>No booking fee</h3><p>The price you see is the property's price. Pay your host at the property.</p></article>
+      <article><span>02</span><h3>Real availability</h3><p>Live beds come straight from the host's calendar. What is free is what you can book.</p></article>
+      <article><span>03</span><h3>Talk to your host</h3><p>Your stay is run by real people. Get in touch directly when you need to.</p></article>
+    </div>
+  </section>
 
-<footer>© nammaBookings · a NammaStay product · <a href="find.html">Find a stay</a> · <a href="host.html">Host dashboard</a>
-  <div class="mute" style="margin-top:8px;font-size:11px">Photos from Wikimedia Commons:
-    <a href="https://commons.wikimedia.org/wiki/File:Blue_Mountain_Homestay_Inakanahalli_Coorg_Jun24_A7CR_01433.jpg">Blue Mountain Homestay</a> by Timothy A. Gonsalves (CC BY-SA 4.0) ·
-    <a href="https://commons.wikimedia.org/wiki/File:Houseboat_in_the_town_of_Alleppey_Kerala,_Dec_2011.jpg">Houseboat, Alleppey</a> by Henkelz (CC BY-SA 3.0) ·
-    <a href="https://commons.wikimedia.org/wiki/File:Tea_plantations_in_Munnar.jpg">Tea plantations, Munnar</a> by eatoutzone.com (CC BY 3.0) ·
-    <a href="https://commons.wikimedia.org/wiki/File:Dwarka_Resort_Cola_Goa_Jan19_DSC06082.jpg">Dwarka Resort, Cola, Goa</a> by Timothy A. Gonsalves (CC BY-SA 4.0). Images resized.</div></footer>
+  <section class="final-cta">
+    <span class="eyebrow">Your next stay is out there</span>
+    <h2>Make it a good one.</h2>
+    <div class="hero-actions">
+      <a class="button button-primary" href="stays.html">Find a hostel or PG <span>→</span></a>
+      <a class="button button-light" href="owner.html">List your property free</a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <a class="logo" href="./"><img src="logo.png" alt="">namma<span>Bookings</span></a>
+  <p>Book direct. Stay local. <span>© nammaBookings · a NammaStay product</span></p>
+  <nav><a href="stays.html">Hostels &amp; PGs</a><a href="find.html">Find a stay</a><a href="owner.html">List your property</a><a href="host.html">Host sign in</a><a href="README.md">About</a></nav>
+</footer>
+
+<dialog class="lightbox" id="lightbox" aria-label="Screenshot preview"><button class="lightbox-close" aria-label="Close image preview">×</button><img alt=""></dialog>
 <script src="home.js" defer></script>
 </body>
 </html>

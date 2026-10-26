@@ -3,6 +3,8 @@ import { sb, configured, $, esc, inr, say, today, photoUrl } from './common.js';
 const msg = $('#msg');
 if (!configured) say(msg, 'Not connected yet — set the Supabase keys in assets/js/config.js.', true);
 
+const TYPES = { hotel: ['hotel', 'resort'], homestay: ['homestay', 'villa', 'apartment'] };
+let type = '';
 const nights = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 
 async function search(e) {
@@ -14,12 +16,13 @@ async function search(e) {
   const { data, error } = await sb.rpc('mk_search', { p_city: f.get('city'), p_in: inD, p_out: outD, p_guests: Number(f.get('guests')) || 1 });
   if (error) return say(msg, error.message, true);
   const q = inD ? `&in=${inD}&out=${outD}&guests=${Number(f.get('guests')) || 1}` : '';
-  $('#results').innerHTML = data.length ? data.map((l) => `
+  const rows = TYPES[type] ? data.filter((l) => TYPES[type].includes(String(l.property_type || '').toLowerCase())) : data;
+  $('#results').innerHTML = rows.length ? rows.map((l) => `
     <a class="tile" href="?id=${esc(l.id)}${q}" style="text-decoration:none;color:inherit">
       ${photoUrl(l.photo) ? `<img src="${esc(photoUrl(l.photo))}" alt="">` : '<div class="ph"></div>'}
       <div><b>${esc(l.title)}</b><div class="mute">${esc(l.property_type)} · ${esc(l.city)}</div>
       <div class="price">from ${inr(l.from_paise)} <span class="mute">/ night</span></div></div></a>`).join('')
-    : '<div class="card">No stays found. Try other dates or a different city.</div>';
+    : '<div class="card">No stays found. Try other dates, a different city or another property type.</div>';
 }
 
 async function detail(id, params) {
@@ -62,5 +65,14 @@ async function detail(id, params) {
 if (configured) {
   const params = new URLSearchParams(location.search), id = params.get('id');
   if (id && /^[0-9a-f-]{36}$/i.test(id)) detail(id, params);
-  else { $('#f').onsubmit = search; search(); }
+  else {
+    const f = $('#f');
+    type = TYPES[params.get('type')] ? params.get('type') : '';
+    ['city', 'in', 'out', 'guests'].forEach((n) => { if (params.get(n) && f.elements[n]) f.elements[n].value = params.get(n); });
+    const tabs = document.querySelectorAll('#types button');
+    const mark = () => tabs.forEach((b) => b.classList.toggle('on', b.dataset.t === type));
+    tabs.forEach((b) => b.onclick = () => { type = b.dataset.t; mark(); search(); });
+    mark();
+    f.onsubmit = search; search();
+  }
 }

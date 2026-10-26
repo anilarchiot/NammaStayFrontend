@@ -150,6 +150,12 @@ create policy mk_photos_delete on storage.objects for delete to authenticated
   using (bucket_id = 'mk-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ---------------------------------------------------------------- NammaStay Connect channel
+alter table public.cn_otas add column if not exists hint text;
+alter table public.cn_otas add column if not exists enabled boolean not null default false;
+alter table public.cn_otas add column if not exists sort int not null default 0;
 insert into public.cn_otas (ota, name, hint, enabled, sort) values
   ('nammastay', 'nammaBookings (marketplace)', 'Listing code from your host dashboard', true, 5)
 on conflict (ota) do nothing;
+
+-- Make PostgREST pick up the new functions immediately.
+notify pgrst, 'reload schema';

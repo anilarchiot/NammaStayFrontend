@@ -4,8 +4,14 @@ A separate public web app (booking-site style) where hosts register, list proper
 It reuses the project's Supabase settings from `../assets/js/config.js` and can be hosted as its own static site
 (deploy the `marketplace/` folder together with `assets/js/config.js`, e.g. a second Cloudflare Pages project).
 
-- `index.html` – guests search by city/dates/guests, view a property and book.
+- `index.html` – the NammaBookings homepage and product guide, with the full screenshot gallery and links into guest search and host signup.
+- `stays.html` – guests search hostels and PGs by city/dates, choose a bed, book or request a visit, and track their request.
+- `find.html` – guests search and book homestays, hotels and resorts.
 - `host.html` – hosts register/sign in, upload a property (photos, rooms, prices), see bookings and the **listing code**.
+- `owner.html` – free hostel/PG listing, booking requests, availability and monthly bills.
+- `search-admin.html` – internal listing review and billing tools.
+
+The homepage screenshot gallery uses the images in `marketplace/screens/`; all 31 supplied product screenshots are included as local site assets.
 
 ## Run and deploy as its own web app
 
@@ -40,3 +46,15 @@ pointed at its own `/api` proxy ([worker/index.js](../worker/index.js)). The Sup
 files; they live in the Worker (`SUPABASE_URL` var, `SUPABASE_ANON_KEY` secret). Deploy with `npm run deploy:live` after
 `wrangler secret put SUPABASE_ANON_KEY --config wrangler.live.jsonc` (and `--config marketplace/wrangler.live.jsonc`).
 Note: this makes code and traffic much harder to read, but anything a browser runs can still be inspected.
+
+## NammaStay Search (free hostel / PG listings)
+
+Mobile-first guest app and owner portal built on the same Supabase project (migration `supabase/migrations/056_nammastay_search.sql`, rollback in `supabase/rollbacks/`).
+
+- `stays.html` – guests: search (hostel per night / PG monthly), results with live-beds vs owner-confirms, map, bed picker, women-only filter, 360° view, reviews, booking request, PG visit scheduling, request tracking, post-stay review.
+- `owner.html` – owners: free sign-up (5+ photos, rooms, map pin, proof), then Requests (accept / can't take it, did they stay?), Free beds (women-only, 360°, WhatsApp community, Instagram, review replies) and Bill (launch offer, 9% after, UTR payment).
+- `search-admin.html` – NammaStay team: checklist-gated approval (Verified badge), ask for changes / reject, bills (confirm UTR, WhatsApp reminder), commission settings, subscribers.
+
+Setup: run `056_nammastay_search.sql` after 055, then make yourself an admin:
+`insert into public.mk_admins (user_id) select id from auth.users where email = 'you@example.com';`
+Optional: set `upiId` in `config.js` to show a "Pay by UPI" button on owner bills. Phone "Send code" verification needs an SMS provider; until then the team ticks "Phone verified" on the video call.
