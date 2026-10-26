@@ -87,6 +87,95 @@
     row.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
   });
 
+  // Resizable table columns: drag the edge of any column header; double-click an edge to reset the table.
+  // Pages re-render their tables, so widths are remembered per page, table and column title.
+  var RS_MIN = 48;
+  function rsKey(table, index) {
+    var all = Array.prototype.slice.call(document.querySelectorAll('table'));
+    return 'ns.colw.' + location.pathname + '.' + all.indexOf(table) + '.' + index + '.' + table.rows[0].cells[index].textContent.trim().toLowerCase();
+  }
+  function rsSave(table, heads) {
+    try { heads.forEach(function (th, i) { localStorage.setItem(rsKey(table, i), String(Math.round(th.getBoundingClientRect().width))); }); } catch (err) { /* ignore */ }
+  }
+  function rsFreeze(table, heads) {
+    var widths = heads.map(function (th) { return th.getBoundingClientRect().width; });
+    table.classList.add('ns-rs-fixed');
+    table.style.tableLayout = 'fixed';
+    table.style.minWidth = '0';
+    heads.forEach(function (th, i) { th.style.width = widths[i] + 'px'; });
+    table.style.width = widths.reduce(function (a, b) { return a + b; }, 0) + 'px';
+  }
+  function rsReset(table, heads) {
+    table.classList.remove('ns-rs-fixed');
+    table.style.tableLayout = table.style.minWidth = table.style.width = '';
+    heads.forEach(function (th, i) {
+      th.style.width = '';
+      try { localStorage.removeItem(rsKey(table, i)); } catch (err) { /* ignore */ }
+    });
+  }
+  function makeResizable(table) {
+    if (table.dataset.nsRs || table.closest('.ns-sidebar') || !table.rows.length) return;
+    var heads = Array.prototype.slice.call(table.rows[0].cells).filter(function (c) { return c.tagName === 'TH'; });
+    if (heads.length < 2 || heads.length !== table.rows[0].cells.length || heads.some(function (th) { return th.colSpan > 1; })) return;
+    table.dataset.nsRs = '1';
+    var saved = [];
+    try { saved = heads.map(function (th, i) { return Number(localStorage.getItem(rsKey(table, i))) || 0; }); } catch (err) { /* ignore */ }
+    if (saved.some(Boolean) && table.offsetWidth) {
+      rsFreeze(table, heads);
+      var total = 0;
+      heads.forEach(function (th, i) {
+        if (saved[i]) th.style.width = Math.max(RS_MIN, saved[i]) + 'px';
+        total += parseFloat(th.style.width);
+      });
+      table.style.width = total + 'px';
+    }
+    heads.forEach(function (th, i) {
+      if (th.classList.contains('ns-sticky-end') || i === heads.length - 1 && th.textContent.trim() === '') return;
+      th.classList.add('ns-rs-th');
+      var grip = document.createElement('span');
+      grip.className = 'ns-rs-grip';
+      grip.setAttribute('aria-hidden', 'true');
+      th.appendChild(grip);
+      grip.addEventListener('click', function (e) { e.stopPropagation(); });
+      grip.addEventListener('dblclick', function (e) { e.stopPropagation(); rsReset(table, heads); });
+      grip.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!table.classList.contains('ns-rs-fixed')) rsFreeze(table, heads);
+        var startX = e.clientX, startW = th.getBoundingClientRect().width, startT = parseFloat(table.style.width);
+        grip.setPointerCapture(e.pointerId);
+        grip.classList.add('is-active');
+        document.body.classList.add('ns-rs-dragging');
+        function move(ev) {
+          var w = Math.max(RS_MIN, startW + ev.clientX - startX);
+          th.style.width = w + 'px';
+          table.style.width = (startT - startW + w) + 'px';
+        }
+        function up() {
+          grip.removeEventListener('pointermove', move);
+          grip.removeEventListener('pointerup', up);
+          grip.removeEventListener('pointercancel', up);
+          grip.classList.remove('is-active');
+          document.body.classList.remove('ns-rs-dragging');
+          rsSave(table, heads);
+        }
+        grip.addEventListener('pointermove', move);
+        grip.addEventListener('pointerup', up);
+        grip.addEventListener('pointercancel', up);
+      });
+    });
+  }
+  function scanTables(root) {
+    if (!root.querySelectorAll) return;
+    if (root.tagName === 'TABLE') makeResizable(root);
+    Array.prototype.forEach.call(root.querySelectorAll('table'), makeResizable);
+  }
+  scanTables(document);
+  if ('MutationObserver' in window) {
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) { Array.prototype.forEach.call(m.addedNodes, function (n) { if (n.nodeType === 1) scanTables(n); }); });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   // Prototype: forms don't submit anywhere yet
   document.querySelectorAll('form').forEach(function (f) {
     f.addEventListener('submit', function (e) { e.preventDefault(); });

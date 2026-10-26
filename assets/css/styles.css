@@ -997,3 +997,12 @@ button.ivs-ms:hover{box-shadow:0 0 0 2px #1C9A6C inset}
 .rs-today-grid>div{padding:12px;border-radius:12px;background:#FBF9F1;border:1px solid #F0EBDB;display:flex;flex-direction:column;gap:4px;min-width:0}
 .rs-li{font-size:13px}
 @media (max-width:760px){.rs-today-grid{grid-template-columns:1fr}.rs-visit{padding:12px 14px}}
+
+/* Resizable table columns (see app.js) */
+.ns-rs-th:not(.ns-sticky-end){position:relative}
+.ns-rs-grip{position:absolute;top:0;right:-5px;bottom:0;width:10px;cursor:col-resize;z-index:2;touch-action:none}
+.ns-rs-grip::after{content:"";position:absolute;top:22%;bottom:22%;left:4px;width:2px;border-radius:2px;background:#D9D2BA;opacity:0;transition:opacity .15s}
+.ns-rs-th:hover .ns-rs-grip::after,.ns-rs-grip.is-active::after{opacity:1;background:var(--green)}
+.ns-rs-fixed th,.ns-rs-fixed td{overflow:hidden;text-overflow:ellipsis}
+.ns-rs-fixed th.ns-rs-th{overflow:visible}
+body.ns-rs-dragging{cursor:col-resize;user-select:none}
