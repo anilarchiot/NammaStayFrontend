@@ -8,6 +8,9 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
+    const origin = request.headers.get('origin');
+    if (origin && origin !== url.origin) return new Response('Forbidden', { status: 403 });
+
     const path = url.pathname.slice(4);
     if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !ALLOWED.some((p) => path.startsWith(p))) {
       return new Response('Not found', { status: 404 });
@@ -27,7 +30,7 @@ export default {
     const res = await fetch(target, { method: request.method, headers, body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body, redirect: 'manual' });
     const out = new Response(res.body, res);
     out.headers.delete('server');
-    out.headers.set('cache-control', out.headers.get('cache-control') || 'no-store');
+    out.headers.set('cache-control', 'private, no-store');
     return out;
   },
 };

@@ -4,6 +4,7 @@ export const ROUTES = Object.freeze([
   { key: 'bookings', path: 'bookings.html', title: 'Bookings', module: './pages/bookings.js' },
   { key: 'calendar', path: 'calendar.html', title: 'Calendar', module: './pages/calendar.js' },
   { key: 'rooms', path: 'rooms.html', title: 'Rooms', module: './pages/rooms.js' },
+  { key: 'ota', path: 'ota.html', title: 'OTA sync', module: './pages/ota.js', roles: ['owner', 'manager'] },
   { key: 'payments', path: 'payments.html', title: 'Payments', module: './pages/payments.js' },
   { key: null, path: 'booking-detail.html', title: 'Booking details', module: './pages/booking-detail.js' },
   { key: 'guests', path: 'guest-profile.html', title: 'Guests', module: './pages/guest-profile.js', roles: ['owner', 'manager', 'front_desk'] },

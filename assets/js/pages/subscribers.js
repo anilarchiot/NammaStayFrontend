@@ -62,7 +62,7 @@ adminPage(async (ctx) => {
           ${field('Payee name shown', `<input class="ns-input" name="payee_name" value="${esc(s.payee_name || '')}">`)}
           ${field('Support WhatsApp', `<input class="ns-input" name="support_whatsapp" value="${esc(s.support_whatsapp || '')}" placeholder="919840012345">`)}
           ${field('Support email', `<input class="ns-input" name="support_email" type="email" value="${esc(s.support_email || '')}">`)}
-          ${field('Free trial (days)', `<input class="ns-input" name="trial_days" type="number" min="0" max="90" value="${s.trial_days}">`, 'Applies to new sign-ups.')}
+          ${field('Free trial', '<input class="ns-input" name="trial_days" type="number" min="7" max="7" value="7" readonly>', 'Fixed at 7 days for new sign-ups.')}
           ${field('Grace after expiry (days)', `<input class="ns-input" name="grace_days" type="number" min="0" max="30" value="${s.grace_days}">`, 'Bookings keep working this long after access ends.')}
         </div>
         ${[['homestay', 'Homestays'], ['hostel', 'Hostels & PGs'], ['hotel', 'Hotels'], [null, 'Other plans']].map(([k, title]) => {

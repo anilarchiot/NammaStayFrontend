@@ -345,7 +345,7 @@ function addPropertyDialog(pre = {}) {
         ${field('Owner’s phone / WhatsApp', '<input class="ns-input" name="phone" type="tel" maxlength="20" placeholder="+91 98400 12233">')}
         <div style="grid-column:1/-1">${field('Owner’s email *', '<input class="ns-input" name="owner_email" type="email">', 'They sign in with this email. If they already use NammaStay, the property is added to their account right away.')}</div>
         ${field('Access', `<select class="ns-input" name="access">${options([['trial', 'Free trial'], ['comp', 'Complimentary (free forever)']], 'trial')}</select>`)}
-        <div id="trial-days">${field('Trial days', '<input class="ns-input" name="trial_days" type="number" min="0" max="365" value="7">')}</div>
+        <div id="trial-days">${field('Trial', '<input class="ns-input" name="trial_days" type="number" min="7" max="7" value="7" readonly>')}</div>
         <label style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600">
           <input type="checkbox" name="add_me" checked style="margin-top:2px"> Add me as manager, so I can set up their rooms, beds and rates</label>
         <div style="grid-column:1/-1">${field('Private note (optional)', '<input class="ns-input" name="admin_note" maxlength="300" placeholder="e.g. Met at travel expo; agreed ₹27,999/year">')}</div>
@@ -355,7 +355,7 @@ function addPropertyDialog(pre = {}) {
       const r = await rpc('admin_create_property', { p: {
         name: v('name').value, kind: v('kind').value, city: v('city').value, address: v('address').value, phone: v('phone').value,
         owner_name: v('owner_name').value, owner_email: v('owner_email').value, complimentary: v('access').value === 'comp',
-        trial_days: v('access').value === 'trial' ? v('trial_days').value : null, add_me: v('add_me').checked, admin_note: v('admin_note').value } });
+        trial_days: v('access').value === 'trial' ? '7' : null, add_me: v('add_me').checked, admin_note: v('admin_note').value } });
       toast(`${v('name').value} added.`);
       if (pre.lead) await rpc('admin_lead_converted', { p_lead: pre.lead, p_property: r.property_id }).catch(() => {});
       inviteMessage({ name: v('name').value.trim(), email: v('owner_email').value.trim(), owner: v('owner_name').value.trim(), phone: v('phone').value,

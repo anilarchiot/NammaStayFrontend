@@ -43,6 +43,7 @@ function protectConfig(file) {
 
 async function protectHtml(file) {
   let html = fs.readFileSync(file, 'utf8');
+  html = html.replace(/https:\/\/\*\.supabase\.co/g, '').replace(/wss:\/\/\*\.supabase\.co/g, '');
   html = html.replace(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi, (m, attrs, code) => {
     if (/type=["'](?!module|text\/javascript)/i.test(attrs) || !code.trim()) return m;
     return `<script${attrs}>${obf(code, /type=["']module/i.test(attrs))}</script>`;

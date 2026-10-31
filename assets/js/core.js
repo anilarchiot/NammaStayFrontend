@@ -2,6 +2,7 @@
 // Every page script imports from here.
 import { PAGE_ROLES, NAV_KEY, ROUTE_BY_KEY, resolveRoute } from './routes.js';
 import { mountPageStepper } from './page-stepper.js';
+import { createDesktopOfflineFetch } from './offline-cache.js';
 const CFG = window.NAMMASTAY_CONFIG || {};
 /** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
 const DEMO_ON = (() => {
@@ -15,6 +16,10 @@ const DEMO_ON = (() => {
 export const DEMO = DEMO_ON;
 /** Base URL of the server functions */
 export const FUNCTIONS_URL = (CFG.supabaseUrl ? CFG.supabaseUrl.replace(/\/$/, '') : 'https://YOUR-PROJECT.supabase.co') + '/functions/v1';
+export const OTA = {
+  airbnb: { name: 'Airbnb', color: '#FF5A5F' }, booking: { name: 'Booking.com', color: '#003580' }, agoda: { name: 'Agoda', color: '#5C2D91' },
+  vrbo: { name: 'Vrbo', color: '#1E64C8' }, google: { name: 'Google Calendar', color: '#188038' }, other: { name: 'Other', color: '#6B7280' },
+};
 export const LIVE = !DEMO && !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 export const NOT_CONNECTED = !DEMO && !LIVE;                      // keys missing: nothing works, nobody gets in
 const authStorage = window.NS_DESKTOP ? {
@@ -22,9 +27,11 @@ const authStorage = window.NS_DESKTOP ? {
   setItem: (key, value) => window.NS_DESKTOP.localStore.set('auth', key, value),
   removeItem: (key) => window.NS_DESKTOP.localStore.delete('auth', key).then(() => undefined),
 } : undefined;
+const desktopOffline = window.NS_DESKTOP ? createDesktopOfflineFetch(CFG.supabaseAnonKey) : null;
 export const sb = LIVE
   ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
     auth: authStorage ? { storage: authStorage } : undefined,
+    global: desktopOffline ? { fetch: desktopOffline.fetch } : undefined,
   })
   : DEMO ? (await import('./demo-backend.js')).createDemoClient() : null;
 const HERE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '').replace(/\/$/, '');
@@ -35,6 +42,25 @@ export const MARKETING_URL = SITE_URL;
 export const ADMIN_URL = SITE_URL;
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+if (window.NS_DESKTOP) {
+  const offlineBanner = () => {
+    if ($('.ns-offline-banner')) return;
+    const main = $('.ns-main');
+    if (!main) return;
+    const banner = document.createElement('div');
+    banner.className = 'ns-access-banner info ns-offline-banner';
+    banner.setAttribute('role', 'status');
+    banner.textContent = 'Offline — showing saved data. Changes will not save until you reconnect.';
+    const mobilebar = main.querySelector('.ns-mobilebar');
+    if (mobilebar) mobilebar.insertAdjacentElement('afterend', banner); else main.prepend(banner);
+  };
+  const clearOfflineBanner = () => $('.ns-offline-banner')?.remove();
+  if (!navigator.onLine) offlineBanner();
+  window.addEventListener('offline', offlineBanner);
+  window.addEventListener('online', clearOfflineBanner);
+  window.addEventListener('ns:offline-cache-used', offlineBanner);
+}
 
 // ---------------------------------------------------------------- text & numbers
 export function esc(v) {
@@ -350,6 +376,7 @@ function disposeCurrentPage() {
 // ---------------------------------------------------------------- NammaStay admin area (separate login: admin-login.html)
 const ADMIN_NAV = [
   ['admin.html', 'Overview', '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"></path><path d="M9 12l2 2 4-4"></path>'],
+  ['channel-manager.html', 'Channel manager', '<path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0011 21.07l1.71-1.71"></path>'],
   ['subscribers.html', 'Subscribers', '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path>'],
   ['revenue.html', 'Revenue & coupons', '<path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path>'],
   ['leads.html', 'Leads', '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>'],
@@ -450,6 +477,10 @@ async function bootApp() {
     location.replace('login.html?next=' + encodeURIComponent(here));
     throw new Stop();
   }
+  desktopOffline?.start(async () => {
+    const { data: { session: currentSession } } = await sb.auth.getSession();
+    return currentSession;
+  });
   // Properties added for this email by NammaStay admin get linked on sign-in
   const claimKey = 'ns.claimed.' + session.user.id;
   if (Date.now() - Number(localStorage.getItem(claimKey) || 0) > 5 * 60e3) {
@@ -508,6 +539,14 @@ function applyChrome(ctx) {
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
+  let otaLink = $('.ns-sidebar a[href="ota.html"]');
+  if (['owner', 'manager'].includes(ctx.role)) {
+    if (!otaLink) {
+      otaLink = document.createElement('a'); otaLink.href = 'ota.html'; otaLink.className = 'ns-nav-link';
+      otaLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0011 21.07l1.71-1.71"></path></svg><span>OTA sync</span>';
+    }
+    if (roomsLink?.parentElement) roomsLink.parentElement.insertAdjacentElement('afterend', otaLink);
+  } else otaLink?.remove();
   const so = $('.ns-sidebar a[href="login.html"], .ns-sidebar [data-signout], .ns-sidebar button:last-of-type');
   const LANG_STYLE = 'width:100%;height:34px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 8px';
   const oldLang = $('.ns-sidebar .ns-lang');
@@ -604,6 +643,7 @@ function applyChrome(ctx) {
     localStorage.removeItem('ns.property');
     location.replace('login.html');
   });
+  import('./pages/purni.js').then(({ mountPurni }) => mountPurni(ctx)).catch((error) => console.warn('Purni could not load', error));
   if (ctx.memberships.length > 1 && subEl) {         // switch property
     subEl.style.cursor = 'pointer';
     subEl.title = 'Switch property';
@@ -794,24 +834,30 @@ const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke
 let notificationAudio = null;
 function unlockNotificationAudio() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass || notificationAudio) return;
+  if (!AudioContextClass) return;
   try {
-    notificationAudio = new AudioContextClass();
-    notificationAudio.resume().catch(() => {});
+    notificationAudio ||= new AudioContextClass();
+    if (notificationAudio.state !== 'running') notificationAudio.resume().catch(() => {});
   } catch { /* sound is optional */ }
 }
 document.addEventListener('pointerdown', unlockNotificationAudio, { once: true, passive: true });
 document.addEventListener('keydown', unlockNotificationAudio, { once: true });
 function playNotificationChime() {
-  if (!notificationAudio || notificationAudio.state !== 'running') return;
+  if (!notificationAudio) return;
+  if (notificationAudio.state !== 'running') {
+    notificationAudio.resume().then(() => {
+      if (notificationAudio.state === 'running') playNotificationChime();
+    }).catch(() => {});
+    return;
+  }
   const start = notificationAudio.currentTime;
-  [[880, 0, 0.24], [1174, 0.11, 0.32]].forEach(([frequency, delay, duration]) => {
+  [[880, 0, 0.34], [1174, 0.12, 0.42]].forEach(([frequency, delay, duration]) => {
     const oscillator = notificationAudio.createOscillator();
     const volume = notificationAudio.createGain();
     const noteStart = start + delay;
     oscillator.type = 'sine'; oscillator.frequency.value = frequency;
     volume.gain.setValueAtTime(0.0001, noteStart);
-    volume.gain.exponentialRampToValueAtTime(0.14, noteStart + 0.018);
+    volume.gain.exponentialRampToValueAtTime(0.36, noteStart + 0.018);
     volume.gain.exponentialRampToValueAtTime(0.0001, noteStart + duration);
     oscillator.connect(volume); volume.connect(notificationAudio.destination);
     oscillator.start(noteStart); oscillator.stop(noteStart + duration + 0.03);
@@ -865,7 +911,10 @@ async function openNotifications(ctx, setCount) {
         <div class="ns-muted">${esc(n.body || '')}</div></div>
         <div class="ns-muted" style="white-space:nowrap">${fmtDayTime(n.created_at)}</div>
       </a>`).join('') : '<div class="ns-empty">No notifications yet.</div>';
-  modal({ title: 'Notifications', body: `<div>${list}</div>`, actions: [{ label: 'Close' }] });
+  modal({ title: 'Notifications', body: `<div>${list}</div>`, actions: [
+    { label: 'Test sound', onClick: () => { playNotificationChime(); return false; } },
+    { label: 'Close' },
+  ] });
   rpc('mark_notifications_read', { p_property: ctx.property_id }).then(() => setCount(0)).catch(() => {});
 }
 

@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
     "stays:dev": "npx --yes http-server marketplace -p 4174 -c-1",
-    "stays:deploy": "wrangler deploy --config marketplace/wrangler.jsonc",
+    "stays:deploy": "npm run build:live && wrangler deploy --config marketplace/wrangler.jsonc",
     "build:live": "node scripts/build-live.cjs",
     "deploy:live": "npm run build:live && wrangler deploy --config wrangler.live.jsonc && wrangler deploy --config marketplace/wrangler.live.jsonc",
     "desktop:dev": "electron .",
