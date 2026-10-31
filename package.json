@@ -22,7 +22,7 @@
     "mobile:ios": "npm run mobile:sync && cd mobile && cap open ios",
     "mobile:run:android": "npm run mobile:sync && cd mobile && cap run android",
     "mobile:run:ios": "npm run mobile:sync && cd mobile && cap run ios",
-    "build": "node scripts/validate-production.cjs",
+    "build": "node scripts/validate-production.cjs && node scripts/build-live.cjs",
     "validate:production": "node scripts/validate-production.cjs",
     "test:desktop": "node --test desktop/*.test.cjs",
     "test": "npm run build && npm run test:desktop && npm run mobile:build-web"

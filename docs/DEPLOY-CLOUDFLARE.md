@@ -80,7 +80,7 @@ From now on every push to `main` deploys automatically, and every pull request g
 
 ### If Cloudflare created a Worker instead of a Pages project
 
-Cloudflare's dashboard may set the site up as a **Worker** with the deploy command `npx wrangler deploy`. The `wrangler.jsonc` publishes the root static site files. Use these settings (**Workers & Pages → your Worker → Settings → Build**):
+Cloudflare's dashboard may set the site up as a **Worker** with the deploy command `npx wrangler deploy`. The `wrangler.jsonc` publishes the protected build from `live/site`; the build command must run `npm run build` (or `npm test`, which runs it) so that directory exists before deploy. Use these settings (**Workers & Pages → your Worker → Settings → Build**):
 
 | Setting | Value |
 |---|---|
