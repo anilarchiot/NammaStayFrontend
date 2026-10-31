@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "NammaStay website and Windows desktop app",
   "author": "NammaStay",
+  "desktopName": "NammaStay",
   "engines": {
     "node": ">=20"
   },
@@ -16,6 +17,8 @@
     "deploy:live": "npm run build:live && wrangler deploy --config wrangler.live.jsonc && wrangler deploy --config marketplace/wrangler.live.jsonc",
     "desktop:dev": "electron .",
     "desktop:build:win": "electron-builder --win nsis --publish never",
+    "desktop:build:mac": "electron-builder --mac dmg zip --publish never",
+    "desktop:build:linux": "electron-builder --linux AppImage deb --publish never",
     "mobile:build-web": "node mobile/build-web.cjs",
     "mobile:sync": "npm run mobile:build-web && cd mobile && cap sync",
     "mobile:android": "npm run mobile:sync && cd mobile && cap open android",
@@ -48,6 +51,28 @@
       "icon": "assets/img/app.ico",
       "target": "nsis",
       "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "icon": "assets/img/app.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.travel",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "desktop/entitlements.mac.plist",
+      "entitlementsInherit": "desktop/entitlements.mac.plist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network",
+      "syncDesktopName": true,
+      "maintainer": "NammaStay <hello@thenammastay.com>",
+      "icon": "assets/img/logo.png"
     },
     "nsis": {
       "oneClick": false,

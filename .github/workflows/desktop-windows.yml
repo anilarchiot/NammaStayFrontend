@@ -26,7 +26,29 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run desktop:build:win
+      - name: Build Windows installer
+        run: npm run desktop:build:win
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      - name: Verify installer signature
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem release -Filter *.exe
+          if (-not $installers) { throw "No Windows installer was produced." }
+          foreach ($installer in $installers) {
+            $signature = Get-AuthenticodeSignature $installer.FullName
+            if ($env:WINDOWS_SIGNING_CONFIGURED -eq "true" -and $signature.Status -ne "Valid") {
+              throw "Installer signature is not valid: $($signature.StatusMessage)"
+            }
+            if ($signature.Status -eq "Valid") {
+              Write-Host "$($installer.Name) is signed by $($signature.SignerCertificate.Subject)"
+            } else {
+              Write-Warning "$($installer.Name) is unsigned. Configure the Windows signing certificate secrets for publisher verification."
+            }
+          }
+        env:
+          WINDOWS_SIGNING_CONFIGURED: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: NammaStay-Windows-installer

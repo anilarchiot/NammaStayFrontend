@@ -38,8 +38,30 @@ kept in Electron's per-user application data folder, not in the install director
 It opens maximized without the standard Windows title/menu bar and uses a NammaStay-styled top strip with window
 controls.
 
-Build the installer on Windows with `npm run desktop:build:win`. The GitHub Actions workflow
-`Build Windows desktop app` also builds the installer and publishes it as a downloadable workflow artifact.
+Build desktop packages on their native operating systems:
+
+```bash
+npm run desktop:build:win    # Windows installer (.exe)
+npm run desktop:build:mac    # macOS disk image and archive (.dmg, .zip)
+npm run desktop:build:linux  # Linux AppImage and Debian package
+```
+
+GitHub Actions builds Windows, macOS, and Linux artifacts in separate workflows. For publisher signing:
+
+- **Windows:** configure `WINDOWS_CERTIFICATE_BASE64` (base64-encoded PKCS#12 `.p12`/`.pfx`) and
+  `WINDOWS_CERTIFICATE_PASSWORD` repository Actions secrets. CI verifies the Authenticode signature.
+- **macOS:** configure `MACOS_CERTIFICATE_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`,
+  `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`. Use a Developer ID Application certificate from an
+  Apple Developer account; CI signs, notarizes, and validates the packages.
+- **Linux:** Linux distributions do not share a universal executable-signing or antivirus-reputation system.
+  The workflow publishes AppImage and Debian packages as GitHub artifacts; users should install through a
+  trusted package source and verify the release provenance.
+
+Use certificates issued by the platform's trusted authorities; never use self-signed certificates for public
+distribution. Signatures establish publisher identity and package integrity, but cannot guarantee acceptance by
+every Defender or antivirus product, particularly for a new app or certificate. Unsigned builds remain possible
+when signing secrets are not configured. If a signed release is flagged, submit that exact build to the detecting
+vendor for false-positive review.
 
 This is the desktop/local-storage foundation, **not yet an offline copy of the operational app**. Non-booking
 business records are still read from and written to Supabase, and booking/calendar changes still require an
@@ -61,7 +83,9 @@ npm run mobile:run:android
 
 The Android project is in `mobile/android/`. Run these commands on a computer with Android Studio and its SDK installed.
 Android Studio can build and run a debug APK; a Play Store release needs a signed Android App Bundle and Play
-Console account.
+Console account. Google Play App Signing is the recommended distribution path; signing/reputation is separate
+from Windows Authenticode and macOS notarization. Keep the upload keystore and its passwords in a secure secret
+store; never commit them to the repository.
 
 Run iOS commands on macOS with Xcode and CocoaPods installed:
 
@@ -73,8 +97,15 @@ npm run mobile:run:ios
 
 The iOS project is in `mobile/ios/App/App.xcworkspace` (run `pod install` in `mobile/ios/App` first). Xcode can run the app in an iPhone simulator or on a device;
 App Store/TestFlight distribution requires Apple signing credentials and an Apple Developer account. iOS apps
-cannot be built or signed on Windows or Linux. After changing website pages or assets, the mobile commands sync
-the web app into each native project automatically.
+are signed and distributed through Apple's ecosystem; Windows Defender does not scan or establish trust for iOS
+apps. iOS apps cannot be built or signed on Windows or Linux. After changing website pages or assets, the mobile
+commands sync the web app into each native project automatically.
+
+The **Build signed iOS app** workflow creates a signed App Store IPA when these repository Actions secrets are
+configured: `IOS_DISTRIBUTION_CERTIFICATE_BASE64` (base64-encoded `.p12`), `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`,
+`IOS_APP_STORE_PROFILE_BASE64` (base64-encoded App Store provisioning profile), and `IOS_TEAM_ID`. The profile
+must match the app's `com.nammastay.app` bundle identifier. Trigger the workflow manually to produce an artifact;
+submission to App Store Connect/TestFlight remains a separate release step.
 
 ## Supabase
 The backend is the Supabase project `skcqpfyshbxcyyamsgtj`

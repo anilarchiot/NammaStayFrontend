@@ -1,0 +1,87 @@
+name: Build macOS and Linux desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "*.html"
+      - "*.js"
+      - "assets/**"
+      - "desktop/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/desktop-macos-linux.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build signed and notarized macOS packages when credentials are configured
+        run: npm run desktop:build:mac
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Verify macOS signature and notarization
+        shell: bash
+        env:
+          MACOS_SIGNING_CONFIGURED: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          if [[ "$MACOS_SIGNING_CONFIGURED" == "true" ]]; then
+            app_path="$(find release -type d -name 'NammaStay.app' -print -quit)"
+            test -n "$app_path"
+            codesign --verify --deep --strict --verbose=2 "$app_path"
+            for image in release/*.dmg; do
+              xcrun stapler validate "$image"
+            done
+          else
+            echo "::warning::macOS packages are unsigned. Configure the documented Apple Developer secrets for publisher signing and notarization."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NammaStay-macOS
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+
+  linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:build:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NammaStay-Linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
