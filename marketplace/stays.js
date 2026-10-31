@@ -11,7 +11,7 @@ const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 const saved = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const remember = (r) => localStorage.setItem(KEY, JSON.stringify([r, ...saved().filter((x) => x.ref !== r.ref)].slice(0, 10)));
 const note = (t, err) => `<div class="msg${err ? ' err' : ''}">${esc(t)}</div>`;
-const brand = (right = '<a class="small" href="owner.html">For owners</a>') => `<div class="brand"><a class="brand-link" href="#/"><img class="brand-logo" src="logo.png" alt=""><span class="brand-word">Namma<b>Bookings</b></span></a>${right}</div>`;
+const brand = (right = '<a class="small" href="#/rewards">Rewards</a><a class="small" href="owner.html">For owners</a>') => `<div class="brand"><a class="brand-link" href="#/"><img class="brand-logo" src="logo.png" alt=""><span class="brand-word">Namma<b>Bookings</b></span></a>${right}</div>`;
 // Place suggestions: cities, areas and property names from published listings, plus common cities.
 const FALLBACK_PLACES = ['Chennai', 'Bengaluru', 'Pondicherry', 'Kochi', 'Hyderabad', 'Coimbatore', 'Madurai', 'Mysuru', 'Goa', 'Munnar', 'Ooty'].map((t) => ({ t, k: 'City' }));
 let placesPromise = null;
@@ -97,6 +97,7 @@ function route() {
   const { path, q } = parse();
   if (path.startsWith('/l/')) return listing(path.slice(3), q);
   if (path === '/results') return results(q);
+  if (path === '/rewards') return rewards(q);
   if (path === '/track') return track(q);
   return home(q);
 }
@@ -138,7 +139,7 @@ async function home(q) {
     </div>
     <div class="kick">Popular</div><div class="chips">${['Chennai', 'Pondicherry', 'Bengaluru', 'Kochi'].map((c) => `<button class="chip" data-c="${c}">${c}</button>`).join('')}</div>
     ${mine.length ? `<div class="kick" style="margin-top:12px">Your requests</div>${mine.map((r) => `<a class="card" style="display:block" href="#/track?ref=${esc(r.ref)}&phone=${encodeURIComponent(r.phone)}"><b>${esc(r.title)}</b><div class="mute">${esc(r.ref)}</div></a>`).join('')}` : ''}
-    <p class="mute" style="text-align:center;margin-top:18px"><a href="#/track">Find a request</a> · <a href="owner.html">List your hostel or PG free</a></p>`;
+    <p class="mute" style="text-align:center;margin-top:18px"><a href="#/track">Find a request</a> · <a href="#/rewards">Guest rewards</a> · <a href="owner.html">List your hostel or PG free</a></p>`;
   const f = app.querySelector('#f');
   let k = kind;
   const updateSummary = () => {
@@ -319,6 +320,62 @@ function requestModal(l, room, beds, inD, outD, type) {
   };
 }
 
+// ------------------------------------------------------------------ guest rewards
+async function rewards(q) {
+  const ref = q.get('ref'), phone = q.get('phone');
+  if (!ref || !phone) {
+    app.classList.remove('success-page');
+    app.innerHTML = `${brand()}<section class="rewards-intro">
+      <span class="pill green">NammaStay guest rewards</span><h1>Your stays add up.</h1>
+      <p class="mute">Earn 1 point for every ₹100 of an eligible booking after checkout and host confirmation. Points unlock traveller tiers and badges.</p>
+      <div class="card rewards-rule"><b>How it works</b><p class="mute">Book through NammaStay Search, complete your stay, and ask your host to mark it as stayed. Points are based on the booking total. Points have no cash value.</p></div>
+    </section>
+    <form class="card rewards-lookup" id="rewards-form"><h2>Check your points</h2>
+      <label for="reward-ref">Booking reference</label><input id="reward-ref" name="ref" placeholder="REQ-2041" required autocomplete="off">
+      <label for="reward-phone">Phone used for the booking</label><input id="reward-phone" name="phone" type="tel" required autocomplete="tel">
+      <button class="btn block">View my rewards</button><div id="reward-message" role="status" aria-live="polite"></div>
+    </form>`;
+    app.querySelector('#rewards-form').onsubmit = (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      go('/rewards', { ref: f.get('ref'), phone: f.get('phone') });
+    };
+    return;
+  }
+
+  const { data: r, error } = await sb.rpc('mk2_rewards', { p_ref: ref, p_phone: phone });
+  if (error) {
+    app.innerHTML = `${brand()}${note(error.message, true)}<a class="btn ghost" href="#/rewards">Try again</a>`;
+    return;
+  }
+  const next = Number(r.next_tier_points || 0);
+  const progress = next ? Math.min(100, Math.round(Number(r.points) / next * 100)) : 100;
+  const tierMessage = next
+    ? `${Number(r.points_to_next)} more points to ${next === 100 ? 'Explorer' : next === 500 ? 'Trailblazer' : 'Legend'}`
+    : 'You have reached our highest traveller tier.';
+  const bookings = (r.bookings || []).map((b) => `<article class="card rewards-booking">
+    <div class="row2"><b>${esc(b.title)}</b><span class="pill ${b.status === 'earned' ? 'green' : ''}">${esc(b.status)}</span></div>
+    <div class="mute">${esc(fmt(b.check_in))} → ${esc(fmt(b.check_out))} · ${esc(b.ref)}</div>
+    <div class="row2 rewards-booking-points"><span>${inr(b.amount_paise)} booking total</span><b>${Number(b.points)} points</b></div>
+    ${b.status === 'awaiting confirmation' ? '<p class="mute">Your host has not confirmed this completed stay yet.</p>' : ''}
+  </article>`).join('');
+  app.classList.remove('success-page');
+  app.innerHTML = `${brand('<a class="small" href="#/">New search</a>')}
+    <section class="rewards-dashboard">
+      <div class="card rewards-balance"><div class="kick">Your NammaStay rewards</div>
+        <div class="rewards-score">${Number(r.points).toLocaleString('en-IN')} <span>points</span></div>
+        <span class="pill green">${esc(r.tier)}</span>
+        <p class="mute">${tierMessage}</p>
+        <div class="rewards-progress" role="progressbar" aria-label="Progress to next traveller tier" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>
+        <div class="rewards-stats"><div><b>${Number(r.completed_stays)}</b><span>completed stays</span></div><div><b>${esc(r.tier)}</b><span>traveller tier</span></div></div>
+      </div>
+      <div class="rewards-history"><div class="row2"><h2>Your stays</h2><a href="#/rewards">Check another booking</a></div>
+        ${bookings || '<div class="card mute">No eligible stays yet. Complete a stay booked through NammaStay to start earning points.</div>'}
+        <p class="mute">Points are awarded after checkout when the host confirms your stay. Earn 1 point per ₹100 of the booking total; points do not have cash value.</p>
+      </div>
+    </section>`;
+}
+
 // ------------------------------------------------------------------ track / confirm
 async function track(q) {
   const ref = q.get('ref'), phone = q.get('phone');
@@ -334,7 +391,7 @@ async function track(q) {
   const when = visit ? new Date(t.visit_at).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : `${fmt(t.check_in)} → ${fmt(t.check_out)}`;
   const wa = waLink(t.whatsapp_phone, `Hi, this is about request ${t.ref} on NammaStay (${when}).`);
   const ok = t.status === 'accepted';
-  let html = brand('<a class="small" href="#/">New search</a>');
+  let html = brand(`<a class="small" href="#/rewards?${new URLSearchParams({ ref, phone })}">Rewards</a><a class="small" href="#/">New search</a>`);
   if (ok) {
     const nextCity = (name) => `#/results?${new URLSearchParams({ city: name, in: t.check_in, out: t.check_out, beds: t.beds, kind: t.kind })}`;
     html += `<section class="success-view"><div class="success-icon" aria-hidden="true">✓</div><h1>${visit ? 'Your visit is booked!' : "You're booked!"}</h1>

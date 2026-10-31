@@ -557,6 +557,33 @@ label,.ns label,.auth-card label,.guest .search-card label,.field-label{font-fam
 .offers .offer b{font-family:var(--font-head);font-size:clamp(28px,2.6vw,36px);font-weight:var(--fw-heading)}
 @media(max-width:639px){.auth-intro .big{font-size:var(--fs-h1)}.app.wide:has(.auth-shell) .auth-intro .big{font-size:var(--fs-h1)}}
 
+/* Guest rewards */
+.rewards-intro,.rewards-lookup{max-width:680px;margin:28px auto 16px}
+.rewards-intro h1{margin:12px 0 6px}
+.rewards-rule{margin-top:18px;padding:18px}
+.rewards-rule p{margin-bottom:0}
+.rewards-lookup{padding:20px}
+.rewards-lookup h2{margin-top:0}
+.rewards-lookup .btn{margin-top:16px}
+.rewards-dashboard{max-width:760px;margin:26px auto;display:grid;gap:20px}
+.rewards-balance{padding:24px;background:var(--navy);color:#fff;border:0}
+.rewards-balance .kick,.rewards-balance .mute{color:#D5DDEC}
+.rewards-score{font-family:var(--font-head);font-size:var(--fs-display);font-weight:var(--fw-heading);line-height:var(--lh-heading);margin:10px 0}
+.rewards-score span{font-family:var(--font-body);font-size:var(--fs-body);font-weight:var(--fw-strong)}
+.rewards-progress{height:9px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.2);margin:16px 0}
+.rewards-progress span{display:block;height:100%;border-radius:inherit;background:#7DE0B5}
+.rewards-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.rewards-stats div{display:grid;gap:2px}
+.rewards-stats b{font-family:var(--font-head);font-size:var(--fs-h3);font-weight:var(--fw-strong)}
+.rewards-stats span{color:#D5DDEC;font-size:var(--fs-small)}
+.rewards-history h2{margin:0}
+.rewards-history>.row2{margin-bottom:12px}
+.rewards-history>.row2 a{font-size:var(--fs-small);font-weight:var(--fw-strong)}
+.rewards-booking{padding:16px;margin-bottom:10px}
+.rewards-booking-points{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.rewards-booking-points b{font-family:var(--font-head);font-weight:var(--fw-strong)}
+@media(max-width:639px){.rewards-balance{padding:18px}.rewards-history>.row2{align-items:flex-start}}
+
 /* Owner auth: match the guest search screen (same container, scale, borders) */
 .ns:not(.guest) .app.wide:has(.auth-shell){max-width:1100px;margin:0 auto;padding:0 24px 48px}
 .app.wide:has(.auth-shell) .auth-shell{padding-top:28px;gap:32px}

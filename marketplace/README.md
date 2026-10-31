@@ -58,3 +58,7 @@ Mobile-first guest app and owner portal built on the same Supabase project (migr
 Setup: run `056_nammastay_search.sql` after 055, then make yourself an admin:
 `insert into public.mk_admins (user_id) select id from auth.users where email = 'you@example.com';`
 Optional: set `upiId` in `config.js` to show a "Pay by UPI" button on owner bills. Phone "Send code" verification needs an SMS provider; until then the team ticks "Phone verified" on the video call.
+
+### Guest rewards
+
+Run `supabase/migrations/057_guest_rewards.sql` after `056_nammastay_search.sql`. Guests can open **Guest rewards** from the search app and verify with a booking reference plus the phone number used for that booking. They earn 1 point per ₹100 of an accepted stay's booking total after checkout and host confirmation. Points unlock Explorer (100), Trailblazer (500), and Legend (1,000) tiers; they have no cash value. No extra guest account or personal-data table is created.

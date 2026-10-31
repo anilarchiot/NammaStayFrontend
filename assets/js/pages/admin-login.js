@@ -6,7 +6,7 @@ import { sb, rpc, reveal, esc, param, DEMO, NOT_CONNECTED, markBrowserSession, S
 const main = document.querySelector('.ns-login-main > div');
 const email = $('#email'); const pw = $('#pw'); const btn = main.querySelector('a[href="admin.html"]');
 const formBits = [...main.children].slice(1);                     // everything below the logo: heading, form, footer
-const next = (() => { const n = param('next') || ''; return /^(admin|subscribers|leads|revenue|activity)\.html(\?[^#]*)?$/.test(n) ? n : 'admin.html'; })();
+const next = (() => { const n = param('next') || ''; return /^(admin|channel-manager|subscribers|leads|revenue|activity)\.html(\?[^#]*)?$/.test(n) ? n : 'admin.html'; })();
 const err = document.createElement('div'); err.className = 'ns-error'; err.hidden = true; btn.insertAdjacentElement('beforebegin', err);
 const fail = (m) => { err.textContent = m; err.hidden = false; btn.style.opacity = ''; btn.style.pointerEvents = ''; };
 const go = () => { markBrowserSession(); location.replace(next); };
