@@ -45,7 +45,7 @@ The NammaStay app talks to nammaBookings through NammaStay Connect as the `namma
 pointed at its own `/api` proxy ([worker/index.js](../worker/index.js)). The Supabase URL and anon key are not in the shipped
 files; they live in the Worker (`SUPABASE_URL` var, `SUPABASE_ANON_KEY` secret). Deploy with `npm run deploy:live` after
 `wrangler secret put SUPABASE_ANON_KEY --config wrangler.live.jsonc` (and `--config marketplace/wrangler.live.jsonc`).
-Note: this makes code and traffic much harder to read, but anything a browser runs can still be inspected.
+Browser requests use the site's `/api` proxy, so the Supabase project URL stays server-side; the public browser config uses the marker `theNammaStay`, which the Worker replaces with its configured key. The marker is not a secret. This requires deploying the Worker build, not publishing the source folder directly to a static host. Obfuscation is not a security boundary: anything a browser runs can still be inspected.
 
 ## NammaStay Search (free hostel / PG listings)
 

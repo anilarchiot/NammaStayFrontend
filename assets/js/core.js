@@ -15,7 +15,7 @@ const DEMO_ON = (() => {
 })();
 export const DEMO = DEMO_ON;
 /** Base URL of the server functions */
-export const FUNCTIONS_URL = (CFG.supabaseUrl ? CFG.supabaseUrl.replace(/\/$/, '') : 'https://YOUR-PROJECT.supabase.co') + '/functions/v1';
+export const FUNCTIONS_URL = (CFG.supabaseUrl || `${location.origin}/api`).replace(/\/$/, '') + '/functions/v1';
 export const OTA = {
   airbnb: { name: 'Airbnb', color: '#FF5A5F' }, booking: { name: 'Booking.com', color: '#003580' }, agoda: { name: 'Agoda', color: '#5C2D91' },
   vrbo: { name: 'Vrbo', color: '#1E64C8' }, google: { name: 'Google Calendar', color: '#188038' }, other: { name: 'Other', color: '#6B7280' },
@@ -125,7 +125,8 @@ function friendly(error) {
   if (/subscription has ended|account is suspended/i.test(m)) return m;
   const fn = (/Could not find the function (?:public\.)?(\w+)|function public\.(\w+)\(.*\) does not exist/i.exec(m) || []).slice(1).find(Boolean);
   if (fn) {                                                     // the website is newer than the database: an SQL update hasn't been run yet
-    const upd = /^(booking_guest)/.test(fn) ? '030_booking_guests.sql' : /^pg_(dashboard|payments|report|income|selfcheckin_info)$/.test(fn) ? '032_pg_app.sql'
+    const upd = fn === 'admin_delete_subscriber' ? '058_admin_delete_subscriber.sql'
+      : /^(booking_guest)/.test(fn) ? '030_booking_guests.sql' : /^pg_(dashboard|payments|report|income|selfcheckin_info)$/.test(fn) ? '032_pg_app.sql'
       : /^(resort_|activit|dayout_|day_visit|stay_package|booking_package|booking_extra_beds|booking_resort|group_|groups_)/.test(fn) ? '034_resort.sql'
       : /^(meal_plan|booking_meal|kitchen_list|guide_)/.test(fn) ? '033_homestay.sql'
       : /^(pg_|_pg_)/.test(fn) ? '031_pg_tenants.sql' : 'the latest SQL update';

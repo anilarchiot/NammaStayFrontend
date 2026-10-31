@@ -50,7 +50,8 @@ adminPage(async (ctx) => {
             <td>${pill(l, c)}${p.plan_id && plan[p.plan_id] ? `<div class="ns-muted">${esc(plan[p.plan_id].name)}</div>` : ''}</td>
             <td>${until}</td><td class="ns-muted">${p.last_booking_at ? fmtDate(p.last_booking_at) : 'None yet'}</td>
             <td style="white-space:nowrap"><a class="ns-btn-ghost" style="height:32px;font-size:12px" href="admin.html?id=${esc(p.property_id)}">Open</a>
-              <button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-manage="${esc(p.property_id)}">Manage</button></td></tr>`; }).join('')
+              <button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-manage="${esc(p.property_id)}">Manage</button>
+              <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-delete="${esc(p.property_id)}">Delete</button></td></tr>`; }).join('')
           || '<tr><td colspan="7" class="ns-empty">No properties found.</td></tr>'}
         </tbody></table></div>
       </div>
@@ -109,6 +110,24 @@ adminPage(async (ctx) => {
             p_complimentary: el.querySelector('[name=comp]').checked });
           toast('Saved.'); draw(); } }],
       });
+    });
+    $$('[data-delete]').forEach((b) => b.onclick = async () => {
+      const p = d.properties.find((x) => x.property_id === b.dataset.delete);
+      if (!p) return;
+      if (!await confirmDialog(
+        `Delete ${p.name}?`,
+        `This permanently deletes the property and its associated records. This cannot be undone. The owner's NammaStay login is not deleted.`,
+        { confirmLabel: 'Delete property', danger: true },
+      )) return;
+      b.disabled = true;
+      try {
+        await rpc('admin_delete_subscriber', { p_property: p.property_id });
+        toast(`${p.name} deleted.`);
+        draw();
+      } catch (e) {
+        toast(e.message, { error: true });
+        b.disabled = false;
+      }
     });
     $('#save-billing').onclick = async (e) => {
       const v = (n) => $(`#bset > div [name="${n}"]`)?.value?.trim() ?? '';

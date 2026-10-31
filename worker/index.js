@@ -1,6 +1,6 @@
 // Edge proxy: the browser only ever talks to /api/* on our own domain. The Supabase project URL and
 // anon key live here (Worker var SUPABASE_URL, secret SUPABASE_ANON_KEY) and are never shipped to the page.
-const PLACEHOLDER = 'eyJns-public-placeholder';
+const PLACEHOLDER = 'theNammaStay';
 const ALLOWED = ['/rest/v1/', '/auth/v1/', '/storage/v1/', '/functions/v1/', '/realtime/v1/'];
 
 export default {

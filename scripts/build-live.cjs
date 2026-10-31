@@ -9,7 +9,7 @@ const { minify } = require('html-minifier-terser');
 
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'live');
-const PLACEHOLDER = 'eyJns-public-placeholder';
+const PLACEHOLDER = 'theNammaStay';
 
 const OBF = {
   compact: true, stringArray: true, stringArrayEncoding: ['base64'], stringArrayThreshold: 0.75,

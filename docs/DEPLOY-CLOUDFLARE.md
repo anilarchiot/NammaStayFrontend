@@ -78,6 +78,10 @@ Watch these in **Supabase → Reports** and **Usage** every month.
 
 From now on every push to `main` deploys automatically, and every pull request gets its own preview link.
 
+### Keep the Supabase project URL out of browser requests
+
+The static Pages setup above connects directly to Supabase, so browser developer tools will show the Supabase request host. If you want requests to use your own domain instead, deploy the protected Worker build; it serves `live/site` and forwards `/api/*` server-side. Configure `SUPABASE_ANON_KEY` as a Worker secret for both `wrangler.live.jsonc` and `marketplace/wrangler.live.jsonc`, then deploy with `npm run deploy:live`. In the browser, the configured key is replaced by the public marker `theNammaStay`; the Worker substitutes the real key before forwarding. Developer tools will still show the `/api/rest/v1/...` path on your domain, but not the Supabase host or real key. The marker is not a secret.
+
 ### If Cloudflare created a Worker instead of a Pages project
 
 Cloudflare's dashboard may set the site up as a **Worker** with the deploy command `npx wrangler deploy`. The `wrangler.jsonc` publishes the protected build from `live/site`; the build command must run `npm run build` (or `npm test`, which runs it) so that directory exists before deploy. Use these settings (**Workers & Pages → your Worker → Settings → Build**):
