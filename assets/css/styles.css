@@ -1102,3 +1102,16 @@ button.ivs-ms:hover{box-shadow:0 0 0 2px #1C9A6C inset}
 .ns-rs-fixed th,.ns-rs-fixed td{overflow:hidden;text-overflow:ellipsis}
 .ns-rs-fixed th.ns-rs-th{overflow:visible}
 body.ns-rs-dragging{cursor:col-resize;user-select:none}
+
+@supports (height:100dvh){
+  .ns-shell,.ns-main,.ns-login,.ns-login-aside,.ns-login-main,.ns-modal-page,.ns-phone{min-height:100dvh}
+  .ns-sidebar{height:100dvh}
+  .ns-modal-page{height:100dvh}
+  .ns-modal{max-height:calc(100dvh - 24px)}
+  .inv-preview{max-height:58dvh}
+  .fc-copy,.ivs-pick-list{max-height:52dvh}
+  .ivs-share-prev img{max-height:52dvh}
+  .cx-frame{height:65dvh}
+  .cx-connect-modal .cx-frame{height:min(72dvh,820px)}
+  @media (max-width:640px){.cx-connect-modal .cx-frame{height:60dvh}}
+}

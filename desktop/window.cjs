@@ -1,4 +1,5 @@
 const { BrowserWindow, shell } = require('electron');
+const path = require('node:path');
 const { ORIGIN, PRELOAD_PATH } = require('./config.cjs');
 
 function openExternal(url) {
@@ -16,6 +17,7 @@ async function createMainWindow() {
     height: 960,
     minWidth: 900,
     minHeight: 640,
+    icon: path.join(__dirname, '../assets/img/app.ico'),
     frame: false,
     autoHideMenuBar: true,
     show: false,

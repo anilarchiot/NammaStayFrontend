@@ -45,6 +45,7 @@
       "output": "release"
     },
     "win": {
+      "icon": "assets/img/app.ico",
       "target": "nsis",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
