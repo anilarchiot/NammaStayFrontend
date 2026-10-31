@@ -60,7 +60,8 @@
     "electron-builder": "^26.15.3",
     "html-minifier-terser": "^7.2.0",
     "javascript-obfuscator": "^5.9.0",
-    "terser": "^5.51.2"
+    "terser": "^5.51.2",
+    "wrangler": "4.156.0"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

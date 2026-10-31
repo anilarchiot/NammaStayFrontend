@@ -94,6 +94,8 @@ Cloudflare's dashboard may set the site up as a **Worker** with the deploy comma
 | Variable | `NODE_VERSION` = `22` |
 
 - The `name` in `wrangler.jsonc` must match the Worker's name in the dashboard. Change one of them if they differ.
+- Wrangler is pinned in the project dependencies, so `npx` uses the lockfile version instead of downloading an unpinned CLI.
+- If deployment reports Cloudflare API error `971` with a `Retry-After` header, the Worker-name validation request was rate-limited. Wait at least the indicated number of seconds before retrying once; repeatedly starting deployments during that window can extend the throttle. This is a temporary Cloudflare API limit, not a Worker-name mismatch.
 - Error `Asset too large … node_modules/workerd/bin/workerd`: Wrangler is uploading the whole repository. Make sure `wrangler.jsonc` is on the `main` branch and the build command is set.
 - Custom domains are added under the Worker's **Settings → Domains & Routes** (same DNS steps as section 4).
 
