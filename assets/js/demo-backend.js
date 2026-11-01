@@ -619,6 +619,8 @@ function load() {
   if (DB) return DB;
   try { DB = JSON.parse(localStorage.getItem(KEY)); } catch { DB = null; }
   DB = shift(DB && DB.bookings ? DB : seed());
+  if (!DB.housekeepingAddon) DB.housekeepingAddon = { active_until: null, payments: [] };
+  if (!DB.otaAddon) DB.otaAddon = { active_until: null, payments: [] };
   if (!DB.leads) DB.leads = seedLeads();
   const P0 = DB.properties[0];
   if (P0.gst_mode === undefined) Object.assign(P0, { gst_mode: 'none', gstin: null, legal_name: null, gst_rate: 5, extras_gst_rate: 5, invoice_prefix: 'INV',
@@ -695,6 +697,41 @@ function load() {
   return DB;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch { /* storage full: keep in memory */ } }
+function addonOwnerRpcs(prefix, key, label) {
+  return {
+    [`${prefix}_addon_status`]: () => {
+      const a = DB[key]; const last = a.payments.slice().sort((x, y) => T(y.submitted_at) - T(x.submitted_at))[0];
+      return { active: !!a.active_until && T(a.active_until) > Date.now(), active_until: a.active_until || null,
+        pending: a.payments.some((x) => x.status === 'pending'), last_status: last?.status || null, review_note: last?.review_note || null };
+    },
+    [`${prefix}_addon_submit`]: ({ p_utr }) => {
+      const utr = String(p_utr || '').replace(/\s/g, '').toUpperCase();
+      if (!/^[A-Z0-9]{6,35}$/.test(utr)) fail('Enter a valid UPI transaction ID (UTR).');
+      if (DB[key].payments.some((x) => x.utr === utr)) fail('This UTR has already been submitted.');
+      if (DB[key].payments.some((x) => x.status === 'pending')) fail(`A ${label} payment is already waiting for confirmation.`);
+      DB[key].payments.push({ id: uuid(), utr, status: 'pending', submitted_at: new Date().toISOString(), review_note: null });
+      save(); return { status: 'pending' };
+    },
+  };
+}
+function addonAdminRpcs(prefix, key) {
+  return {
+    [`admin_${prefix}_addon_requests`]: () => DB[key].payments.filter((x) => x.status === 'pending').map((x) => ({
+      id: x.id, property_id: P, property: DB.properties[0].name, owner_email: 'owner@demo.nammastay', amount_paise: 88000, utr: x.utr, submitted_at: x.submitted_at })),
+    [`admin_review_${prefix}_addon_payment`]: ({ p_id, p_approve, p_note }) => {
+      const request = DB[key].payments.find((x) => x.id === p_id && x.status === 'pending') || fail('This add-on payment was already reviewed.');
+      if (!p_approve) { Object.assign(request, { status: 'rejected', review_note: p_note || null }); save(); return { status: 'rejected' }; }
+      const start = new Date(Math.max(Date.now(), DB[key].active_until ? T(DB[key].active_until) : 0));
+      const end = new Date(start); end.setMonth(end.getMonth() + 1);
+      Object.assign(request, { status: 'approved', review_note: null, period_start: start.toISOString(), period_end: end.toISOString() });
+      DB[key].active_until = end.toISOString(); save();
+      return { status: 'approved', active_until: end.toISOString() };
+    },
+  };
+}
+function requireHousekeepingAddon() {
+  if (!DB.housekeepingAddon?.active_until || T(DB.housekeepingAddon.active_until) <= Date.now()) fail('Housekeeping is not enabled for this property.');
+}
 // Homestay demo: meal plans, a house guide and meals on the current bookings (033)
 function hsSeedOnce() {
   if (DB.rsSeed) rsData();                                        // resort demo seeds its own meal plans & guide
@@ -1428,6 +1465,20 @@ const RPC = {
       planName: plan.name, start: start.toISOString(), end: end.toISOString(), utr: sp.utr, submitted: sp.submitted_at || new Date().toISOString() });
     if (sp.property_id === P) notify('Subscription payment confirmed', 'Paid until ' + end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), null);
     return { status: 'approved', paid_until: end.toISOString() };
+  },
+  ...addonAdminRpcs('ota', 'otaAddon'),
+  admin_housekeeping_addon_requests: () => (DB.housekeepingAddon?.payments || []).filter((x) => x.status === 'pending').map((x) => ({
+    id: x.id, property_id: P, property: DB.properties[0].name, owner_email: 'owner@demo.nammastay',
+    amount_paise: 88000, utr: x.utr, submitted_at: x.submitted_at,
+  })),
+  admin_review_housekeeping_addon_payment: ({ p_id, p_approve, p_note }) => {
+    const request = DB.housekeepingAddon.payments.find((x) => x.id === p_id && x.status === 'pending') || fail('This add-on payment was already reviewed.');
+    if (!p_approve) { Object.assign(request, { status: 'rejected', review_note: p_note || null }); save(); return { status: 'rejected' }; }
+    const start = new Date(Math.max(Date.now(), DB.housekeepingAddon.active_until ? T(DB.housekeepingAddon.active_until) : 0));
+    const end = new Date(start); end.setMonth(end.getMonth() + 1);
+    Object.assign(request, { status: 'approved', review_note: null, period_start: start.toISOString(), period_end: end.toISOString() });
+    DB.housekeepingAddon.active_until = end.toISOString(); save();
+    return { status: 'approved', active_until: end.toISOString() };
   },
   admin_update_subscription: ({ p_property, p_extend_days, p_complimentary }) => {
     const t = p_property === P ? DB.billing.mine : DB.billing.others.find((o) => o.property_id === p_property) || fail('Property not found.');
@@ -2252,15 +2303,31 @@ const RPC = {
   api_key_revoke: ({ p_id }) => { const k = (DB.apiKeys || []).find((x) => x.id === p_id); if (!k) throw new Error('API key not found.'); k.revoked_at = k.revoked_at || new Date().toISOString(); save(); return null; },
   rate_rule_delete: ({ p_id }) => { DB.rateRules = DB.rateRules.filter((x) => x.id !== p_id); return null; },
   rate_preview: ({ p_bed, p_from, p_days }) => { const bed = bedOf(p_bed); const out = []; for (let i = 0; i < (p_days || 14); i++) { const d = addDays(p_from, i); out.push({ day: d, rate_paise: nightRate(bed, bed.rate_paise, d) }); } return out; },
-  hk_board: () => DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id && b.is_active).sort((a, b) => a.sort - b.sort).map((b) => {
+  ...addonOwnerRpcs('ota', 'otaAddon', 'OTA sync'),
+  housekeeping_addon_status: () => {
+    const last = (DB.housekeepingAddon?.payments || []).slice().sort((a, b) => T(b.submitted_at) - T(a.submitted_at))[0];
+    return { active: !!DB.housekeepingAddon?.active_until && T(DB.housekeepingAddon.active_until) > Date.now(),
+      active_until: DB.housekeepingAddon?.active_until || null,
+      pending: !!DB.housekeepingAddon?.payments.some((x) => x.status === 'pending'),
+      last_status: last?.status || null, review_note: last?.review_note || null };
+  },
+  housekeeping_addon_submit: ({ p_utr }) => {
+    const utr = String(p_utr || '').replace(/\s/g, '').toUpperCase();
+    if (!/^[A-Z0-9]{6,35}$/.test(utr)) fail('Enter a valid UPI transaction ID (UTR).');
+    if (DB.housekeepingAddon.payments.some((x) => x.utr === utr)) fail('This UTR has already been submitted.');
+    if (DB.housekeepingAddon.payments.some((x) => x.status === 'pending')) fail('A Housekeeping payment is already waiting for confirmation.');
+    DB.housekeepingAddon.payments.push({ id: uuid(), utr, status: 'pending', submitted_at: new Date().toISOString(), review_note: null });
+    save(); return { status: 'pending' };
+  },
+  hk_board: () => { requireHousekeepingAddon(); return DB.rooms.slice().sort((a, b) => a.sort - b.sort).flatMap((r) => DB.beds.filter((b) => b.room_id === r.id && b.is_active).sort((a, b) => a.sort - b.sort).map((b) => {
     const inh = DB.bookings.find((x) => x.bed_id === b.id && x.status === 'checked_in');
     const arr = DB.bookings.filter((x) => x.bed_id === b.id && ['pending', 'confirmed'].includes(x.status) && ymd(x.check_in_at) === ymd()).sort((a, c) => (a.check_in_at < c.check_in_at ? -1 : 1))[0];
     return { id: b.id, label: b.label, room: r.name, room_id: r.id, status: b.hk_status || 'clean', note: b.hk_note || null, updated_at: b.hk_updated_at || null, updated_by: b.hk_updated_at ? ownerName() : null,
       in_house: inh ? { guest: guestOf(DB, inh).full_name, out: inh.check_out_at, leaving_today: ymd(inh.check_out_at) === ymd() } : null,
-      arriving: arr ? { guest: guestOf(DB, arr).full_name, at: arr.check_in_at } : null, blocked: DB.blocks.some((k) => k.bed_id === b.id && T(k.starts_at) <= Date.now() && T(k.ends_at) > Date.now()) }; })),
-  hk_set: ({ p_bed, p_status, p_note }) => { const b = bedOf(p_bed) || fail('Bed not found.'); Object.assign(b, { hk_status: p_status, hk_note: p_note || null, hk_updated_at: new Date().toISOString(), hk_by: ME }); return null; },
-  hk_counts: () => ({ dirty: DB.beds.filter((b) => b.is_active && b.hk_status === 'dirty').length, cleaning: DB.beds.filter((b) => b.is_active && b.hk_status === 'cleaning').length,
-    inspect: DB.beds.filter((b) => b.is_active && b.hk_status === 'inspect').length }),
+      arriving: arr ? { guest: guestOf(DB, arr).full_name, at: arr.check_in_at } : null, blocked: DB.blocks.some((k) => k.bed_id === b.id && T(k.starts_at) <= Date.now() && T(k.ends_at) > Date.now()) }; })); },
+  hk_set: ({ p_bed, p_status, p_note }) => { requireHousekeepingAddon(); const b = bedOf(p_bed) || fail('Bed not found.'); Object.assign(b, { hk_status: p_status, hk_note: p_note || null, hk_updated_at: new Date().toISOString(), hk_by: ME }); return null; },
+  hk_counts: () => { requireHousekeepingAddon(); return { dirty: DB.beds.filter((b) => b.is_active && b.hk_status === 'dirty').length, cleaning: DB.beds.filter((b) => b.is_active && b.hk_status === 'cleaning').length,
+    inspect: DB.beds.filter((b) => b.is_active && b.hk_status === 'inspect').length }; },
   setup_progress: () => { const p0 = DB.properties[0]; return { done_at: p0.setup_done_at || null, details: !!(p0.phone && p0.address && p0.city), rooms: DB.beds.some((b) => b.is_active),
     upi: !!p0.upi_id, staff: (DB.members || []).length > 1 || true, booking: DB.bookings.length > 0 }; },
   setup_finish: ({ p_done }) => { DB.properties[0].setup_done_at = p_done ? new Date().toISOString() : null; return null; },

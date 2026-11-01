@@ -254,8 +254,9 @@
   .price-card.best{border:2px solid var(--green);padding:29px;box-shadow:0 20px 50px rgba(28,154,108,.14)}
   .price-card .tag{position:absolute;top:-13px;left:30px;background:var(--green);color:#fff;font-size:12px;font-weight:800;padding:4px 12px;border-radius:999px}
   .price-card h3{font-size:18px}
-  .price-card .amt{font:800 40px/1 'Sora',sans-serif}
-  .price-card .amt small{font:700 15px 'Manrope',sans-serif;color:var(--muted)}
+  .price-card .amt{font:800 40px/1 'Sora',sans-serif;display:flex;align-items:baseline;flex-wrap:wrap;column-gap:8px;row-gap:4px}
+  .price-card .amt.long{font-size:32px}
+  .price-card .amt small{font:700 15px 'Manrope',sans-serif;color:var(--muted);white-space:nowrap}
   .price-card p{color:var(--muted);font-size:14.5px}
   .price-card .btn{margin-top:auto}
   .price-card > :nth-last-child(2){margin-bottom:10px}
@@ -722,7 +723,7 @@
         <button type="button" role="tab" data-kind="homestay" aria-selected="false">Homestay</button>
         <button type="button" role="tab" data-kind="hotel" aria-selected="false">Hotel</button>
       </div>
-      <p class="sub center" style="text-align:center">Every feature, unlimited staff and unlimited bookings. Start with 7 days free — no card needed. Pay by UPI when you’re ready.</p>
+      <p class="sub center" style="text-align:center">Core features, unlimited staff and bookings. Housekeeping is optional at <span data-hk-price>₹880</span>/month. Start with 7 days free — no card needed. Pay by UPI when you’re ready.</p>
       <div class="price-grid" id="price-grid"></div>
       <ul class="price-incl">
         <li>Bed-level bookings &amp; calendar</li><li>Guest online check-in</li><li>Form C for foreign guests</li><li>UPI QR payments, no gateway fees</li>
@@ -772,9 +773,9 @@
         <details><summary>How is my guests’ ID data protected?</summary><p>Aadhaar numbers are stored masked (last 4 digits only), ID photos are kept in private storage and deleted automatically after the period you choose, and staff only see what their role allows.</p></details>
         <details><summary>Can my staff have limited access?</summary><p>Yes. There are four roles — owner, manager, front desk and accountant. For example, an accountant can see payments and reports but not guest ID documents.</p></details>
         <details><summary>Can I manage more than one property?</summary><p>Yes. One login can belong to several properties, and you switch between them from the menu. Each property keeps its own rooms, rates, team and reports.</p></details>
-        <details><summary>How much does it cost?</summary><p>One flat monthly price per property, based on its type and size — see Pricing above. Every feature and unlimited staff are included. There are no per-booking or per-guest fees.</p></details>
+        <details><summary>How much does it cost?</summary><p>One flat monthly price per property, based on its type and size — see Pricing above. The core plan includes unlimited staff and bookings; Housekeeping is an optional <span data-hk-price>₹880</span>/month add-on. There are no per-booking or per-guest fees.</p></details>
         <details><summary>What happens after the free trial?</summary><p>Pay for a month or a year by UPI from the Billing tab in Settings and enter the transaction ID — we confirm it and your access continues. If you don’t renew, your data stays safe and visible; only new bookings pause until you do.</p></details>
-        <details><summary>Can I try it before paying?</summary><p>Yes — the 7-day free trial has every feature and needs no card. Prefer a guided tour first? Book a free 15-minute walkthrough and we’ll show you around on WhatsApp or a video call.</p></details>
+        <details><summary>Can I try it before paying?</summary><p>Yes — the 7-day free trial includes the core plan and needs no card. Housekeeping can be added separately for <span data-hk-price>₹880</span>/month. Prefer a guided tour first? Book a free 15-minute walkthrough and we’ll show you around on WhatsApp or a video call.</p></details>
       </div>
     </div>
   </section>
@@ -893,7 +894,10 @@ var NS_SITE = {
 
   /* ---- Pricing: live from the database when connected ---- */
   var allPlans = NS_SITE.prices; var kind = 'hostel';
-  function inr(p) { return '₹' + Math.round(p / 100).toLocaleString('en-IN'); }
+  var C = null;                                              // currency module; prices stay in INR until it loads
+  function inr(p) { return C ? C.priceFromInr(p / 100) : '₹' + Math.round(p / 100).toLocaleString('en-IN'); }
+  function loc(t) { return C ? C.localizeText(t) : t; }
+  function amt(v, per) { return '<div class="amt' + (v.length > 8 ? ' long' : '') + '">' + v + ' <small>/ ' + per + '</small></div>'; }
   function drawPrices() {
     var grid = document.getElementById('price-grid');
     var list = allPlans.filter(function (p) { return (p.kind || 'hostel') === kind; });
@@ -906,8 +910,8 @@ var NS_SITE = {
         var per = p.period_months === 1 ? 'month' : p.period_months === 12 ? 'year' : p.period_months + ' months';
         var isBest = list.length > 1 && p === best;
         return '<div class="price-card' + (isBest ? ' best' : '') + '">' + (isBest ? '<span class="tag">Best value</span>' : '') +
-          '<h3>' + esc(p.name) + '</h3><div class="amt">' + inr(p.price_paise) + ' <small>/ ' + per + '</small></div>' +
-          '<p>' + esc(p.description || '') + '</p>' + (p.period_months > 1 ? '<p>≈ ' + inr(p.price_paise / p.period_months) + ' per month</p>' : '') +
+          '<h3>' + esc(p.name) + '</h3>' + amt(inr(p.price_paise), per) +
+          '<p>' + esc(loc(p.description || '')) + '</p>' + (p.period_months > 1 ? '<p>≈ ' + inr(p.price_paise / p.period_months) + ' per month</p>' : '') +
           '<a class="btn ' + (isBest ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 7-day free trial</a></div>';
       });
     } else {                                                   // sizes: one card per size
@@ -918,8 +922,8 @@ var NS_SITE = {
         var size = hi && !lo ? 'Up to ' + hi + ' rooms' : lo && hi ? lo + '–' + hi + ' rooms' : lo ? lo + '+ rooms' : 'Any size';
         var mid = i === 0 && order.length > 1;
         return '<div class="price-card' + (mid ? ' best' : '') + '">' + (mid ? '<span class="tag">Most popular</span>' : '') + '<h3>' + size + '</h3>' +
-          (q ? '<div class="amt" style="font-size:32px">Custom</div><p>' + esc(q.description || 'Priced for your hotel') + '</p><a class="btn btn-light" href="#early-access">Talk to us</a>'
-             : '<div class="amt">' + inr(m.price_paise) + ' <small>/ month</small></div>' + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — save ' + inr(m.price_paise * 12 - y.price_paise) + '</p>' : '') +
+          (q ? '<div class="amt" style="font-size:32px">Custom</div><p>' + esc(loc(q.description || 'Priced for your hotel')) + '</p><a class="btn btn-light" href="#early-access">Talk to us</a>'
+             : amt(inr(m.price_paise), 'month') + (y ? '<p class="alt">or ' + inr(y.price_paise) + ' / year — save ' + inr(m.price_paise * 12 - y.price_paise) + '</p>' : '') +
                '<a class="btn ' + (mid ? 'btn-primary' : 'btn-light') + '" href="signup.html">Start 7-day free trial</a>') + '</div>';
       });
     }
@@ -931,7 +935,13 @@ var NS_SITE = {
     document.querySelectorAll('#price-tabs button').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
     drawPrices();
   });
-  drawPrices();
+  import('./assets/js/housekeeping-price.js').then(function (hk) {
+    return import('./assets/js/currency.js').then(function (m) {
+      C = m;
+      var text = hk.housekeepingPrice().text;
+      document.querySelectorAll('[data-hk-price]').forEach(function (el) { el.textContent = text; });
+    });
+  }).catch(function () {}).then(drawPrices);
   var cfgP = window.NAMMASTAY_CONFIG || {};
   if (cfgP.supabaseUrl && cfgP.supabaseAnonKey) {
     fetch(cfgP.supabaseUrl.replace(/\/$/, '') + '/rest/v1/plans?select=id,name,period_months,price_paise,description,kind,min_units,max_units,is_quote&is_active=eq.true&order=sort', {

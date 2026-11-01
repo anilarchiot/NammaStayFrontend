@@ -1,4 +1,5 @@
 // NammaStay admin: every subscribing property, UPI payments to confirm, prices & settings.
+import { HK_PRICE_INR_PAISE } from '../housekeeping-price.js';
 import { openPlatformInvoice, GST_STATES, options, adminPage, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
   confirmDialog, toast, field, showFatal, $, $$ } from '../core.js';
 
@@ -13,6 +14,10 @@ adminPage(async (ctx) => {
   async function draw() { await drawInner(); invoiceCard(); }
   async function drawInner() {
     const d = await rpc('admin_subscriptions', { p_q: q || null });
+    const ADDON_LABEL = { housekeeping: 'Housekeeping', ota: 'OTA sync' };
+    const addonPayments = (await Promise.all(Object.keys(ADDON_LABEL).map(async (kind) =>
+      (await rpc(`admin_${kind}_addon_requests`).catch(() => [])).map((x) => ({ ...x, kind }))))).flat()
+      .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
     const plan = Object.fromEntries(d.plans.map((p) => [p.id, p]));
     const count = (s) => d.properties.filter((p) => p.state === s).length;
     const mrr = d.properties.filter((p) => p.state === 'active' && plan[p.plan_id])
@@ -36,6 +41,18 @@ adminPage(async (ctx) => {
           <td>${esc(plan[p.plan_id]?.name || p.plan_id)}</td><td style="font-weight:700">${rupees(p.amount_paise)}${p.coupon_code ? `<div class="ns-pill green" style="font-size:11px;margin-top:2px">${esc(p.coupon_code)}</div>` : ''}</td><td style="font-family:monospace;font-size:13px">${esc(p.utr)}</td>
           <td style="white-space:nowrap"><button type="button" class="ns-btn" style="height:32px;font-size:12px" data-approve="${esc(p.id)}">Approve</button>
             <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-reject="${esc(p.id)}">Reject</button></td></tr>`).join('')
+          || '<tr><td colspan="6" class="ns-empty">Nothing to confirm right now.</td></tr>'}
+        </tbody></table></div>
+      </div>
+
+      <div class="ns-card" style="padding:0;overflow:hidden">
+        <div style="padding:18px 20px"><div class="ns-h3">Add-on payments (Housekeeping, OTA sync)</div>
+          <div class="ns-muted">Confirm each payment (${rupees(HK_PRICE_INR_PAISE)}) in your UPI account before activating one month of the add-on.</div></div>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:720px"><thead><tr><th>Submitted</th><th>Property</th><th>Add-on</th><th>Amount</th><th>UTR</th><th></th></tr></thead><tbody>
+        ${addonPayments.map((p) => `<tr><td>${fmtDayTime(p.submitted_at)}</td><td style="font-weight:700">${esc(p.property)}<div class="ns-muted" style="font-weight:500">${esc(p.owner_email || '')}</div></td>
+          <td>${ADDON_LABEL[p.kind]}</td><td style="font-weight:700">${rupees(p.amount_paise)}</td><td style="font-family:monospace;font-size:13px">${esc(p.utr)}</td>
+          <td style="white-space:nowrap"><button type="button" class="ns-btn" style="height:32px;font-size:12px" data-hk-addon-approve="${esc(p.kind)}:${esc(p.id)}">Approve</button>
+            <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-hk-addon-reject="${esc(p.kind)}:${esc(p.id)}">Reject</button></td></tr>`).join('')
           || '<tr><td colspan="6" class="ns-empty">Nothing to confirm right now.</td></tr>'}
         </tbody></table></div>
       </div>
@@ -98,6 +115,23 @@ adminPage(async (ctx) => {
         await rpc('admin_review_subscription_payment', { p_id: b.dataset.reject, p_approve: false, p_note: el.querySelector('[name=note]').value });
         toast('Rejected.'); draw(); } }],
     }));
+    $$('[data-hk-addon-approve]').forEach((b) => b.onclick = async () => {
+      const [kind, id] = b.dataset.hkAddonApprove.split(':');
+      const p = addonPayments.find((x) => x.id === id && x.kind === kind);
+      if (!p || !await confirmDialog(`Approve ${ADDON_LABEL[kind]} add-on`, `Confirm ${rupees(p.amount_paise)} (UTR ${p.utr}) from ${p.property} has reached your account?`, { confirmLabel: 'Approve' })) return;
+      try {
+        const result = await rpc(`admin_review_${kind}_addon_payment`, { p_id: p.id, p_approve: true, p_note: null });
+        toast(`${ADDON_LABEL[kind]} enabled until ${fmtDate(result.active_until)}.`); draw();
+      } catch (e) { toast(e.message, { error: true }); }
+    });
+    $$('[data-hk-addon-reject]').forEach((b) => b.onclick = () => { const [kind, id] = b.dataset.hkAddonReject.split(':'); modal({
+      title: `Reject ${ADDON_LABEL[kind]} payment`,
+      body: field('Reason (the owner sees this)', '<input class="ns-input" name="note" value="Payment not found in our account — please check the UTR">'),
+      actions: [{ label: 'Cancel' }, { label: 'Reject', kind: 'danger', onClick: async (el) => {
+        await rpc(`admin_review_${kind}_addon_payment`, { p_id: id, p_approve: false, p_note: el.querySelector('[name=note]').value });
+        toast('Payment rejected.'); draw();
+      } }],
+    }); });
     $$('[data-manage]').forEach((b) => b.onclick = () => {
       const p = d.properties.find((x) => x.property_id === b.dataset.manage);
       modal({

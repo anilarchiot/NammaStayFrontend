@@ -531,6 +531,100 @@ async function bootApp() {
   return ctx;
 }
 
+function mountTopbar(ctx) {
+  const main = $('.ns-main');
+  if (!main || $('.ns-topbar', main)) return;
+  const topbar = document.createElement('header');
+  topbar.className = 'ns-topbar';
+
+  const property = document.createElement('details');
+  property.className = 'ns-topbar-popover ns-property-picker';
+  const propertySummary = document.createElement('summary');
+  propertySummary.className = 'ns-property-trigger';
+  propertySummary.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>';
+  const propertyName = document.createElement('span');
+  propertyName.className = 'ns-property-name';
+  propertyName.textContent = ctx.property_name;
+  propertySummary.append(propertyName);
+  propertySummary.insertAdjacentHTML('beforeend', '<svg class="ns-topbar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>');
+  property.append(propertySummary);
+  const propertyMenu = document.createElement('div');
+  propertyMenu.className = 'ns-topbar-menu ns-property-menu';
+  propertyMenu.setAttribute('aria-label', 'Switch property');
+  ctx.memberships.forEach((membership) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'ns-property-option';
+    option.textContent = membership.property_name;
+    if (membership.property_id === ctx.property_id) option.setAttribute('aria-current', 'true');
+    option.addEventListener('click', () => {
+      property.open = false;
+      if (membership.property_id === ctx.property_id) return;
+      localStorage.setItem('ns.property', membership.property_id);
+      location.reload();
+    });
+    propertyMenu.append(option);
+  });
+  property.append(propertyMenu);
+
+  const actions = document.createElement('div');
+  actions.className = 'ns-topbar-actions';
+  const languageWrap = document.createElement('label');
+  languageWrap.className = 'ns-topbar-language';
+  languageWrap.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"></path></svg>';
+  const language = langPicker();
+  language.classList.add('ns-topbar-lang');
+  const languageNames = { en: 'EN', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', te: 'తెలుగు', ml: 'മലയാളം' };
+  Array.from(language.options).forEach((option) => { option.textContent = languageNames[option.value] || option.textContent; });
+  languageWrap.append(language);
+  actions.append(languageWrap);
+
+  const profile = document.createElement('details');
+  profile.className = 'ns-topbar-popover ns-profile-picker';
+  const profileSummary = document.createElement('summary');
+  profileSummary.className = 'ns-profile-trigger';
+  const profileAvatar = document.createElement('span');
+  profileAvatar.className = 'ns-profile-avatar';
+  profileAvatar.textContent = initials(ctx.name);
+  profileSummary.append(profileAvatar);
+  profileSummary.insertAdjacentHTML('beforeend', '<svg class="ns-topbar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>');
+  profile.append(profileSummary);
+  const profileMenu = document.createElement('div');
+  profileMenu.className = 'ns-topbar-menu ns-profile-menu';
+  const identity = document.createElement('div');
+  identity.className = 'ns-profile-identity';
+  const identityAvatar = document.createElement('span');
+  identityAvatar.className = 'ns-profile-avatar';
+  identityAvatar.textContent = initials(ctx.name);
+  const identityCopy = document.createElement('div');
+  const identityName = document.createElement('strong');
+  identityName.textContent = ctx.name;
+  const identitySub = document.createElement('span');
+  identitySub.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
+  identityCopy.append(identityName, identitySub);
+  identity.append(identityAvatar, identityCopy);
+  profileMenu.append(identity);
+  const sidebarFoot = $('.ns-sidebar-foot');
+  const settings = sidebarFoot?.querySelector('a[href="settings.html"]');
+  const signout = sidebarFoot?.querySelector('.ns-signout');
+  if (settings) profileMenu.append(settings);
+  if (signout) profileMenu.append(signout);
+  profile.append(profileMenu);
+  actions.append(profile);
+
+  topbar.append(property, actions);
+  const mobilebar = $('.ns-mobilebar', main);
+  main.insertBefore(topbar, mobilebar ? mobilebar.nextSibling : main.firstChild);
+  sidebarFoot?.remove();
+
+  document.addEventListener('click', (event) => {
+    if (!topbar.contains(event.target)) topbar.querySelectorAll('details[open]').forEach((item) => { item.open = false; });
+  });
+  topbar.querySelectorAll('details').forEach((item) => item.addEventListener('toggle', () => {
+    if (item.open) topbar.querySelectorAll('details[open]').forEach((other) => { if (other !== item) other.open = false; });
+  }));
+}
+
 function applyChrome(ctx) {
   const nameEl = $('.ns-user-name'); if (nameEl) nameEl.textContent = ctx.name;
   const subEl = $('.ns-user-sub'); if (subEl) subEl.textContent = `${ROLE_LABEL[ctx.role]} · ${ctx.property_name}`;
@@ -548,15 +642,7 @@ function applyChrome(ctx) {
     }
     if (roomsLink?.parentElement) roomsLink.parentElement.insertAdjacentElement('afterend', otaLink);
   } else otaLink?.remove();
-  const so = $('.ns-sidebar a[href="login.html"], .ns-sidebar [data-signout], .ns-sidebar button:last-of-type');
-  const LANG_STYLE = 'width:100%;height:34px;border-radius:8px;border:1px solid #2A3963;background:#15244A;color:#FBF3DE;font:600 12.5px Manrope,sans-serif;padding:0 8px';
-  const oldLang = $('.ns-sidebar .ns-lang');
-  if (oldLang) oldLang.replaceWith(langPicker(LANG_STYLE));             // menu restored from the last page: same size, live again
-  else {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'padding:4px 0 8px';
-    wrap.appendChild(langPicker(LANG_STYLE));
-    const foot = $('.ns-sidebar .ns-user') || so; foot?.parentElement?.insertBefore(wrap, foot);
-  }
+  $('.ns-sidebar .ns-lang')?.closest('div')?.remove();
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
     const rb = $('.ns-sidebar .ns-nav-link[href="rooms.html"]');
@@ -636,6 +722,7 @@ function applyChrome(ctx) {
   }
   pgMenu(ctx);                                                          // PG / co-living menu (032)
   resortMenu(ctx);                                                      // resorts: Activities, Day visitors, Groups (034)
+  mountTopbar(ctx);
   if (DEMO) demoBadge();
   const out = $('.ns-signout');
   if (out) out.addEventListener('click', async (e) => {
@@ -645,13 +732,6 @@ function applyChrome(ctx) {
     location.replace('login.html');
   });
   import('./pages/purni.js').then(({ mountPurni }) => mountPurni(ctx)).catch((error) => console.warn('Purni could not load', error));
-  if (ctx.memberships.length > 1 && subEl) {         // switch property
-    subEl.style.cursor = 'pointer';
-    subEl.title = 'Switch property';
-    subEl.addEventListener('click', () => choose('Switch property',
-      ctx.memberships.map((m) => ({ label: `${m.property_name} (${ROLE_LABEL[m.role]})`, value: m.property_id })))
-      .then((v) => { if (v) { localStorage.setItem('ns.property', v); location.reload(); } }));
-  }
   window.nsMarkActiveNav?.();
   document.documentElement.classList.add('ns-chrome-ready');
 }
@@ -875,13 +955,12 @@ function ringNotificationBells(bells) {
 }
 async function startNotifications(ctx) {
   const bells = [];
-  for (const host of [$('.ns-sidebar'), $('.ns-mobilebar')]) {
-    if (!host) continue;
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ns-bell'; b.setAttribute('aria-label', 'Notifications'); b.innerHTML = BELL;
-    b.addEventListener('click', () => openNotifications(ctx, setCount));
-    host.appendChild(b); bells.push(b);
-  }
+  const host = $('.ns-topbar-actions');
+  if (!host) return;
+  const bell = document.createElement('button');
+  bell.type = 'button'; bell.className = 'ns-bell'; bell.setAttribute('aria-label', 'Notifications'); bell.innerHTML = BELL;
+  bell.addEventListener('click', () => openNotifications(ctx, setCount));
+  host.insertBefore(bell, host.firstChild); bells.push(bell);
   if (!bells.length) return;
   function setCount(n) {
     bells.forEach((b) => {

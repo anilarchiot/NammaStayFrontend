@@ -7,7 +7,7 @@ const SAFE_READ_RPCS = new Set([
   'booking_detail', 'booking_guests_list', 'booking_status_counts',
   'check_coupon', 'dashboard_summary', 'day_visits_list', 'dayout_packages_list', 'formc_due_count', 'formc_list',
   'company_health', 'company_summary', 'guest_profile', 'group_get', 'groups_list', 'guide_for_token', 'guide_get',
-  'hk_board', 'hk_counts', 'invest_summary', 'lead_counts',
+  'invest_summary', 'lead_counts',
   'legal_checklist_get', 'legal_docs_alerts', 'legal_docs_list', 'kitchen_list', 'list_bookings', 'list_deleted_bookings',
   'list_leads', 'list_members', 'list_payments', 'meal_plans_list', 'my_billing_details', 'my_memberships',
   'my_platform_invoices', 'occupancy_series', 'ota_overview', 'paylink_list', 'payment_summary', 'pg_dashboard',

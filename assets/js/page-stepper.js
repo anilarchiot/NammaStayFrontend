@@ -147,8 +147,11 @@ export function mountPageStepper(ctx, route) {
   if (!host || !route || !ctx?.user?.id) return;
 
   const pageKey = route.key || route.path.replace(/\.html$/, '');
-  const storageKey = `ns.page-stepper:${ctx.user.id}:${pageKey}`;
-  try { if (localStorage.getItem(storageKey) === 'done') return; } catch { /* Storage may be unavailable. */ }
+  const storageKey = `ns.page-stepper:${pageKey}`;
+  const legacyStorageKey = `ns.page-stepper:${ctx.user.id}:${pageKey}`;
+  try {
+    if (localStorage.getItem(storageKey) === 'done' || localStorage.getItem(legacyStorageKey) === 'done') return;
+  } catch { /* Storage may be unavailable. */ }
 
   const messages = GUIDES[pageKey] || [`Review the information on ${route.title}.`, 'Use the available controls to find or update what you need.', 'Open a related record for more detail.'];
   const targets = TARGETS[pageKey] || [];

@@ -1,5 +1,16 @@
 // Housekeeping board — every bed/room: Dirty → Cleaning → Ready (Clean). Check-out marks it Dirty automatically.
+import { requireAddon } from '../addon-gate.js';
 import { page, rpc, content, setSubtitle, headerActions, esc, modal, field, toast, fmtTime, W, onPageLeave, $, $$ } from '../core.js';
+
+const ADDON = {
+  rpc: 'housekeeping_addon', name: 'Housekeeping', eyebrow: 'HOUSEKEEPING', ctaLabel: 'Turn on Housekeeping',
+  ownerHeading: 'Housekeeping is an add-on', staffHeading: 'Housekeeping is off for this property',
+  ownerText: 'Give your team a live cleaning list after every check-out. Track dirty, in-progress, and ready rooms from one shared board.',
+  staffText: 'Ask the property owner to turn on Housekeeping. Once enabled, your team can mark rooms as cleaning or ready.',
+  asideIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"></path><path d="M6 21V10l6-5 6 5v11"></path><path d="M10 21v-5h4v5"></path></svg>',
+  asideOwner: ['Your team gets a shared cleaning board', 'Staff can update room status as soon as access is active.'],
+  asideStaff: ['Housekeeping is managed by the owner', 'Your current access and bookings are unchanged.'],
+};
 
 const ST = {
   dirty: { label: 'Dirty', next: 'cleaning', action: 'Start cleaning', icon: '🧺' },
@@ -10,6 +21,7 @@ const ST = {
 const ago = (iso) => { if (!iso) return ''; const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 
 page('housekeeping', async (ctx) => {
+  if (!await requireAddon(ctx, ADDON)) return;
   let filter = 'todo';
   headerActions().innerHTML = '<button type="button" class="ns-btn-ghost hk-refresh-button" id="hk-refresh"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Refresh</span></button>';
 

@@ -194,6 +194,8 @@ export function mountPurni(ctx) {
       return { text: `That’s outside what I can help with here, ${firstName}. I can check rent, vacant beds, and tenants; the support team can help with anything else.`, link: supportMailLink(ctx, question), prompts: initialShortcuts.slice(0, 3) };
     }
     if (/housekeep|clean|dirty|room turn/.test(q)) {
+      const addon = await rpc('housekeeping_addon_status', { p_property: ctx.property_id }).catch(() => ({ active: false }));
+      if (!addon.active) return { text: 'Housekeeping is not enabled for this property yet. The owner can review the add-on from the Housekeeping page.', link: { href: 'housekeeping.html', label: 'View Housekeeping' }, prompts: [['Arrivals', 'How many arrivals are expected today?'], ['Form C', 'Are any Form C reports due?']] };
       const counts = await rpc('hk_counts', { p_property: ctx.property_id });
       const dirty = Number(counts?.dirty || 0);
       const cleaning = Number(counts?.cleaning || 0);

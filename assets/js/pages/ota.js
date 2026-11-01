@@ -1,6 +1,20 @@
 // OTA calendar sync (iCal) — export each bed/room's NammaStay calendar to OTAs, import OTA calendars back.
 import { fmtDate, rupees, modal, page, rpc, sb, content, setSubtitle, headerActions, esc, toast, confirmDialog, field, options, showFatal, W,
   FUNCTIONS_URL, OTA, DEMO, $, $$ } from '../core.js';
+import { otaIcon, OTA_LIST } from '../ota-icons.js';
+import { requireAddon } from '../addon-gate.js';
+
+const ADDON = {
+  rpc: 'ota_addon', name: 'OTA sync', eyebrow: 'OTA SYNC', ctaLabel: 'Turn on OTA sync',
+  ownerHeading: 'Sell on many OTAs without double bookings', staffHeading: 'OTA sync is off for this property',
+  channels: true,
+  features: ['Connect several OTAs at the same time', 'A night booked on one site closes on all the others', 'OTA bookings show up on your NammaStay calendar', 'Automatic sync every 30 minutes'],
+  ownerText: 'Connect Airbnb, Booking.com, Agoda and more so availability and bookings stay in step automatically and double bookings are avoided.',
+  staffText: 'Ask the property owner to turn on OTA sync. Once enabled, your calendars stay in step with the OTAs.',
+  asideIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0011 21.07l1.71-1.71"></path></svg>',
+  asideOwner: ['Your calendars stay in sync with every OTA', 'Nights booked here close on the OTAs, and OTA bookings appear on your calendar.'],
+  asideStaff: ['OTA sync is managed by the owner', 'Your current access and bookings are unchanged.'],
+};
 
 const ago = (iso) => {
   if (!iso) return 'not synced yet';
@@ -17,6 +31,7 @@ const HOWTO = [
 
 page('ota', async (ctx) => {
   if (!ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
+  if (!await requireAddon(ctx, ADDON)) return;
   const canEdit = ctx.allow('manage_rooms');
   headerActions().innerHTML = '<button type="button" class="ns-btn ns-refresh-button" id="sync-now"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>';
 
@@ -30,7 +45,12 @@ page('ota', async (ctx) => {
     content(`
       <div id="cx-card"></div>
       <div class="ns-card ota-intro">
-        <div class="ns-h3">Keep Airbnb, Booking.com and NammaStay in step</div>
+        <div class="ns-h3">Connect as many OTAs as you like — all in step with NammaStay</div>
+        <div class="ns-muted">Add one calendar for each OTA you sell on. Every OTA you connect shares availability, so a night booked anywhere closes everywhere.</div>
+        <div class="ota-chips">${OTA_LIST.map((o) => {
+          const n = feeds.filter((f) => f.channel === o.key).length;
+          return `<span class="ota-chip${n ? ' is-on' : ''}">${otaIcon(o)}${esc(o.name)}<em>${n ? `✓ ${n} connected` : 'Not connected'}</em></span>`;
+        }).join('')}<span class="ota-chip ota-chip-more">+ Any other OTA with an iCal link</span></div>
         <div class="ota-steps">
           <div><span>1</span><b>Export to the OTA</b><br>Copy a ${W.unit}’s NammaStay link and paste it in the OTA’s “import calendar”. Nights booked here close there.</div>
           <div><span>2</span><b>Import from the OTA</b><br>Copy the OTA’s calendar (export / iCal) link and add it below. Their bookings appear on your calendar as 🔗 blocks.</div>
@@ -57,7 +77,7 @@ page('ota', async (ctx) => {
               <button type="button" class="ota-link-btn" data-newtok>Make a new link (if this one was shared by mistake)</button>
             </div>
             <div class="ota-col">
-              <div class="ota-lbl">⬇ OTA calendars — imported here</div>
+              <div class="ota-lbl">⬇ OTA calendars — imported here <span class="ota-count">${b.feeds.length} connected</span></div>
               ${b.feeds.length ? b.feeds.map((f) => `<div class="ota-feed${f.last_status === 'error' ? ' is-err' : ''}">
                   <span class="ota-badge" style="background:${(OTA[f.channel] || OTA.other).color}">${esc((OTA[f.channel] || OTA.other).name)}</span>
                   <span class="ota-feed-main"><span class="ota-url">${esc(f.import_url)}</span>
@@ -67,7 +87,7 @@ page('ota', async (ctx) => {
                 <select class="ns-input" data-add-ch aria-label="OTA">${options(Object.entries(OTA).map(([k, v]) => [k, v.name]), 'airbnb')}</select>
                 <input class="ns-input" data-add-url placeholder="Paste the OTA’s calendar link (https://…ics)" aria-label="OTA calendar link">
                 <button type="button" class="ns-btn" data-add>Add</button></div>` : ''}
-              ${!b.feeds.length ? '<div class="ns-muted" style="font-size:12.5px">No OTA calendar yet.</div>' : ''}
+              ${!b.feeds.length ? '<div class="ns-muted" style="font-size:12.5px">No OTA calendar yet. Add one per OTA — you can connect several.</div>' : ''}
             </div>
           </div></div>`;
       }).join('') || '<div class="ns-card ns-empty">Add your rooms and beds first (Rooms).</div>'}`);

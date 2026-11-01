@@ -1,3 +1,4 @@
+import { housekeepingPrice } from '../housekeeping-price.js';
 import { hostExtras, isResort, isHomestay, ymd, W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 import { mountGuideCard, mountMealPlansCard } from './homestay.js';   // homestays (033)
 import { mountResortSettings } from './resort.js';            // resorts (034)
@@ -241,11 +242,11 @@ page('settings', async (ctx) => {
             <div class="ns-muted" style="font-size:13.5px">${esc(until)}</div>
             ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using NammaStay meanwhile.</div>' : ''}
             ${a.state === 'expired' ? '<div class="ns-error">New bookings are paused. Your data is safe — renew below to continue.</div>' : ''}
-            <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property — all features, unlimited staff and bookings.
+            <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property for the core plan, with unlimited staff and bookings. Housekeeping is optional at ${housekeepingPrice().text}/month.
               ${b.pay_to?.support_whatsapp || b.pay_to?.support_email ? `<br>Questions? ${b.pay_to.support_whatsapp ? `<a href="https://wa.me/${esc(b.pay_to.support_whatsapp.replace(/\D/g, ''))}" target="_blank" rel="noopener" style="font-weight:700">WhatsApp us</a>` : ''} ${b.pay_to.support_email ? `<a href="mailto:${esc(b.pay_to.support_email)}" style="font-weight:700">${esc(b.pay_to.support_email)}</a>` : ''}` : ''}</div>
           </div>
           <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
-            ${a.state === 'complimentary' ? '<div class="ns-h3">Your property has complimentary access — nothing to pay.</div>' : `
+            ${a.state === 'complimentary' ? '<div class="ns-h3">Your core plan has complimentary access — no plan payment is needed. Housekeeping is optional at ' + housekeepingPrice().text + '/month.</div>' : `
             <div><div class="ns-h3">${a.state === 'active' ? 'Renew or extend' : 'Choose a plan'}</div><div class="ns-muted" style="margin-top:4px">${esc(tierNote)}</div></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="plans">
               ${plans.map((x) => x.is_quote ? `<div class="ns-plan" style="cursor:default">
