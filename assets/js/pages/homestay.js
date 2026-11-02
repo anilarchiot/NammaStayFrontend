@@ -21,7 +21,7 @@ export async function mountMealPlansCard(ctx) {
   const host = document.querySelector('.ns-content'); if (!host) return;
   const plans = await plansOrNull(ctx);
   if (plans === null) { host.insertAdjacentHTML('beforeend', '<div class="ns-card ns-muted">Meal plans need the database update <b>033_homestay.sql</b>.</div>'); return; }
-  const can = ctx.can('owner', 'manager') && ctx.allow('manage_rooms');
+  const can = ctx.canManageRooms();
   const card = document.createElement('div'); card.className = 'ns-card'; card.id = 'meal-plans';
   card.style.cssText = 'padding:0;overflow:hidden';
   host.append(card);

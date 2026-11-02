@@ -30,9 +30,9 @@ const HOWTO = [
 ];
 
 page('ota', async (ctx) => {
-  if (!ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
+  if (!ctx.isAdmin && !ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
   if (!await requireAddon(ctx, ADDON)) return;
-  const canEdit = ctx.allow('manage_rooms');
+  const canEdit = ctx.canManageRooms();
   headerActions().innerHTML = '<button type="button" class="ns-btn ns-refresh-button" id="sync-now"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>';
 
   async function draw() {

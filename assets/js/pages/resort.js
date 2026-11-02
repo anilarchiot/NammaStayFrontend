@@ -18,7 +18,7 @@ export async function mountResortSettings(ctx) {
   try { [pk, st, meals, acts] = await Promise.all([rpc('stay_packages_list', { p_property: ctx.property_id }), rpc('resort_settings_get', { p_property: ctx.property_id }),
     rpc('meal_plans_list', { p_property: ctx.property_id }).catch(() => []), rpc('activities_list', { p_property: ctx.property_id })]); }
   catch (e) { if (notInstalled(e)) { host.insertAdjacentHTML('beforeend', '<div class="ns-card ns-muted">Resort features need the database update <b>034_resort.sql</b>.</div>'); return; } throw e; }
-  const can = ctx.can('owner', 'manager') && ctx.allow('manage_rooms');
+  const can = ctx.canManageRooms();
 
   // ---- extra beds
   const beds = document.createElement('div'); beds.className = 'ns-card'; beds.id = 'rs-beds';

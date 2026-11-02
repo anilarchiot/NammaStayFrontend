@@ -211,7 +211,7 @@ page('settings', async (ctx) => {
       if (hostExtras()) await mountMealPlansCard(ctx).catch(() => {});   // homestay / resort: meal plans (033)
       if (isResort()) await mountResortSettings(ctx).catch(() => {});   // resort: stay packages, extra beds (034)
       if (!ctx.isPg) await priceRulesCard(ctx);           // seasonal / weekend nightly prices don't apply to PG rent
-      if (!ctx.allow('manage_rooms')) {
+      if (!ctx.canManageRooms()) {
         $$('#save-rates, #x-save, #x-add, #x-suggest, [data-x-del], #pr-add, [data-pr-edit], [data-pr-del]').forEach((b) => b.remove());
         $$('.ns-content input, .ns-content select').forEach((i) => { i.disabled = true; });
         document.querySelector('.ns-content').insertAdjacentHTML('afterbegin', '<div class="ns-demo-hint">View only — your role can’t change rooms, beds or prices.</div>');

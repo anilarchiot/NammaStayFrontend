@@ -515,6 +515,9 @@ async function bootApp() {
     property_id: m.property_id, property_name: m.property_name, role: m.role,
     name: m.display_name || session.user.email,
     can: (...roles) => roles.includes(m.role),
+    canManageRooms: () => ctx.isAdmin || m.role === 'owner' || (
+      m.role === 'manager' && (typeof rolePerms.manage_rooms === 'boolean' ? rolePerms.manage_rooms : permDefault(m.role, 'manage_rooms'))
+    ),
   };
   ctx.isAdmin = await adminP;                                         // NammaStay platform admin
   ctx.isPg = (await pgP) === true;                                    // PG / co-living property (031)
