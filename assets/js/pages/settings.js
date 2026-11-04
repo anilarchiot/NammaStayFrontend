@@ -456,7 +456,14 @@ async function extrasCard(ctx) {
   const add = (it) => { $('#x-empty')?.remove(); tbody.insertAdjacentHTML('beforeend', rowHtml(it)); };
   $('#x-add').onclick = () => { add({ unit: 'each' }); tbody.lastElementChild.querySelector('[name=x-name]').focus(); };
   $('#x-suggest')?.addEventListener('click', (e) => { SUGGESTED.forEach(([name, category, rupee, unit]) => add({ name, category, price_paise: rupee * 100, unit })); e.target.remove(); toast('Suggested items added — change the prices, then Save extras.'); });
-  tbody.addEventListener('click', (e) => { const b = e.target.closest('[data-x-del]'); if (!b) return; const tr = b.closest('tr'); if (tr.dataset.extra) removed.add(tr.dataset.extra); tr.remove(); });
+  tbody.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-x-del]'); if (!b) return;
+    const tr = b.closest('tr');
+    const name = tr.querySelector('[name=x-name]').value.trim() || 'this item';
+    if (!await confirmDialog('Delete extra?', `${name} will be removed from the price list when you save your changes.`, { confirmLabel: 'Delete', danger: true })) return;
+    if (tr.dataset.extra) removed.add(tr.dataset.extra);
+    tr.remove();
+  });
   $('#x-save').onclick = async (e) => {
     e.target.disabled = true;
     try {

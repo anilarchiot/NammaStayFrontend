@@ -115,7 +115,7 @@ page('rooms', async (ctx) => {
     try {
       const history = await q(sb.from('bookings').select('id').eq('bed_id', b.id).limit(1));
       if (history.length) throw new Error(`${b.label} has booking history and can’t be deleted. Edit the room and turn off “In use” instead.`);
-      if (!await confirmDialog('Delete bed', `Permanently delete ${b.label}? This also removes its maintenance blocks.`, { confirmLabel: 'Delete', danger: true })) return;
+      if (!await confirmDialog('Delete bed?', `Are you sure you want to permanently delete ${b.label}? This also removes its maintenance blocks.`, { confirmLabel: 'Delete', danger: true })) return;
       await q(sb.from('bed_blocks').delete().eq('bed_id', b.id));
       await q(sb.from('beds').delete().eq('id', b.id));
       toast(`${b.label} deleted.`);
@@ -130,7 +130,7 @@ page('rooms', async (ctx) => {
       const ids = new Set(units.map((b) => b.id));
       const history = ids.size ? await q(sb.from('bookings').select('id,bed_id').eq('property_id', ctx.property_id)) : [];
       if (history.some((b) => ids.has(b.bed_id))) throw new Error(`${r.name} has beds with booking history and can’t be deleted. Edit the room and turn off “In use” on those beds instead.`);
-      if (!await confirmDialog('Delete room', `Permanently delete ${r.name} and all ${units.length} ${units.length === 1 ? W.unit : W.units}? This also removes their maintenance blocks.`, { confirmLabel: 'Delete room', danger: true })) return;
+      if (!await confirmDialog('Delete room?', `Are you sure you want to permanently delete ${r.name} and all ${units.length} ${units.length === 1 ? W.unit : W.units}? This also removes their maintenance blocks.`, { confirmLabel: 'Delete room', danger: true })) return;
       for (const b of units) await q(sb.from('bed_blocks').delete().eq('bed_id', b.id));
       await q(sb.from('beds').delete().eq('room_id', r.id));
       await q(sb.from('rooms').delete().eq('id', r.id));
