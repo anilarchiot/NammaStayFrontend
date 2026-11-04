@@ -14,6 +14,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/rotating-property-type.css">
+<script src="assets/js/rotating-property-type.js" defer></script>
 <script src="assets/js/config.js"></script>
 <style>
   a{color:#1C9A6C}a:hover{color:#157A56}
@@ -43,8 +45,8 @@
     </div>
 
     <div style="max-width:400px;">
-      <div style="font-family:'Sora',sans-serif;font-size:38px;font-weight:700;line-height:1.25;color:#FBF3DE;margin-bottom:20px;">Run your hostel front desk from one screen.</div>
-      <div style="font-size:16px;line-height:1.7;color:#AEB6C9;">Bookings, beds, check-ins and payments for hostels, hotels and homestays — built for small property teams.</div>
+      <div role="heading" aria-level="1" aria-label="Run your property front desk from one screen." style="font-family:'Sora',sans-serif;font-size:38px;font-weight:700;line-height:1.25;color:#FBF3DE;margin-bottom:20px;">Run your <span class="rotating-property-type" data-rotating-type="hotel|resort|PG" aria-hidden="true">hotel</span> front desk from one screen.</div>
+      <div style="font-size:16px;line-height:1.7;color:#AEB6C9;">Bookings, beds, check-ins and payments for hotels, resorts, PGs and homestays — built for small property teams.</div>
     </div>
 
     <div style="display:flex;gap:32px;">

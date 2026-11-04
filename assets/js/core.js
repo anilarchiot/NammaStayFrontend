@@ -139,7 +139,24 @@ export async function loadPropertyCount() {
   if (!els.length) return;
   try {
     const n = await rpc('public_property_count');
-    if (Number.isFinite(+n) && +n > 0) els.forEach((e) => { e.textContent = String(n); });
+    if (Number.isFinite(+n) && +n > 0) els.forEach((e) => {
+      const target = Math.round(+n);
+      const start = Math.max(0, Number.parseInt(e.textContent, 10) || 0);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || target <= start) {
+        e.textContent = String(target);
+        return;
+      }
+
+      const duration = 1000;
+      const startedAt = performance.now();
+      const step = (now) => {
+        const progress = Math.min((now - startedAt) / duration, 1);
+        const eased = 1 - (1 - progress) ** 3;
+        e.textContent = String(Math.round(start + (target - start) * eased));
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
   } catch { /* keep default */ }
 }
 
@@ -536,7 +553,9 @@ async function bootApp() {
 
 function mountTopbar(ctx) {
   const main = $('.ns-main');
-  if (!main || $('.ns-topbar', main)) return;
+  if (!main) return;
+  const cachedBar = $('.ns-topbar[data-cached]', main);
+  if ($('.ns-topbar', main) && !cachedBar) return;
   const topbar = document.createElement('header');
   topbar.className = 'ns-topbar';
 
@@ -617,7 +636,8 @@ function mountTopbar(ctx) {
 
   topbar.append(property, actions);
   const mobilebar = $('.ns-mobilebar', main);
-  main.insertBefore(topbar, mobilebar ? mobilebar.nextSibling : main.firstChild);
+  if (cachedBar) cachedBar.replaceWith(topbar);
+  else main.insertBefore(topbar, mobilebar ? mobilebar.nextSibling : main.firstChild);
   sidebarFoot?.remove();
 
   document.addEventListener('click', (event) => {
@@ -736,6 +756,7 @@ function applyChrome(ctx) {
   });
   import('./pages/purni.js').then(({ mountPurni }) => mountPurni(ctx)).catch((error) => console.warn('Purni could not load', error));
   window.nsMarkActiveNav?.();
+  window.nsRestoreNavScroll?.();
   document.documentElement.classList.add('ns-chrome-ready');
 }
 
@@ -826,14 +847,20 @@ function saveShell(admin) {
       area: admin ? 'admin' : 'app',
       property: admin ? '' : localStorage.getItem('ns.property') || '',
     };
+    const bar = admin ? null : $('.ns-main > .ns-topbar');
+    if (bar) {
+      const copy = bar.cloneNode(true);
+      copy.removeAttribute('data-cached');
+      copy.querySelectorAll('details[open]').forEach((d) => d.removeAttribute('open'));
+      copy.querySelectorAll('select').forEach((sel) => Array.from(sel.options).forEach((o) => { if (o.value === sel.value) o.setAttribute('selected', ''); }));
+      data.topbar = copy.outerHTML;
+    }
     if (admin) {
       data.brand = side.querySelector('.ns-brand')?.outerHTML || '';
       const foot = side.querySelector('.ns-sidebar-foot')?.cloneNode(true);
       if (foot) { unmark(foot); data.foot = foot.outerHTML; }
     } else {
       data.name = $('.ns-user-name')?.textContent || ''; data.sub = $('.ns-user-sub')?.textContent || ''; data.av = $('.ns-avatar')?.textContent || '';
-      const foot = side.querySelector('.ns-sidebar-foot')?.cloneNode(true);
-      if (foot) { unmark(foot); foot.querySelectorAll('.ns-bell').forEach((e) => e.remove()); data.foot = foot.outerHTML; }
     }
     localStorage.setItem(admin ? 'ns.shell.admin' : 'ns.shell', JSON.stringify(data));
   } catch { /* storage full or blocked: pages still work, just without the instant menu */ }

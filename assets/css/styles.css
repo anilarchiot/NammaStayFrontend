@@ -28,6 +28,10 @@ html:not(.ns-chrome-ready) .ns-sidebar .ns-sidebar-foot{visibility:hidden}
 @view-transition{navigation:auto}
 .ns-sidebar{view-transition-name:ns-sidebar}
 ::view-transition-group(ns-sidebar){animation:none}
+.ns-topbar{view-transition-name:ns-topbar}
+::view-transition-group(ns-topbar){animation:none}
+/* While a page loads, keep the top bar visible above the loading cover. */
+.ns-booting .ns-topbar{z-index:301}
 ::view-transition-old(ns-sidebar){display:none}
 ::view-transition-new(ns-sidebar){animation:none}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.12s}
@@ -54,6 +58,8 @@ html:not(.ns-chrome-ready) .ns-sidebar .ns-sidebar-foot{visibility:hidden}
 .ns-pw-eye{position:absolute;top:0;right:4px;bottom:0;margin:auto 0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#6B7280;border-radius:8px;cursor:pointer;padding:0}
 .ns-pw-eye:hover{color:var(--navy);background:rgba(16,26,61,.06)}
 input::-ms-reveal,input::-ms-clear{display:none}
+/* Settings, profile and sign out live in the top bar for property users (admin pages keep them here). */
+body:not(.ns-admin-area) .ns-sidebar-foot{display:none}
 .ns-sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid #22305A;padding-top:12px}
 .ns-user{display:flex;align-items:center;gap:10px;padding:12px 8px 4px 8px;line-height:1.3}
 .ns-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
@@ -68,7 +74,7 @@ input::-ms-reveal,input::-ms-clear{display:none}
 .ns-mobilebar,.ns-scrim{display:none}
 
 /* ---------- Shared property and account bar ---------- */
-.ns-topbar{position:relative;z-index:25;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:64px;padding:8px 16px 8px 20px;background:var(--navy);border-bottom:1px solid #2A3963;color:var(--cream)}
+.ns-topbar{position:sticky;top:0;z-index:50;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:64px;padding:8px 16px 8px 20px;background:var(--navy);border-bottom:1px solid #2A3963;color:var(--cream)}
 .ns-topbar-popover{position:relative;min-width:0}
 .ns-topbar-popover > summary{list-style:none;cursor:pointer}
 .ns-topbar-popover > summary::-webkit-details-marker{display:none}
@@ -116,6 +122,8 @@ tr[data-href]:hover{background:#FBF9F1}
 .ns-login-brand img{background:#FFFDF6;border:1px solid var(--line);border-radius:10px;padding:3px}
 .ns-login-brand > span{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--ink)}
 .ns-login-brand > span span{color:var(--green)}
+.ns-signup-consent{display:grid;grid-template-columns:16px minmax(0,1fr);align-items:start;gap:8px;font-size:13px;line-height:1.55;color:#6B7280}
+.ns-signup-consent input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--green)}
 
 /* ---------- Booking detail (modal page) ---------- */
 .ns-modal-page{width:100%;min-height:100vh;height:100vh}
@@ -801,19 +809,19 @@ body:has(.ns-demo-badge) .purni-root{bottom:76px}
 .hk-addon-lock,.hk-addon-aside-icon{width:48px;height:48px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#FFF1E2;color:#9A430E}
 .hk-addon-eyebrow{color:#59647A;font-size:10px;font-weight:800}
 .hk-addon-card h2{max-width:480px;margin:0;color:var(--ink);font:800 20px/1.35 'Sora',sans-serif}
-.hk-addon-card > p{max-width:520px;margin:0;color:#626B7C;font-size:12px;line-height:1.6}
+.hk-addon-card > p{max-width:520px;margin:0;color:#626B7C;font-size:14px;line-height:1.55}
 .ota-ico{display:inline-flex;width:30px;height:30px;flex:0 0 auto;align-items:center;justify-content:center;border-radius:9px;color:#fff;font-family:var(--font-head);font-size:var(--fs-small);font-weight:var(--fw-heading);letter-spacing:-.02em;line-height:1}
 .ota-chip .ota-ico{width:22px;height:22px;border-radius:7px;font-size:var(--fs-label)}
 .ota-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;width:100%;max-width:560px}
 .ota-tile{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:#FBF9F1;text-align:left;color:var(--ink)}
-.ota-tile b{font-size:var(--fs-small);font-weight:var(--fw-strong);line-height:1.25}
+.ota-tile b{font-size:14px;font-weight:var(--fw-strong);line-height:1.25}
 .ota-tile.is-more{grid-column:1/-1;justify-content:center;border-style:dashed;background:#fff}
 .ota-tile.is-more b{color:var(--muted);font-weight:var(--fw-body)}
 .hk-addon-channels{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:520px}
 .hk-addon-channel{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:#FBF9F1;color:var(--ink);font-size:var(--fs-small);font-weight:var(--fw-strong)}
 .hk-addon-channel i{width:10px;height:10px;border-radius:50%}
 .hk-addon-channel.is-more{border-style:dashed;background:#fff;color:var(--muted);font-weight:var(--fw-body)}
-.hk-addon-features{list-style:none;margin:4px 0;padding:14px 18px;display:grid;gap:8px;text-align:left;background:#F1F8F4;border-radius:12px;color:#157A56;font-size:var(--fs-small);font-weight:var(--fw-strong)}
+.hk-addon-features{list-style:none;margin:4px 0;padding:14px 18px;display:grid;gap:8px;text-align:left;background:#F1F8F4;border-radius:12px;color:#157A56;font-size:14px;font-weight:var(--fw-strong)}
 .hk-addon-features li:before{content:"✓";margin-right:8px;font-weight:var(--fw-heading)}
 .hk-addon-price{display:flex;align-items:baseline;gap:5px;margin-top:3px;color:var(--ink);font:800 22px 'Sora',sans-serif}
 .hk-addon-price span,.hk-addon-payment-amount span{color:var(--muted);font:600 12px 'Manrope',system-ui,sans-serif}

@@ -265,7 +265,7 @@ function plansFor() {
 }
 function seedBilling() {
   const now = Date.now(); const D = (n) => new Date(now + n * DAY).toISOString();
-  const other = (name, city, owner, email, beds, state) => ({ property_id: uuid(), name, city, owner_name: owner, owner_email: email, beds,
+  const other = (name, city, owner, email, beds, state, kind = 'hostel') => ({ property_id: uuid(), name, city, owner_name: owner, owner_email: email, beds, kind,
     created_at: D(state === 'trial' ? -4 : -80), trial_ends_at: D(state === 'trial' ? 11 : -65),
     paid_until: state === 'active' ? D(20) : state === 'grace' ? D(-1) : state === 'expired' ? D(-30) : null,
     plan_id: ['active', 'grace', 'expired'].includes(state) ? 'monthly' : null, is_complimentary: false, last_booking_at: D(-1) });
@@ -275,10 +275,11 @@ function seedBilling() {
     // the demo hostel itself is in its free trial so the Billing tab has something to show
     mine: { trial_ends_at: D(11), paid_until: null, plan_id: null, is_complimentary: false },
     payments: [],
-    others: [other('Blue Door Hostel', 'Pondicherry', 'Meera Krishnan', 'meera@bluedoor.in', 24, 'active'),
-             other('Hilltop Backpackers', 'Manali', 'Aisha Khan', 'aisha@hilltop.co', 40, 'trial'),
-             other('Beach Shack Stays', 'Goa', 'Joseph D’Souza', 'joseph@goabeach.in', 12, 'grace'),
-             other('Mehta Guest House', 'Udaipur', 'Karan Mehta', 'karan@mehta.in', 8, 'expired')],
+    others: [other('Blue Door Hostel', 'Pondicherry', 'Meera Krishnan', 'meera@bluedoor.in', 24, 'active', 'hostel'),
+             other('Hilltop Backpackers', 'Manali', 'Aisha Khan', 'aisha@hilltop.co', 40, 'trial', 'hostel'),
+             other('Beach Shack Stays', 'Goa', 'Joseph D’Souza', 'joseph@goabeach.in', 12, 'grace', 'resort'),
+             other('Mehta Guest House', 'Udaipur', 'Karan Mehta', 'karan@mehta.in', 8, 'expired', 'hotel'),
+             other('Misty Hills Homestay', 'Coorg', 'Anita Rao', 'anita@mistyhills.in', 14, 'active', 'homestay')],
     pending: [{ id: uuid(), property_id: null, property: 'Hilltop Backpackers', owner_email: 'aisha@hilltop.co', plan_id: 'yearly', amount_paise: 2799900,
                 utr: '412398765432', submitted_at: D(-0.1) }],
   };
@@ -1443,8 +1444,9 @@ const RPC = {
   admin_subscriptions: ({ p_q }) => {
     const m = DB.billing.mine; const q = (p_q || '').toLowerCase();
     const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: ownerName(), owner_email: 'owner@demo.nammastay',
-      beds: activeBeds().length, created_at: DB.properties[0].created_at, last_booking_at: DB.bookings.map((b) => b.created_at).sort().pop(), ...m };
-    const list = [mine, ...DB.billing.others].map((x) => ({ ...x, state: accessOf(x) }))
+      beds: activeBeds().length, created_at: DB.properties[0].created_at, last_booking_at: DB.bookings.map((b) => b.created_at).sort().pop(), ...m,
+      kind: DB.pgMode ? 'pg' : DB.resortMode ? 'resort' : DB.properties[0].kind };
+    const list = [mine, ...DB.billing.others].map((x) => ({ ...x, kind: x.kind || 'hostel', state: accessOf(x) }))
       .filter((x) => !q || [x.name, x.city, x.owner_email].some((v) => (v || '').toLowerCase().includes(q)));
     return { settings: { ...DB.billing.settings }, plans: DB.billing.plans.map((p) => ({ ...p })), pending: DB.billing.pending.map((p) => ({ ...p })), properties: list };
   },

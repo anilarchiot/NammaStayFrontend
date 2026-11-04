@@ -3,7 +3,14 @@ import { sb, configured, $, esc, inr, say, today, photoUrl } from './common.js';
 const msg = $('#msg');
 if (!configured) say(msg, 'Not connected yet — set the Supabase keys in assets/js/config.js.', true);
 
-const TYPES = { hotel: ['hotel', 'resort'], homestay: ['homestay', 'villa', 'apartment'] };
+const TYPES = {
+  hostel: ['hostel'],
+  pg: ['pg'],
+  resort: ['resort'],
+  hotel: ['hotel'],
+  backpackers: ['backpacker'],
+  homestay: ['homestay', 'villa', 'apartment'],
+};
 let type = '';
 const nights = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 
@@ -16,7 +23,10 @@ async function search(e) {
   const { data, error } = await sb.rpc('mk_search', { p_city: f.get('city'), p_in: inD, p_out: outD, p_guests: Number(f.get('guests')) || 1 });
   if (error) return say(msg, error.message, true);
   const q = inD ? `&in=${inD}&out=${outD}&guests=${Number(f.get('guests')) || 1}` : '';
-  const rows = TYPES[type] ? data.filter((l) => TYPES[type].includes(String(l.property_type || '').toLowerCase())) : data;
+  const rows = TYPES[type] ? data.filter((l) => {
+    const propertyType = String(l.property_type || '').toLowerCase();
+    return TYPES[type].some((name) => propertyType.includes(name));
+  }) : data;
   $('#results').innerHTML = rows.length ? rows.map((l) => `
     <a class="tile" href="?id=${esc(l.id)}${q}" style="text-decoration:none;color:inherit">
       ${photoUrl(l.photo) ? `<img src="${esc(photoUrl(l.photo))}" alt="">` : '<div class="ph"></div>'}
@@ -70,7 +80,11 @@ if (configured) {
     type = TYPES[params.get('type')] ? params.get('type') : '';
     ['city', 'in', 'out', 'guests'].forEach((n) => { if (params.get(n) && f.elements[n]) f.elements[n].value = params.get(n); });
     const tabs = document.querySelectorAll('#types button');
-    const mark = () => tabs.forEach((b) => b.classList.toggle('on', b.dataset.t === type));
+    const mark = () => tabs.forEach((b) => {
+      const active = b.dataset.t === type;
+      b.classList.toggle('on', active);
+      b.setAttribute('aria-pressed', String(active));
+    });
     tabs.forEach((b) => b.onclick = () => { type = b.dataset.t; mark(); search(); });
     mark();
     f.onsubmit = search; search();

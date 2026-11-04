@@ -38,6 +38,9 @@ label{color:var(--muted)}
 .seg button,.ns:not(.guest) .seg button{flex:1;min-height:44px;border:0;border-radius:999px;background:transparent;color:var(--muted);box-shadow:none;font:800 14px 'Manrope',sans-serif;transition:background .2s,color .2s,box-shadow .2s}
 .seg button:hover:not(.on){background:var(--mint);color:var(--green-d);transform:none;box-shadow:none}
 .seg button.on,.ns:not(.guest) .seg button.on{background:var(--navy);color:#fff;box-shadow:0 6px 16px rgba(14,27,61,.22)}
+.seg.type-tabs{justify-content:flex-start;overflow-x:auto;scrollbar-width:thin}
+.seg.type-tabs button{flex:0 0 auto;white-space:nowrap;padding-inline:12px}
+.seg.type-tabs a{flex:0 0 auto;align-self:center;white-space:nowrap;padding:10px 12px;font-weight:var(--fw-strong)}
 .chip{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
 .chip:hover{border-color:var(--green)}
 .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}

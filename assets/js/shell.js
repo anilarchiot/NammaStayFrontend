@@ -16,6 +16,30 @@
   }
   window.nsMarkActiveNav = markActive;
 
+  // Paint the previous page's top bar as soon as <main> is parsed; core.js swaps in the live one.
+  function restoreTopbar(html) {
+    var done = false;
+    function place() {
+      if (done) return true;
+      var main = document.querySelector('.ns-main');
+      if (!main) return false;
+      var mobilebar = main.querySelector('.ns-mobilebar');
+      if (!mobilebar && !main.children.length) return false;
+      var holder = document.createElement('div');
+      holder.innerHTML = html;
+      var bar = holder.firstElementChild;
+      if (!bar) { done = true; return true; }
+      bar.setAttribute('data-cached', '1');
+      main.insertBefore(bar, mobilebar ? mobilebar.nextSibling : main.firstChild);
+      done = true;
+      return true;
+    }
+    if (place()) return;
+    var mo = new MutationObserver(function () { if (place()) mo.disconnect(); });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', function () { place(); mo.disconnect(); });
+  }
+
   // Show the finished menu from the previous page straight away (core.js saves it once the login is
   // checked), so the sidebar doesn't jump from this page's placeholder menu to the real one.
   (function restoreChrome() {
@@ -50,6 +74,7 @@
     var brand = sidebar.querySelector('.ns-brand');
     var foot = sidebar.querySelector('.ns-sidebar-foot');
     nav.innerHTML = saved.nav;
+    if (area === 'app' && saved.topbar) restoreTopbar(saved.topbar);
     if (foot && saved.foot) {
       var holder = document.createElement('div');
       holder.innerHTML = saved.foot;
@@ -64,9 +89,24 @@
   })();
   markActive();
 
-  // Keep the menu's scroll position from page to page.
-  try { var y = +sessionStorage.getItem('ns.navScroll') || 0; if (y) nav.scrollTop = y; } catch (e) { /* ignore */ }
-  window.addEventListener('pagehide', function () {
+  // Keep the menu's scroll position from page to page. Saved while scrolling (pagehide is unreliable),
+  // and restored again once core.js has finished building the menu, because extra links change its height.
+  var restoring = false;
+  function restoreNavScroll() {
+    var y = 0; try { y = +sessionStorage.getItem('ns.navScroll') || 0; } catch (e) { /* ignore */ }
+    restoring = true;
+    nav.scrollTop = y;
+    var on = nav.querySelector('.is-active');
+    if (on && !y) {
+      var top = on.offsetTop - nav.offsetTop;
+      if (top < nav.scrollTop || top + on.offsetHeight > nav.scrollTop + nav.clientHeight) nav.scrollTop = Math.max(0, top - nav.clientHeight / 2);
+    }
+    setTimeout(function () { restoring = false; }, 50);
+  }
+  window.nsRestoreNavScroll = restoreNavScroll;
+  restoreNavScroll();
+  nav.addEventListener('scroll', function () {
+    if (restoring || !document.documentElement.classList.contains('ns-chrome-ready')) return;
     try { sessionStorage.setItem('ns.navScroll', String(nav.scrollTop)); } catch (e) { /* ignore */ }
-  });
+  }, { passive: true });
 })();

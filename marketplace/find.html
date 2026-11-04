@@ -18,7 +18,16 @@
 <main>
   <div id="msg"></div>
   <div id="search" class="card">
-    <div class="seg" id="types" role="group" aria-label="Property type"><a href="stays.html">Hostels &amp; PGs</a><button type="button" data-t="hotel">Hotels</button><button type="button" data-t="homestay">Homestays</button><button type="button" data-t="" class="on">All stays</button></div>
+    <div class="seg type-tabs" id="types" role="group" aria-label="Property type">
+      <button type="button" data-t="" class="on" aria-pressed="true">All stays</button>
+      <button type="button" data-t="hostel" aria-pressed="false">Hostels</button>
+      <button type="button" data-t="pg" aria-pressed="false">PGs</button>
+      <button type="button" data-t="resort" aria-pressed="false">Resorts</button>
+      <button type="button" data-t="hotel" aria-pressed="false">Hotels</button>
+      <button type="button" data-t="backpackers" aria-pressed="false">Backpackers</button>
+      <button type="button" data-t="homestay" aria-pressed="false">Homestays</button>
+      <a href="stays.html">Hostel &amp; PG search</a>
+    </div>
     <form class="search" id="f">
       <input name="city" placeholder="City or property name">
       <input name="in" type="date" aria-label="Check-in">

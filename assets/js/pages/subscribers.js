@@ -4,10 +4,12 @@ import { openPlatformInvoice, GST_STATES, options, adminPage, page, rpc, content
   confirmDialog, toast, field, showFatal, $, $$ } from '../core.js';
 
 const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Complimentary', 'grey'], suspended: ['Suspended', 'red'] };
+const PROPERTY_TYPES = [['hostel', 'Hostel / Backpackers'], ['pg', 'PG'], ['resort', 'Resort'], ['hotel', 'Hotel'], ['homestay', 'Homestay']];
+const PROPERTY_TYPE_LABEL = Object.fromEntries(PROPERTY_TYPES);
 
 adminPage(async (ctx) => {
   if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
-  let q = '';
+  let q = '', propertyKind = '';
   headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div>';
   headerSearch('Search property, city, owner…', (v) => { q = v; draw(); });
 
@@ -58,18 +60,23 @@ adminPage(async (ctx) => {
       </div>
 
       <div class="ns-card" style="padding:0;overflow:hidden">
-        <div class="ns-h3" style="padding:18px 20px">Properties</div>
-        <div style="overflow-x:auto"><table class="ns-table" style="min-width:900px"><thead><tr><th>Property</th><th>Owner</th><th>Beds / rooms</th><th>Status</th><th>Access until</th><th>Last booking</th><th></th></tr></thead><tbody>
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+          <div class="ns-h3">Properties</div>
+          <div class="ns-muted">Backpacker hostels are grouped under Hostel, matching their registered property type.</div>
+          <div id="property-kind-chips" style="display:flex;gap:8px;flex-wrap:wrap" role="group" aria-label="Filter properties by type"></div>
+        </div>
+        <div style="overflow-x:auto"><table class="ns-table" style="min-width:1000px"><thead><tr><th>Property</th><th>Type</th><th>Owner</th><th>Beds / rooms</th><th>Status</th><th>Access until</th><th>Last booking</th><th></th></tr></thead><tbody id="rows">
         ${d.properties.map((p) => { const [l, c] = STATE[p.state] || [p.state, 'grey'];
           const until = p.is_complimentary ? '—' : p.state === 'trial' ? `Trial · ${fmtDate(p.trial_ends_at)}` : p.paid_until ? fmtDate(p.paid_until) : fmtDate(p.trial_ends_at);
-          return `<tr><td style="font-weight:700">${esc(p.name)}<div class="ns-muted" style="font-weight:500">${esc(p.city || '')} · joined ${fmtDate(p.created_at)}</div></td>
+          return `<tr data-kind="${esc(p.kind || 'unknown')}"><td style="font-weight:700">${esc(p.name)}<div class="ns-muted" style="font-weight:500">${esc(p.city || '')} · joined ${fmtDate(p.created_at)}</div></td>
+            <td>${esc(PROPERTY_TYPE_LABEL[p.kind] || 'Unknown')}</td>
             <td>${esc(p.owner_name || '')}<div class="ns-muted">${esc(p.owner_email || '')}</div></td><td>${p.beds}</td>
             <td>${pill(l, c)}${p.plan_id && plan[p.plan_id] ? `<div class="ns-muted">${esc(plan[p.plan_id].name)}</div>` : ''}</td>
             <td>${until}</td><td class="ns-muted">${p.last_booking_at ? fmtDate(p.last_booking_at) : 'None yet'}</td>
             <td style="white-space:nowrap"><a class="ns-btn-ghost" style="height:32px;font-size:12px" href="admin.html?id=${esc(p.property_id)}">Open</a>
               <button type="button" class="ns-btn-ghost" style="height:32px;font-size:12px" data-manage="${esc(p.property_id)}">Manage</button>
-              <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-delete="${esc(p.property_id)}">Delete</button></td></tr>`; }).join('')
-          || '<tr><td colspan="7" class="ns-empty">No properties found.</td></tr>'}
+              <button type="button" class="ns-btn-danger" style="height:32px;font-size:12px" data-delete="${esc(p.property_id)}">Delete</button></td></tr>`; }).join('')}
+        <tr id="property-empty" hidden><td colspan="8" class="ns-empty"></td></tr>
         </tbody></table></div>
       </div>
 
@@ -101,6 +108,31 @@ adminPage(async (ctx) => {
         <div class="ns-help">“Rooms” = active beds for hostels, rooms for hotels & homestays. Each owner only sees the plans that fit their property; a homestay above its limit gets hotel prices.</div>
         <button type="button" class="ns-btn" id="save-billing" style="align-self:flex-start">Save billing settings</button>
       </div>`);
+
+    const typeCounts = Object.fromEntries(d.properties.map((p) => [p.kind || 'unknown', 0]));
+    d.properties.forEach((p) => { typeCounts[p.kind || 'unknown'] += 1; });
+    const typeFilters = [['', 'All', d.properties.length],
+      ...PROPERTY_TYPES.map(([kind, label]) => [kind, label, typeCounts[kind] || 0]),
+      ...(typeCounts.unknown ? [['unknown', 'Unknown', typeCounts.unknown]] : [])];
+    $('#property-kind-chips').innerHTML = typeFilters.map(([kind, label, n]) =>
+      `<button type="button" class="ns-chip${propertyKind === kind ? ' is-on' : ''}" data-kind-filter="${esc(kind)}">${esc(label)} (${n})</button>`).join('');
+    const applyKindFilter = () => {
+      const visibleCount = d.properties.filter((p) => !propertyKind || (p.kind || 'unknown') === propertyKind).length;
+      $$('#rows tr[data-kind]').forEach((row) => { row.hidden = !!propertyKind && row.dataset.kind !== propertyKind; });
+      $$('#property-kind-chips [data-kind-filter]').forEach((button) => {
+        button.classList.toggle('is-on', button.dataset.kindFilter === propertyKind);
+      });
+      const empty = $('#property-empty');
+      empty.hidden = visibleCount > 0;
+      empty.firstElementChild.textContent = propertyKind ? 'No properties found for this type.' : 'No properties found.';
+    };
+    $('#property-kind-chips').onclick = (e) => {
+      const button = e.target.closest('[data-kind-filter]');
+      if (!button) return;
+      propertyKind = button.dataset.kindFilter;
+      applyKindFilter();
+    };
+    applyKindFilter();
 
     $$('[data-approve]').forEach((b) => b.onclick = async () => {
       const p = d.pending.find((x) => x.id === b.dataset.approve);

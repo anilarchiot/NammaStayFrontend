@@ -46,9 +46,10 @@ function accountStep() {
       ${input('email', 'Email', `type="email" autocomplete="email" value="${esc(param('email') || '')}"`)}
       ${input('pw', 'Password', 'type="password" autocomplete="new-password" minlength="10"')}
       <div class="ns-help" style="margin-top:-8px">At least 10 characters.</div>
-      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#6B7280">
-        <input type="checkbox" id="agree" style="width:16px;height:16px;accent-color:#1C9A6C;margin-top:2px">
-        I agree to the <a href="${MARKETING_URL}/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="${MARKETING_URL}/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and to handle my guests’ data responsibly.</label>
+      <label class="ns-signup-consent">
+        <input type="checkbox" id="agree">
+        <span>I agree to the <a href="${MARKETING_URL}/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="${MARKETING_URL}/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and to handle my guests’ data responsibly.</span>
+      </label>
       ${errBox}
       <button type="button" class="ns-btn ns-btn-lg" id="go">Create account</button>
       <div style="font-size:14px;color:#6B7280;text-align:center">Already have an account? <a href="login.html" style="font-weight:700">Sign in</a></div>
