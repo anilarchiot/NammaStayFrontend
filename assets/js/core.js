@@ -665,6 +665,15 @@ function applyChrome(ctx) {
     }
     if (roomsLink?.parentElement) roomsLink.parentElement.insertAdjacentElement('afterend', otaLink);
   } else otaLink?.remove();
+  let cxLink = $('.ns-sidebar a[href="channex.html"]');
+  if (['owner', 'manager'].includes(ctx.role)) {
+    if (!cxLink) {
+      cxLink = document.createElement('a'); cxLink.href = 'channex.html'; cxLink.className = 'ns-nav-link';
+      cxLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3"></path><path d="M20 17H7l3 3"></path></svg><span>Channex</span>';
+      if (/channex\.html$/.test(__PATH())) { cxLink.classList.add('is-active'); cxLink.setAttribute('aria-current', 'page'); }
+    }
+    (otaLink || roomsLink?.parentElement)?.insertAdjacentElement('afterend', cxLink);
+  } else cxLink?.remove();
   $('.ns-sidebar .ns-lang')?.closest('div')?.remove();
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
