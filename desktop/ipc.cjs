@@ -6,7 +6,7 @@ function assertTrustedSender(event) {
   const senderUrl = event.senderFrame?.url || event.sender?.getURL?.() || '';
   const senderOrigin = senderUrl ? new URL(senderUrl).origin : '';
   if (senderOrigin !== ORIGIN) {
-    throw new Error('Local data requests are only accepted from the NammaStay desktop app.');
+    throw new Error('Local data requests are only accepted from TheNammaStay desktop app.');
   }
 }
 

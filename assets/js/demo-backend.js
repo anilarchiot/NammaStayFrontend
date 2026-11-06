@@ -360,11 +360,11 @@ function demoInvoiceDoc({ id, propertyName, propertyId, amount, planName, start,
   DB.invCount = (DB.invCount || 0) + 1; const number = `${st.invoice_prefix}/${fy}/${String(DB.invCount).padStart(4, '0')}`;
   const fd = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).replace('Sept', 'Sep');
   const doc = { number, issued_at: new Date().toISOString(), fy, subscription: true, title: gst ? 'Tax invoice' : 'Invoice', gst, inter_state: inter,
-    seller: { name: 'NammaStay', legal_name: st.legal_name || 'NammaStay', gstin: st.gstin, address: st.address, phone: '+91 98400 00000', email: 'billing@thenammastay.com' },
+    seller: { name: 'TheNammaStay', legal_name: st.legal_name || 'NammaStay', gstin: st.gstin, address: st.address, phone: '+91 98400 00000', email: 'billing@thenammastay.com' },
     buyer: { name: own ? (P0.bill_name || P0.name) : propertyName, company: own && P0.bill_name && P0.bill_name !== P0.name ? P0.name : null, gstin: own ? P0.bill_gstin : null,
       address: own ? (P0.bill_address || [P0.address, P0.city].filter(Boolean).join(', ')) : null, phone: null, email: null },
     period: { plan: planName, from: start, to: end, property: propertyName },
-    lines: [{ desc: `NammaStay subscription — ${planName} plan (${fd(start)} → ${fd(end)}) · ${propertyName}`, sac: st.sac, qty: 1, rate_paise: amount, amount_paise: amount, gst_rate: rate, taxable_paise: taxable, tax_paise: tax }],
+    lines: [{ desc: `TheNammaStay subscription — ${planName} plan (${fd(start)} → ${fd(end)}) · ${propertyName}`, sac: st.sac, qty: 1, rate_paise: amount, amount_paise: amount, gst_rate: rate, taxable_paise: taxable, tax_paise: tax }],
     amount_paise: amount, taxable_paise: taxable, cgst_paise: gst && !inter ? Math.floor(tax / 2) : 0, sgst_paise: gst && !inter ? tax - Math.floor(tax / 2) : 0, igst_paise: gst && inter ? tax : 0,
     paid_paise: amount, balance_paise: 0, payments: [{ code: 'UPI', kind: 'payment', method: 'upi', amount_paise: amount, received_at: submitted, reference: utr }] };
   DB.pinv.unshift({ number, issued_at: doc.issued_at, total_paise: amount, payment_id: id, property: propertyName, property_id: propertyId, doc });
@@ -556,7 +556,7 @@ function businessHealth() {
       let st = !pn ? (inc > 0 ? 'amber' : 'unknown') : rn >= pn * 1.03 ? 'green' : rn >= pn * 0.95 ? 'amber' : 'red'; if (o.full >= 4 && st === 'green') st = 'amber';
       areas.push(A('pricing', 'Pricing', st, R(rn) + ' / night', `Money received per available unit-night${pn ? ', was ' + R(pn) : ''} · ${o.full} full nights in 30 days`, 'Money received in the last 30 days ÷ nights available.',
         o.full >= 4 ? `You were full on ${o.full} nights — raise prices on those days (weekends, holidays).` : 'Earnings per night are slipping: check you aren’t discounting too much and add extras (breakfast, tours).', 10));
-    } else areas.push(A('pricing', 'Pricing', 'unknown', '—', 'No payments recorded yet', 'Needs payments.', 'Record payments in NammaStay so earnings per night can be tracked.', 10));
+    } else areas.push(A('pricing', 'Pricing', 'unknown', '—', 'No payments recorded yet', 'Needs payments.', 'Record payments in TheNammaStay so earnings per night can be tracked.', 10));
     const ex = DB.expenses.filter((x) => x.spent_on >= from && x.spent_on <= today); const exp = ex.reduce((a, x) => a + x.amount_paise, 0);
     if (!ex.length || inc <= 0) areas.push(A('profit', 'Profit', 'unknown', '—', !ex.length ? 'No expenses recorded in the last 30 days' : 'No income in the last 30 days', 'Money received − expenses, last 30 days.', 'Add rent, salaries and bills in Expenses & profit — without them profit can’t be measured.', 20));
     else { const m = (inc - exp) * 100 / inc; areas.push(A('profit', 'Profit', m >= 25 ? 'green' : m >= 10 ? 'amber' : 'red', Math.round(m) + '% margin', `${R(inc - exp)} profit on ${R(inc)} received (30 days)`, '(Money received − expenses) ÷ money received, last 30 days.', 'Margin is thin: look at your biggest expense categories and OTA commission; small price rises help most.', 20)); }
@@ -1431,7 +1431,7 @@ const RPC = {
   submit_subscription_payment: ({ p_plan, p_utr, p_coupon }) => {
     const plan = plansFor().find((p) => p.id === p_plan) || fail('Choose a plan for your property.');
     const cq = p_coupon ? couponQuote(plan, p_coupon) : null;
-    if (plan.is_quote) fail('This plan is priced on request. Please contact NammaStay support.');
+    if (plan.is_quote) fail('This plan is priced on request. Please contact TheNammaStay support.');
     const utr = String(p_utr || '').replace(/\s/g, '').toUpperCase();
     if (!/^[0-9A-Z]{6,35}$/.test(utr)) fail('Enter the UPI transaction ID (UTR) from your payment app.');
     if (DB.billing.payments.some((x) => x.utr === utr && x.status !== 'rejected') || DB.billing.pending.some((x) => x.utr === utr)) fail('This UPI transaction ID was already submitted.');
@@ -1440,7 +1440,7 @@ const RPC = {
     DB.billing.pending.push({ id: pay.id, property_id: P, property: DB.properties[0].name, owner_email: 'owner@demo.nammastay', plan_id: plan.id, amount_paise: pay.amount_paise, coupon_code: pay.coupon_code, utr, submitted_at: pay.submitted_at });
     return { id: pay.id, status: 'pending' };
   },
-  create_my_property: () => fail('Sign-up works once NammaStay is connected to its database.'),
+  create_my_property: () => fail('Sign-up works once TheNammaStay is connected to its database.'),
   admin_subscriptions: ({ p_q }) => {
     const m = DB.billing.mine; const q = (p_q || '').toLowerCase();
     const mine = { property_id: P, name: DB.properties[0].name, city: DB.properties[0].city, owner_name: ownerName(), owner_email: 'owner@demo.nammastay',
@@ -1572,7 +1572,7 @@ const RPC = {
         phone: mine ? DB.properties[0].phone : '+91 98' + String(10000000 + x.beds * 7919).slice(0, 8), email: x.owner_email, upi_id: mine ? DB.properties[0].upi_id : (x.beds > 20 ? 'owner@okicici' : null), created_at: x.created_at },
       subscription: { ...x.sub, state: x.state },
       members: mine ? DB.members.map((m) => ({ name: m.display_name, email: m.email, role: m.role, last_seen_at: m.last_seen_at }))
-        : x.fresh ? [{ name: 'NammaStay support', email: 'owner@demo.nammastay', role: 'manager', last_seen_at: null }]
+        : x.fresh ? [{ name: 'TheNammaStay support', email: 'owner@demo.nammastay', role: 'manager', last_seen_at: null }]
         : [{ name: x.owner_name, email: x.owner_email, role: 'owner', last_seen_at: x.last_seen_at }, { name: 'Front desk', email: 'desk@' + x.owner_email.split('@')[1], role: 'front_desk', last_seen_at: x.last_seen_at }],
       usage: { rooms: mine ? DB.rooms.length : Math.max(1, Math.round(x.beds / 8)), beds: x.beds, guests: mine ? DB.guests.length : x.bookings_30d * 3,
         bookings_total: mine ? DB.bookings.length : x.bookings_30d * 4, bookings_30d: x.bookings_30d,
@@ -1910,7 +1910,7 @@ const RPC = {
   pg_mode: () => !!DB.pgMode,
   pg_set_mode: ({ p_on }) => {
     if (p_on && DB.properties[0].kind !== 'hostel') fail('PG / co-living works with beds — set the type to PG / Co-living (not hotel or homestay).');
-    if (!p_on && DB.pgMode) fail('This is a PG / co-living account — it can’t be switched to another type. Contact NammaStay support if you need to.');
+    if (!p_on && DB.pgMode) fail('This is a PG / co-living account — it can’t be switched to another type. Contact TheNammaStay support if you need to.');
     DB.pgMode = !!p_on; return !!p_on;
   },
   // ---- PG app (032)
@@ -2199,7 +2199,7 @@ const RPC = {
   admin_backfill_invoices: () => 0,
   run_billing_reminders: () => 0,
   admin_reminders: ({ p_all }) => DB.rem.filter((r) => p_all || !r.whatsapp_done_at).map((r) => ({ ...r, text: { title: { trial_3d: 'Your free trial ends in 3 days', trial_1d: 'Your free trial ends tomorrow',
-    trial_ended: 'Your free trial has ended', renew_7d: 'Your NammaStay plan renews in 7 days', renew_1d: 'Your NammaStay plan ends tomorrow', expired: 'Your NammaStay plan has ended' }[r.kind], body: '' } })),
+    trial_ended: 'Your free trial has ended', renew_7d: 'Your TheNammaStay plan renews in 7 days', renew_1d: 'Your TheNammaStay plan ends tomorrow', expired: 'Your TheNammaStay plan has ended' }[r.kind], body: '' } })),
   admin_mark_reminder: ({ p_id, p_done }) => { const r = DB.rem.find((x) => x.id === p_id); if (r) r.whatsapp_done_at = p_done ? new Date().toISOString() : null; return null; },
   formc_list: () => {
     const isF = (g) => g && g.nationality && !/^(india|indian)$/i.test(g.nationality);

@@ -133,7 +133,7 @@ async function home(q) {
       <button class="btn block search-submit"><span class="search-ico" aria-hidden="true">${ICON.search}</span> Search stays</button>
     </form>
     <div class="benefits">
-      <div class="benefit"><span class="benefit-icon live-icon" aria-hidden="true">${ICON.bed}</span><div><b>Live beds and rooms</b><div class="mute">Straight from the property's own NammaStay calendar, so what you see is free.</div></div></div>
+      <div class="benefit"><span class="benefit-icon live-icon" aria-hidden="true">${ICON.bed}</span><div><b>Live beds and rooms</b><div class="mute">Straight from the property's own TheNammaStay calendar, so what you see is free.</div></div></div>
       <div class="benefit"><span class="benefit-icon fee-icon" aria-hidden="true">${ICON.rupee}</span><div><b>No booking fee</b><div class="mute">You pay the property's own price. Nothing added.</div></div></div>
       <div class="benefit"><span class="benefit-icon home-icon" aria-hidden="true">${ICON.home}</span><div><b>Pay at the property</b><div class="mute">No advance, unless the property asks for one.</div></div></div>
     </div>
@@ -195,7 +195,7 @@ async function results(q) {
   const rows = liveOnly ? data.filter((l) => l.live) : data;
   const lq = new URLSearchParams({ in: inD || '', out: outD || '', beds });
   const head = `<div class="row2"><h2 style="font-size:20px">${rows.length} stay${rows.length === 1 ? '' : 's'} free on your dates</h2><button class="btn ghost sm" id="mt">${asMap ? 'List' : 'Map'}</button></div>`;
-  const foot = `<p class="mute" style="text-align:center"><b>Live beds</b>: runs on NammaStay, book instantly. <b>Owner confirms</b>: the owner replies to your request.</p>`;
+  const foot = `<p class="mute" style="text-align:center"><b>Live beds</b>: runs on TheNammaStay, book instantly. <b>Owner confirms</b>: the owner replies to your request.</p>`;
   if (!rows.length) { out.innerHTML = head + '<div class="card">No stays found. Try other dates, another city or remove a filter.</div>'; }
   else if (asMap) {
     out.innerHTML = head + '<div id="map" class="map"></div>' + foot;
@@ -326,9 +326,9 @@ async function rewards(q) {
   if (!ref || !phone) {
     app.classList.remove('success-page');
     app.innerHTML = `${brand()}<section class="rewards-intro">
-      <span class="pill green">NammaStay guest rewards</span><h1>Your stays add up.</h1>
+      <span class="pill green">TheNammaStay guest rewards</span><h1>Your stays add up.</h1>
       <p class="mute">Earn 1 point for every ₹100 of an eligible booking after checkout and host confirmation. Points unlock traveller tiers and badges.</p>
-      <div class="card rewards-rule"><b>How it works</b><p class="mute">Book through NammaStay Search, complete your stay, and ask your host to mark it as stayed. Points are based on the booking total. Points have no cash value.</p></div>
+      <div class="card rewards-rule"><b>How it works</b><p class="mute">Book through TheNammaStay Search, complete your stay, and ask your host to mark it as stayed. Points are based on the booking total. Points have no cash value.</p></div>
     </section>
     <form class="card rewards-lookup" id="rewards-form"><h2>Check your points</h2>
       <label for="reward-ref">Booking reference</label><input id="reward-ref" name="ref" placeholder="REQ-2041" required autocomplete="off">
@@ -362,7 +362,7 @@ async function rewards(q) {
   app.classList.remove('success-page');
   app.innerHTML = `${brand('<a class="small" href="#/">New search</a>')}
     <section class="rewards-dashboard">
-      <div class="card rewards-balance"><div class="kick">Your NammaStay rewards</div>
+      <div class="card rewards-balance"><div class="kick">Your TheNammaStay rewards</div>
         <div class="rewards-score">${Number(r.points).toLocaleString('en-IN')} <span>points</span></div>
         <span class="pill green">${esc(r.tier)}</span>
         <p class="mute">${tierMessage}</p>
@@ -370,7 +370,7 @@ async function rewards(q) {
         <div class="rewards-stats"><div><b>${Number(r.completed_stays)}</b><span>completed stays</span></div><div><b>${esc(r.tier)}</b><span>traveller tier</span></div></div>
       </div>
       <div class="rewards-history"><div class="row2"><h2>Your stays</h2><a href="#/rewards">Check another booking</a></div>
-        ${bookings || '<div class="card mute">No eligible stays yet. Complete a stay booked through NammaStay to start earning points.</div>'}
+        ${bookings || '<div class="card mute">No eligible stays yet. Complete a stay booked through TheNammaStay to start earning points.</div>'}
         <p class="mute">Points are awarded after checkout when the host confirms your stay. Earn 1 point per ₹100 of the booking total; points do not have cash value.</p>
       </div>
     </section>`;
@@ -389,7 +389,7 @@ async function track(q) {
   if (error) return (app.innerHTML = brand() + note(error.message, true) + '<a class="btn ghost" href="#/track">Try again</a>');
   const total = inr(t.amount_paise), isPg = t.kind === 'pg', visit = t.type === 'visit';
   const when = visit ? new Date(t.visit_at).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : `${fmt(t.check_in)} → ${fmt(t.check_out)}`;
-  const wa = waLink(t.whatsapp_phone, `Hi, this is about request ${t.ref} on NammaStay (${when}).`);
+  const wa = waLink(t.whatsapp_phone, `Hi, this is about request ${t.ref} on TheNammaStay (${when}).`);
   const ok = t.status === 'accepted';
   let html = brand(`<a class="small" href="#/rewards?${new URLSearchParams({ ref, phone })}">Rewards</a><a class="small" href="#/">New search</a>`);
   if (ok) {
@@ -406,7 +406,7 @@ async function track(q) {
       ${safeUrl(t.community_url) || t.instagram ? `<div class="card"><h3>Meet other travellers before you arrive</h3><p class="mute">${esc(t.title)} runs a group for its guests: plans, meetups and tips.</p>
         ${safeUrl(t.community_url) ? `<a class="btn block" target="_blank" rel="noopener" href="${esc(t.community_url)}">Join the WhatsApp community</a>` : ''}
         ${t.instagram ? `<a class="btn line block" style="margin-top:8px" target="_blank" rel="noopener" href="https://instagram.com/${encodeURIComponent(String(t.instagram).replace(/^@/, ''))}">Follow on Instagram</a>` : ''}
-        <p class="mute">The group is run by the ${isPg ? 'PG' : 'hostel'}. NammaStay doesn't see your chats. Your phone number shows to group members.</p></div>` : ''}
+        <p class="mute">The group is run by the ${isPg ? 'PG' : 'hostel'}. TheNammaStay doesn't see your chats. Your phone number shows to group members.</p></div>` : ''}
       <div class="next-stop"><h2>Next stop?</h2><p>Book your next hostel the same way: no booking fee, pay when you arrive.</p><div class="chips"><a class="chip" href="${nextCity('Pondicherry')}">Pondicherry</a><a class="chip" href="${nextCity('Bengaluru')}">Bengaluru</a><a class="chip on" href="#/">Search</a></div></div>
       <div class="success-links"><a href="#/">New search</a><a href="#" id="cancel-booking">Change or cancel</a></div></section>`;
     if (t.can_review) html += `<div class="card"><h3>How was your stay?</h3><form id="rv"><div class="chips" id="st">${[1, 2, 3, 4, 5].map((n) => `<button type="button" class="chip" data-s="${n}">${n} ★</button>`).join('')}</div>
@@ -417,7 +417,7 @@ async function track(q) {
     html += `<div class="card amber"><div style="font-size:30px">◷</div><h2 style="font-size:24px">${visit ? 'Visit request' : 'Request'} sent to ${esc(t.title)}</h2>
       <p>The owner replies by <b>${new Date(t.reply_by).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</b>. We'll WhatsApp you on ${esc(phone)} as soon as they confirm.</p><b style="color:#8A5A00">${esc(t.ref)} · sent ${new Date(t.sent_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</b></div>
       <div class="card"><div class="row2"><b>${when}</b>${t.verified ? '<span class="pill blue">Verified</span>' : ''}</div><div class="mute">${esc(t.room)}${visit ? '' : ` · ${t.beds} bed${t.beds > 1 ? 's' : ''}`}</div><hr style="border:0;border-top:1px solid var(--line)">
-        ${visit ? '' : `<div class="row2"><span>Rate × ${t.beds}</span><b>${total}</b></div><div class="row2"><span>NammaStay fee</span><b style="color:#0F6B4A">₹0</b></div><div class="row2"><b>Pay at the ${isPg ? 'PG' : 'hostel'}</b><b>${total}</b></div><div class="mute">No advance. Nothing is charged now.</div>`}</div>
+        ${visit ? '' : `<div class="row2"><span>Rate × ${t.beds}</span><b>${total}</b></div><div class="row2"><span>TheNammaStay fee</span><b style="color:#0F6B4A">₹0</b></div><div class="row2"><b>Pay at the ${isPg ? 'PG' : 'hostel'}</b><b>${total}</b></div><div class="mute">No advance. Nothing is charged now.</div>`}</div>
       <ol class="card steps" style="padding:8px 16px"><li class="done"><span class="dot">✓</span><div><b>Request sent</b><div class="mute">${new Date(t.sent_at).toLocaleString('en-IN')}</div></div></li>
         <li><span class="dot">2</span><div><b>Owner confirms</b><div class="mute">Waiting · by ${new Date(t.reply_by).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })} at the latest</div></div></li>
         <li><span class="dot">3</span><div><b>Stay and pay at the ${isPg ? 'PG' : 'hostel'}</b></div></li></ol>
@@ -429,7 +429,7 @@ async function track(q) {
       <a class="btn block" href="#/results?${new URLSearchParams({ city: t.city, in: t.check_in, out: t.check_out, beds: t.beds, kind: t.kind, live: 1 })}">Show hostels with live beds</a></div>`;
   }
   if (t.status === 'new') html += `<button class="btn danger block" id="cx" style="margin-top:10px">Cancel ${visit ? 'visit' : 'request'}</button>`;
-  html += `<p class="mute" style="text-align:center">Verified by NammaStay: photos, address and owner checked on a video call.</p><div id="m"></div>`;
+  html += `<p class="mute" style="text-align:center">Verified by TheNammaStay: photos, address and owner checked on a video call.</p><div id="m"></div>`;
   app.classList.toggle('success-page', ok);
   app.innerHTML = html;
   app.querySelector('#cancel-booking')?.addEventListener('click', (e) => {

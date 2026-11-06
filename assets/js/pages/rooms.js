@@ -48,7 +48,7 @@ page('rooms', async (ctx) => {
                 </div>`; }).join('')}
             </div></div>`; }).join('') || (welcome
           ? `<div class="ns-card" style="display:flex;flex-direction:column;gap:10px;grid-column:1/-1">
-              <div class="ns-h3" style="font-size:18px">Welcome to NammaStay 👋 Your free trial has started.</div>
+              <div class="ns-h3" style="font-size:18px">Welcome to TheNammaStay 👋 Your free trial has started.</div>
               <div class="ns-muted" style="font-size:14px;line-height:1.6">Step 1: add your first room type — e.g. ${W.example}.<br>
               Step 2: add your UPI ID in Settings. Step 3: create your first booking from Check-in.</div>
               ${manage ? '<button type="button" class="ns-btn" style="align-self:flex-start" id="first-room">+ Add your first room type</button>' : ''}</div>`

@@ -34,7 +34,7 @@ page(null, async (ctx) => {
   const editable = staff && live;
   const selfLink = b.self_checkin_token ? `${SITE_URL}/self-check-in.html?t=${b.self_checkin_token}` : null;
 
-  document.title = `${b.code} · NammaStay`;
+  document.title = `${b.code} · TheNammaStay`;
   const dlg = $('.ns-dialog');
   dlg.innerHTML = `
     <div style="padding:22px 26px;border-bottom:1px solid #F0EBDB;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -202,7 +202,7 @@ page(null, async (ctx) => {
     const m = modal({
       title: '💳 Online payment link', width: 520,
       body: `<div style="display:flex;flex-direction:column;gap:12px">
-          <div class="ns-muted" style="font-size:13px">The guest pays by UPI, card or net banking on Razorpay. NammaStay marks it paid automatically.</div>
+          <div class="ns-muted" style="font-size:13px">The guest pays by UPI, card or net banking on Razorpay. TheNammaStay marks it paid automatically.</div>
           ${field('Amount (₹)', `<input class="ns-input" name="amt" inputmode="decimal" value="${b.balance_paise / 100}">`, `Balance due: ${rupees(b.balance_paise)}`)}
           <div id="pl-out"></div>
           ${links.length ? `<div><div class="ns-muted" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Earlier links</div>

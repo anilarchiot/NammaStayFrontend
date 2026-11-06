@@ -245,6 +245,7 @@ tr[data-href]:hover{background:#FBF9F1}
 
 .ns-card{background:#FFFFFF;border:1px solid var(--line);border-radius:16px;padding:20px}
 .ns-page-stepper{position:relative;z-index:150!important;grid-column:1 / -1;align-self:start;min-width:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;margin:0 0 16px;padding:16px 18px;background:#F1F8F4;border-color:#BFE3CF;border-radius:18px;box-shadow:0 6px 20px rgba(28,154,108,.14);pointer-events:auto;scroll-margin-top:80px}
+.ns-page-stepper[hidden]{display:none}
 .ns-page-stepper-backdrop{position:fixed;inset:0;z-index:110;background:rgba(14,27,61,.08);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none}
 .ns-page-stepper-copy{min-width:0;flex:1}
 .ns-page-stepper-heading{display:flex;align-items:center;gap:10px;font-size:13px}

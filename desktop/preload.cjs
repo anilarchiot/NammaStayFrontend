@@ -5,11 +5,11 @@ function addDesktopTitlebar() {
 
   const titlebar = document.createElement('header');
   titlebar.id = 'ns-desktop-titlebar';
-  titlebar.setAttribute('aria-label', 'NammaStay application window controls');
+  titlebar.setAttribute('aria-label', 'TheNammaStay application window controls');
   titlebar.innerHTML = `
-    <div class="ns-desktop-brand" aria-label="NammaStay">
+    <div class="ns-desktop-brand" aria-label="TheNammaStay">
       <img src="assets/img/logo.png" alt="">
-      <span>Namma<span>Stay</span></span>
+      <span>TheNamma<span>Stay</span></span>
     </div>
     <div class="ns-desktop-drag"></div>
     <div class="ns-desktop-controls">
@@ -19,7 +19,7 @@ function addDesktopTitlebar() {
       <button type="button" data-window-action="maximize" aria-label="Maximize window" title="Maximize">
         <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" rx=".4"/></svg>
       </button>
-      <button type="button" data-window-action="close" aria-label="Close NammaStay" title="Close">
+      <button type="button" data-window-action="close" aria-label="Close TheNammaStay" title="Close">
         <svg viewBox="0 0 12 12" aria-hidden="true"><path d="m3 3 6 6m0-6L3 9"/></svg>
       </button>
     </div>`;

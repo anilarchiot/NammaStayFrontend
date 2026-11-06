@@ -8,7 +8,7 @@ const COLOR = Object.fromEntries(STATUS.map(([v, , c]) => [v, c]));
 const TYPE = { hostel: 'Hostel', homestay: 'Homestay', hotel: 'Hotel / guest house', other: 'Other' };
 
 adminPage(async (ctx) => {
-  if (!ctx.isAdmin) { showFatal('Leads are only visible to NammaStay admins.'); return; }
+  if (!ctx.isAdmin) { showFatal('Leads are only visible to TheNammaStay admins.'); return; }
   const state = { status: '', q: '', cursor: null, rows: [] };
   const head = headerActions();
   head.innerHTML = '<div class="ns-search"><span>Search</span></div><button type="button" class="ns-btn-ghost" id="csv">Export CSV</button>';
@@ -31,7 +31,7 @@ adminPage(async (ctx) => {
   }
 
   const row = (l) => {
-    const wa = l.phone ? `https://wa.me/${l.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${l.name.split(' ')[0]}, thanks for your interest in NammaStay!`)}` : '';
+    const wa = l.phone ? `https://wa.me/${l.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${l.name.split(' ')[0]}, thanks for your interest in TheNammaStay!`)}` : '';
     return `<tr data-id="${esc(l.id)}">
       <td class="ns-muted">${fmtDayTime(l.created_at)}</td>
       <td style="font-weight:700">${esc(l.name)}${l.notes ? '<div class="ns-muted" style="font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis">📝 ' + esc(l.notes) + '</div>' : ''}</td>

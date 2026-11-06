@@ -1,6 +1,6 @@
 {
   "appId": "com.nammastay.app",
-  "appName": "NammaStay",
+  "appName": "TheNammaStay",
   "webDir": "www",
   "server": {
     "androidScheme": "https",

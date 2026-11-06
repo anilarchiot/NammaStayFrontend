@@ -20,7 +20,7 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   Menu.setApplicationMenu(null);
   app.whenReady().then(start).catch((error) => {
-    dialog.showErrorBox('NammaStay could not start', error.message);
+    dialog.showErrorBox('TheNammaStay could not start', error.message);
     app.quit();
   });
 

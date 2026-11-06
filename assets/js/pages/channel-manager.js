@@ -23,7 +23,7 @@ const api = {
 };
 
 adminPage(async (ctx) => {
-  if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
+  if (!ctx.isAdmin) { showFatal('This screen is only for TheNammaStay admins.'); return; }
   headerActions().innerHTML = '<a class="ns-btn-ghost" href="admin.html">← Admin</a>';
   let st;
   try { st = await api.status(); }
@@ -38,7 +38,7 @@ adminPage(async (ctx) => {
       <div class="ns-card" style="max-width:760px;display:flex;flex-direction:column;gap:16px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
           <div><div class="ns-h3">Channex API key</div>
-            <div class="ns-muted" style="font-size:13px;margin-top:4px">One key for all NammaStay properties. Owners then tap <b>OTA sync → Set up channel manager</b>.</div></div>
+            <div class="ns-muted" style="font-size:13px;margin-top:4px">One key for all TheNammaStay properties. Owners then tap <b>OTA sync → Set up channel manager</b>.</div></div>
           ${st.set ? `<span class="ns-pill ${st.live ? 'green' : 'amber'}">${st.live ? 'Live' : 'Test mode'}</span>` : '<span class="ns-pill grey">Not set</span>'}
         </div>
         ${st.set ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#F6F2E6;border-radius:10px;padding:12px 14px;font-size:13.5px">
@@ -62,7 +62,7 @@ adminPage(async (ctx) => {
         1. Tap <b>Test connection</b> — you should see your Channex properties.<br>
         2. In the hostel app → <b>OTA sync</b> → <b>Set up channel manager</b> (or <b>Already have a Channex property? → Link it</b> with an ID from the list below).<br>
         3. <b>Connect your OTAs</b> → <b>Sync now</b>.<br>
-        <span class="ns-muted">Safety: the key is stored where only NammaStay’s server can read it. This page — and anyone using the website — can only see the last 4 characters.</span>
+        <span class="ns-muted">Safety: the key is stored where only TheNammaStay’s server can read it. This page — and anyone using the website — can only see the last 4 characters.</span>
       </div>`);
     let live = !!st.live;
     $('#cx-env').onclick = (e) => { const b = e.target.closest('[data-live]'); if (!b) return; live = b.dataset.live === '1';

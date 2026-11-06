@@ -70,7 +70,7 @@ const offerCards = () => {
   const s = publicSettings || { fee_pct: 9, launch_until: '2027-03-31' };
   return `<div class="offers" role="list">
     <div class="card dark offer" role="listitem"><div class="kick">Launch offer</div><b>0%</b><div class="mute">commission until ${fmtD(s.launch_until)}</div></div>
-    <div class="card offer" role="listitem"><div class="kick">After that</div><b>${s.fee_pct}%</b><div class="mute">only for guests NammaStay brings who stay. PG: of the first month's rent, once.</div></div>
+    <div class="card offer" role="listitem"><div class="kick">After that</div><b>${s.fee_pct}%</b><div class="mute">only for guests TheNammaStay brings who stay. PG: of the first month's rent, once.</div></div>
     <div class="card mint offer" role="listitem"><div class="kick">Subscribers</div><b>0%</b><div class="mute">always, plus live beds and the full app</div></div></div>`;
 };
 
@@ -84,7 +84,7 @@ function signIn() {
         <section class="auth-intro">
           <span class="auth-eyebrow"><i></i> Free for hostels and PGs</span>
           <h1 class="big">List your hostel or PG free</h1>
-          <p class="auth-sub">Get bookings from guests on NammaStay Search. Guests pay you at the property.</p>
+          <p class="auth-sub">Get bookings from guests on TheNammaStay Search. Guests pay you at the property.</p>
           ${offerCards()}
           <ul class="auth-points">
             <li><span>${ICON.bed}</span><div><b>Free beds, live</b><small>Keep your calendar in step and take requests any time.</small></div></li>
@@ -130,7 +130,7 @@ function signIn() {
           : await sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
       } catch (err) { res = { error: err }; }
       if (reg) {
-        if (res.error || !res.data?.user) return (m.innerHTML = note('Account not created. Please contact NammaStay support.', true));
+        if (res.error || !res.data?.user) return (m.innerHTML = note('Account not created. Please contact TheNammaStay support.', true));
         if (!res.data.session) {
           m.innerHTML = note('Account created. We sent a confirmation link to ' + esc(String(f.get('email'))) + '. Open it, then sign in. Check spam if you do not see it.') + '<button type="button" class="auth-resend" id="rs">Resend confirmation email</button>';
           app.querySelector('#rs').onclick = async (ev) => {
@@ -138,7 +138,7 @@ function signIn() {
             const r = await sb.auth.resend({ type: 'signup', email: String(f.get('email')) }).catch((x) => ({ error: x }));
             b.disabled = false; b.textContent = 'Resend confirmation email';
             m.querySelector('.auth-resend-msg')?.remove();
-            b.insertAdjacentHTML('beforebegin', '<div class="auth-resend-msg">' + (r.error ? note('Email could not be sent. Please contact NammaStay support.', true) : note('Confirmation email sent again.')) + '</div>');
+            b.insertAdjacentHTML('beforebegin', '<div class="auth-resend-msg">' + (r.error ? note('Email could not be sent. Please contact TheNammaStay support.', true) : note('Confirmation email sent again.')) + '</div>');
           };
           return;
         }
@@ -172,7 +172,7 @@ function form() {
       <section class="list-main">
         <span class="auth-eyebrow"><i></i> Free listing</span>
         <h1 class="big">List your hostel or PG free</h1>
-        <p class="auth-sub">Five short steps. The NammaStay team checks it on a short video call, then you go live with a Verified badge.</p>
+        <p class="auth-sub">Five short steps. TheNammaStay team checks it on a short video call, then you go live with a Verified badge.</p>
         <form class="card list-card" id="f">
           <div class="seg" id="kind" role="group" aria-label="Property type"><button type="button" data-k="hostel" class="on">Backpacker hostel · per night</button><button type="button" data-k="pg">PG · per month</button></div>
           <section class="step"><h3><span class="n">1</span> Property</h3>
@@ -187,7 +187,7 @@ function form() {
           <section class="step"><h3><span class="n">3</span> Rooms and prices</h3><div id="rooms"></div><a href="#" id="add" class="add-room">${ICON.plus} Add another room type</a></section>
           <section class="step"><h3><span class="n">4</span> Keep your free beds up to date</h3>
             <input name="ical" type="url" aria-label="Calendar link" placeholder="Paste your calendar link (iCal) from Booking.com, Airbnb or your software">
-            <div class="mute">Want live beds and instant booking? Use the NammaStay app.</div></section>
+            <div class="mute">Want live beds and instant booking? Use TheNammaStay app.</div></section>
           <section class="step"><h3><span class="n">5</span> Proof it's yours</h3>
             <input name="proof" aria-label="Proof" required minlength="5" placeholder="GST number, or the owner's ID number">
             <label for="ab">About <span class="mute">(optional)</span></label><textarea id="ab" name="about" maxlength="600" placeholder="The vibe, what's nearby, house rules"></textarea></section>
@@ -240,8 +240,8 @@ function pending() {
   app.innerHTML = `${demo ? '<div class="demo-banner"><b>Demo mode</b> · this is what an owner sees after submitting. <a href="owner.html">Exit demo</a></div>' : ''}${brand('<a class="small" href="#" id="so">Sign out</a>')}
     <div class="pending-shell"><div class="card ${changes ? 'amber' : rej ? '' : 'mint'}"><div class="kick">${esc(l.kind === 'pg' ? 'PG' : 'Hostel')} · ${esc(l.city)}</div><h2>${esc(l.title)}</h2>
       <h3>${changes ? 'Changes asked' : rej ? 'Not approved' : 'Your listing is being checked'}</h3>
-      <p>${changes ? 'The NammaStay team asked for a change. Update it and we will look again.' : rej ? 'Sorry, we could not approve this listing.' : 'We check your photos, address and phone on a short video call. This usually takes a day.'}</p>
-      ${l.admin_note ? `<div class="card" style="background:#fff"><b>Note from NammaStay:</b><br>${esc(l.admin_note)}</div>` : ''}
+      <p>${changes ? 'TheNammaStay team asked for a change. Update it and we will look again.' : rej ? 'Sorry, we could not approve this listing.' : 'We check your photos, address and phone on a short video call. This usually takes a day.'}</p>
+      ${l.admin_note ? `<div class="card" style="background:#fff"><b>Note from TheNammaStay:</b><br>${esc(l.admin_note)}</div>` : ''}
       ${l.call_at ? `<p><b>Video call:</b> ${esc(l.call_at)}</p>` : ''}</div>
     <button class="btn line block" id="ref">${demo ? 'Back to the demo dashboard' : 'Refresh'}</button>
     ${changes || rej ? '<button class="btn block" id="new" style="margin-top:10px">List it again with the changes</button>' : ''}</div>`;
@@ -256,7 +256,7 @@ function shell(body) {
   const tabs = [['requests', ICON.list, 'Requests'], ['listing', ICON.bed, 'Free beds'], ['bill', ICON.receipt, 'Bill']];
   app.innerHTML = `${demo ? '<div class="demo-banner"><b>Demo mode</b> · sample data, nothing is saved. <a href="owner.html">Exit demo</a></div>' : ''}
     ${brand('<a class="small" href="#" id="so">Sign out</a>')}
-    <div class="dash-head"><div><h1 class="dash-title">${esc(cur.title)}</h1><div class="mute"><span class="live-dot"></span> On NammaStay Search · ${cur.verified ? 'Verified' : 'Live'}${cur.subscriber ? ' · Subscriber' : ''}</div></div>
+    <div class="dash-head"><div><h1 class="dash-title">${esc(cur.title)}</h1><div class="mute"><span class="live-dot"></span> On TheNammaStay Search · ${cur.verified ? 'Verified' : 'Live'}${cur.subscriber ? ' · Subscriber' : ''}</div></div>
       <div class="dash-actions">${listings.length > 1 ? `<select id="sw" aria-label="Property">${listings.map((l) => `<option value="${esc(l.id)}" ${l.id === cur.id ? 'selected' : ''}>${esc(l.title)}</option>`).join('')}</select>` : ''}<button class="btn line" id="lp">${ICON.plus} List a property</button></div></div>
     <div class="bar tabs"><div class="in" style="gap:0">${tabs.map(([k, i, n]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}"><span class="tab-ico">${i}</span>${n}</button>`).join('')}</div></div>
     <div id="body" class="dash-body">${body}</div>`;
@@ -316,7 +316,7 @@ async function listing() {
       <div class="card" style="margin-top:14px"><div class="row2"><h3>Reviews</h3><b>${cur.rating?.avg ? '★ ' + cur.rating.avg + ' · ' : ''}${cur.rating?.count || 0}</b></div>
         ${(rv || []).length ? rv.map((r) => `<div class="rv"><div class="row2"><b>${esc(r.name)}${r.city ? ', ' + esc(r.city) : ''} · <span class="stars">${'★'.repeat(r.stars)}</span></b><span class="mute">${new Date(r.at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span></div>
           ${r.body ? `<div>${esc(r.body)}</div>` : ''}<div class="row2" style="margin-top:6px"><input data-rp="${esc(r.id)}" placeholder="Reply to this review" value="${esc(r.reply || '')}" maxlength="1000"><button type="button" class="btn ghost sm" data-rb="${esc(r.id)}">Reply</button></div></div>`).join('') : '<p class="mute">No reviews yet.</p>'}
-        <div class="mute">Only guests who stayed can review. Stars show on Search after ${3} reviews. You can reply to any review; the NammaStay team removes abusive ones.</div></div>`;
+        <div class="mute">Only guests who stayed can review. Stars show on Search after ${3} reviews. You can reply to any review; TheNammaStay team removes abusive ones.</div></div>`;
     b.querySelectorAll('[data-x]').forEach((x) => x.onclick = () => { tours.splice(Number(x.dataset.x), 1); draw(); });
     b.querySelectorAll('[data-rb]').forEach((x) => x.onclick = async () => {
       const { error } = await sb.rpc('mk2_owner_reply_review', { p_review: x.dataset.rb, p_reply: b.querySelector(`[data-rp="${x.dataset.rb}"]`).value });
@@ -352,22 +352,22 @@ async function bill() {
     const would = x.would_be_fee_paise;
     b.innerHTML = `<div class="chips">${months.map((m) => `<button class="chip ${m === sel ? 'on' : ''}" data-m="${m}">${fmtM(m)}</button>`).join('')}</div>
       <div class="card dark"><div class="kick" style="color:#F5C84C">${fmtM(x.month)}</div><div style="font:800 34px Sora">${x.waived ? '₹0' : inr(x.fee_paise)} to pay</div>
-        <div class="mute">NammaStay Search brought ${x.count} stay${x.count === 1 ? '' : 's'} worth ${inr(x.value_paise)}.${x.waived ? ` ${x.subscriber ? 'Subscriber: 0% always.' : `Launch offer: 0% until ${fmtD(x.launch_until)}.`}` : ''}</div></div>
-      ${x.waived && would > 0 && !x.subscriber ? `<div class="card"><b>The launch offer saved you ${inr(would)} this month</b><div class="mute">From ${fmtD(addDay(x.launch_until))}, free listings pay ${x.fee_pct}% of stays from NammaStay Search. Subscribers pay 0%.</div></div>` : ''}
-      <div class="card"><b>When is the yearly plan cheaper?</b><div class="mute">The yearly plan (${inr(x.yearly_plan_paise)} a year, about ₹${perMonth.toLocaleString('en-IN')} a month) costs less than ${x.fee_pct}% once NammaStay Search brings you about ₹${breakEven.toLocaleString('en-IN')} a month.</div>
+        <div class="mute">TheNammaStay Search brought ${x.count} stay${x.count === 1 ? '' : 's'} worth ${inr(x.value_paise)}.${x.waived ? ` ${x.subscriber ? 'Subscriber: 0% always.' : `Launch offer: 0% until ${fmtD(x.launch_until)}.`}` : ''}</div></div>
+      ${x.waived && would > 0 && !x.subscriber ? `<div class="card"><b>The launch offer saved you ${inr(would)} this month</b><div class="mute">From ${fmtD(addDay(x.launch_until))}, free listings pay ${x.fee_pct}% of stays from TheNammaStay Search. Subscribers pay 0%.</div></div>` : ''}
+      <div class="card"><b>When is the yearly plan cheaper?</b><div class="mute">The yearly plan (${inr(x.yearly_plan_paise)} a year, about ₹${perMonth.toLocaleString('en-IN')} a month) costs less than ${x.fee_pct}% once TheNammaStay Search brings you about ₹${breakEven.toLocaleString('en-IN')} a month.</div>
         <div style="height:10px;background:#EFE6CB;border-radius:6px;margin:10px 0 4px"><div style="height:100%;width:${Math.min(100, Math.round((x.value_paise / 100 / breakEven) * 100))}%;background:#B9761A;border-radius:6px"></div></div>
         <div class="row2 mute"><span>This month ${inr(x.value_paise)}</span><span>₹${breakEven.toLocaleString('en-IN')}</span></div></div>
       <div class="card"><div class="row2"><h3>${fmtM(x.month)}</h3><span class="pill ${{ paid: 'green', waived: 'green', utr: 'amber', open: 'amber', overdue: 'red' }[x.status]}">${{ paid: 'Paid', waived: 'Nothing to pay', utr: 'UTR sent · confirming', open: 'Due ' + fmtD(x.due), overdue: 'Overdue' }[x.status]}</span></div>
-        <div class="mute">Guests from NammaStay Search who stayed</div>
+        <div class="mute">Guests from TheNammaStay Search who stayed</div>
         <table class="tbl">${x.stays.map((s) => `<tr><td>${esc(s.name)} · ${s.nights} night${s.nights > 1 ? 's' : ''}</td><td class="r">${inr(s.amount_paise)}</td></tr>`).join('') || '<tr><td class="mute">No stays this month.</td></tr>'}
           ${x.no_shows ? `<tr><td class="mute">${x.no_shows} no-show (never billed)</td><td class="r">₹0</td></tr>` : ''}
-          <tr><td><b>Stays from NammaStay</b></td><td class="r"><b>${inr(x.value_paise)}</b></td></tr><tr><td><b>NammaStay fee · ${x.fee_pct}%</b></td><td class="r"><b>${inr(x.fee_paise)}</b></td></tr></table>
-        ${['open', 'overdue'].includes(x.status) ? `<p>${CFG.upiId ? `<a class="btn block" href="upi://pay?pa=${encodeURIComponent(CFG.upiId)}&pn=NammaStay&am=${(x.fee_paise / 100).toFixed(2)}&cu=INR&tn=${encodeURIComponent('NammaStay fee ' + x.month.slice(0, 7))}">Pay ${inr(x.fee_paise)} by UPI</a>` : `<span class="mute">Pay ${inr(x.fee_paise)} by UPI to NammaStay.</span>`}</p>
+          <tr><td><b>Stays from TheNammaStay</b></td><td class="r"><b>${inr(x.value_paise)}</b></td></tr><tr><td><b>TheNammaStay fee · ${x.fee_pct}%</b></td><td class="r"><b>${inr(x.fee_paise)}</b></td></tr></table>
+        ${['open', 'overdue'].includes(x.status) ? `<p>${CFG.upiId ? `<a class="btn block" href="upi://pay?pa=${encodeURIComponent(CFG.upiId)}&pn=TheNammaStay&am=${(x.fee_paise / 100).toFixed(2)}&cu=INR&tn=${encodeURIComponent('TheNammaStay fee ' + x.month.slice(0, 7))}">Pay ${inr(x.fee_paise)} by UPI</a>` : `<span class="mute">Pay ${inr(x.fee_paise)} by UPI to NammaStay.</span>`}</p>
           <form id="utr"><label>UPI transaction id (UTR)</label><input name="utr" required pattern="[0-9A-Za-z]{8,30}" placeholder="412345678901"><div id="um"></div><button class="btn line block" style="margin-top:8px">Send UTR</button></form>
-          <div class="mute">NammaStay confirms the UTR. Unpaid ${10} days after the due date, the listing pauses until paid.</div>` : ''}
-        ${x.status === 'utr' ? `<p class="mute">UTR ${esc(x.utr)} sent. NammaStay will confirm it.</p>` : ''}${x.status === 'paid' ? `<p class="mute">Paid ${new Date(x.paid_at).toLocaleDateString('en-IN')}. UTR ${esc(x.utr)}.</p>` : ''}</div>
-      <div class="card"><b>How the bill works</b><ul class="mute" style="padding-left:18px"><li>${x.fee_pct}% only on guests NammaStay Search brought you, and only if they stayed.</li><li>PG: ${x.fee_pct}% of the first month's rent, once, after the tenant moves in.</li><li>Bill on the 1st, pay by the 7th.</li></ul></div>
-      ${x.subscriber ? '' : '<div class="card mint"><b>Subscribe to NammaStay and pay 0%, always</b><div class="mute">Live beds, instant booking and the full hostel app.</div></div>'}`;
+          <div class="mute">TheNammaStay confirms the UTR. Unpaid ${10} days after the due date, the listing pauses until paid.</div>` : ''}
+        ${x.status === 'utr' ? `<p class="mute">UTR ${esc(x.utr)} sent. TheNammaStay will confirm it.</p>` : ''}${x.status === 'paid' ? `<p class="mute">Paid ${new Date(x.paid_at).toLocaleDateString('en-IN')}. UTR ${esc(x.utr)}.</p>` : ''}</div>
+      <div class="card"><b>How the bill works</b><ul class="mute" style="padding-left:18px"><li>${x.fee_pct}% only on guests TheNammaStay Search brought you, and only if they stayed.</li><li>PG: ${x.fee_pct}% of the first month's rent, once, after the tenant moves in.</li><li>Bill on the 1st, pay by the 7th.</li></ul></div>
+      ${x.subscriber ? '' : '<div class="card mint"><b>Subscribe to TheNammaStay and pay 0%, always</b><div class="mute">Live beds, instant booking and the full hostel app.</div></div>'}`;
     b.querySelectorAll('[data-m]').forEach((c) => c.onclick = () => { sel = c.dataset.m; draw(); });
     b.querySelector('#utr')?.addEventListener('submit', async (e) => {
       e.preventDefault();

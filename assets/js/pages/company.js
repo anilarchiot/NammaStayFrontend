@@ -96,7 +96,7 @@ async function draw() {
       <button type="button" class="co-tab" role="tab" data-tab="company" aria-selected="${tab === 'company'}">My company</button>
       <button type="button" class="co-tab" role="tab" data-tab="health" aria-selected="${tab === 'health'}">Company health${acts ? `<span class="co-count" aria-label="${acts} need action">${acts}</span>` : ''}</button>
     </div>
-    <div class="co-print">NammaStay — company summary · ${esc(fmtDate(today()))}</div>
+    <div class="co-print">TheNammaStay — company summary · ${esc(fmtDate(today()))}</div>
     <div class="co-panel" role="tabpanel">${tab === 'company' ? companyTab() : healthTab()}</div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
   $$('.co-tab').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.tab === tab) return;
@@ -546,7 +546,7 @@ const PRESETS = () => [
   ['roc', 'ROC: AOC-4 (accounts)', 'year', nextOf(['10-30']), 'Every year, within 30 days of the AGM'],
   ['roc', 'ROC: MGT-7 (annual return)', 'year', nextOf(['11-29']), 'Every year, within 60 days of the AGM'],
   ['domain', 'Domain thenammastay.com', 'year', '', 'Add the expiry date from your domain registrar'],
-  ['trademark', 'Trademark “NammaStay”', 'none', '', 'Application status — add a date when there’s a hearing or renewal'],
+  ['trademark', 'Trademark “TheNammaStay”', 'none', '', 'Application status — add a date when there’s a hearing or renewal'],
 ];
 function presetsDialog() {
   const have = new Set(S.renewals.map((r) => r.title.toLowerCase()));

@@ -8,7 +8,7 @@ const PROPERTY_TYPES = [['hostel', 'Hostel / Backpackers'], ['pg', 'PG'], ['reso
 const PROPERTY_TYPE_LABEL = Object.fromEntries(PROPERTY_TYPES);
 
 adminPage(async (ctx) => {
-  if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
+  if (!ctx.isAdmin) { showFatal('This screen is only for TheNammaStay admins.'); return; }
   let q = '', propertyKind = '';
   headerActions().innerHTML = '<div class="ns-search"><span>Search</span></div>';
   headerSearch('Search property, city, owner…', (v) => { q = v; draw(); });
@@ -182,7 +182,7 @@ adminPage(async (ctx) => {
       if (!p) return;
       if (!await confirmDialog(
         `Delete ${p.name}?`,
-        `This permanently deletes the property and its associated records. This cannot be undone. The owner's NammaStay login is not deleted.`,
+        `This permanently deletes the property and its associated records. This cannot be undone. The owner's TheNammaStay login is not deleted.`,
         { confirmLabel: 'Delete property', danger: true },
       )) return;
       b.disabled = true;

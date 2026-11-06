@@ -8,7 +8,7 @@ const ADDON = {
   rpc: 'ota_addon', name: 'OTA sync', eyebrow: 'OTA SYNC', ctaLabel: 'Turn on OTA sync',
   ownerHeading: 'Sell on many OTAs without double bookings', staffHeading: 'OTA sync is off for this property',
   channels: true,
-  features: ['Connect several OTAs at the same time', 'A night booked on one site closes on all the others', 'OTA bookings show up on your NammaStay calendar', 'Automatic sync every 30 minutes'],
+  features: ['Connect several OTAs at the same time', 'A night booked on one site closes on all the others', 'OTA bookings show up on your TheNammaStay calendar', 'Automatic sync every 30 minutes'],
   ownerText: 'Connect Airbnb, Booking.com, Agoda and more so availability and bookings stay in step automatically and double bookings are avoided.',
   staffText: 'Ask the property owner to turn on OTA sync. Once enabled, your calendars stay in step with the OTAs.',
   asideIcon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0011 21.07l1.71-1.71"></path></svg>',
@@ -22,8 +22,8 @@ const ago = (iso) => {
   return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
 };
 const HOWTO = [
-  ['airbnb', 'Airbnb', 'Listing → <b>Availability</b> → <b>Connect calendars</b> (Sync calendars). <b>Export</b>: copy Airbnb’s link and add it here. <b>Import</b>: “Connect another calendar” → paste the NammaStay link.'],
-  ['booking', 'Booking.com', 'Extranet → <b>Rates & availability</b> → <b>Sync calendars</b> (if your listing offers it — mostly homes & apartments). Export Booking.com’s link → add it here; import the NammaStay link there.'],
+  ['airbnb', 'Airbnb', 'Listing → <b>Availability</b> → <b>Connect calendars</b> (Sync calendars). <b>Export</b>: copy Airbnb’s link and add it here. <b>Import</b>: “Connect another calendar” → paste TheNammaStay link.'],
+  ['booking', 'Booking.com', 'Extranet → <b>Rates & availability</b> → <b>Sync calendars</b> (if your listing offers it — mostly homes & apartments). Export Booking.com’s link → add it here; import TheNammaStay link there.'],
   ['agoda', 'Agoda', 'YCS → <b>Calendar</b> → <b>Calendar sync / iCal</b> (homes listings). Same two steps.'],
   ['vrbo', 'Vrbo', 'Calendar → <b>Import & export</b>. Same two steps.'],
   ['google', 'Google Calendar', 'Settings → your calendar → <b>Secret address in iCal format</b> → add it here (e.g. owner’s personal blocks).'],
@@ -46,16 +46,16 @@ page('ota', async (ctx) => {
     content(`
       <div id="cx-card"></div>
       <div class="ns-card ota-intro">
-        <div class="ns-h3">Connect as many OTAs as you like — all in step with NammaStay</div>
+        <div class="ns-h3">Connect as many OTAs as you like — all in step with TheNammaStay</div>
         <div class="ns-muted">Add one calendar for each OTA you sell on. Every OTA you connect shares availability, so a night booked anywhere closes everywhere.</div>
         <div class="ota-chips">${OTA_LIST.map((o) => {
           const n = feeds.filter((f) => f.channel === o.key).length;
           return `<span class="ota-chip${n ? ' is-on' : ''}">${otaIcon(o)}${esc(o.name)}<em>${n ? `✓ ${n} connected` : 'Not connected'}</em></span>`;
         }).join('')}<span class="ota-chip ota-chip-more">+ Any other OTA with an iCal link</span></div>
         <div class="ota-steps">
-          <div><span>1</span><b>Export to the OTA</b><br>Copy a ${W.unit}’s NammaStay link and paste it in the OTA’s “import calendar”. Nights booked here close there.</div>
+          <div><span>1</span><b>Export to the OTA</b><br>Copy a ${W.unit}’s TheNammaStay link and paste it in the OTA’s “import calendar”. Nights booked here close there.</div>
           <div><span>2</span><b>Import from the OTA</b><br>Copy the OTA’s calendar (export / iCal) link and add it below. Their bookings appear on your calendar as 🔗 blocks.</div>
-          <div><span>3</span><b>Automatic</b><br>NammaStay checks every 30 minutes, or tap <b>Sync now</b>. A clash with an existing booking sends you an alert.</div>
+          <div><span>3</span><b>Automatic</b><br>TheNammaStay checks every 30 minutes, or tap <b>Sync now</b>. A clash with an existing booking sends you an alert.</div>
         </div>
         <details class="ota-howto"><summary>Where to find the calendar links on each OTA</summary>
           ${HOWTO.map(([k, n, t]) => `<div class="ota-how"><span class="ota-dot" style="background:${OTA[k].color}"></span><div><b>${n}</b> — ${t}</div></div>`).join('')}
@@ -69,7 +69,7 @@ page('ota', async (ctx) => {
           <div class="ota-bed-head"><b>${esc(b.label)}</b>${b.is_active ? '' : ' <span class="ns-pill grey">Not in use</span>'}</div>
           <div class="ota-cols">
             <div class="ota-col">
-              <div class="ota-lbl">⬆ NammaStay link — paste into the OTA</div>
+              <div class="ota-lbl">⬆ TheNammaStay link — paste into the OTA</div>
               <div class="ota-export">
                 <select class="ns-input" data-exp-ch aria-label="For which OTA">${options(Object.entries(OTA).filter(([k]) => k !== 'other').map(([k, v]) => [k, `For ${v.name}`]).concat([['', 'Any OTA']]), 'airbnb')}</select>
                 <input class="ns-input" readonly data-exp-url value="${esc(`${FUNCTIONS_URL}/ical?t=${b.token}&c=airbnb`)}" aria-label="Calendar link">
@@ -163,7 +163,7 @@ async function cxCard(ctx) {
       <div class="ns-muted" style="font-size:12.5px">Real-time with Booking.com, Agoda, Expedia, Airbnb, MakeMyTrip/Goibibo, Hostelworld and more: free ${W.units} and your prices (with seasonal &amp; weekend rules) go out, OTA bookings come in with the guest’s details.</div></div>
       ${link?.cx_property_id ? `<span class="ns-pill ${link.enabled ? (link.last_error ? 'red' : 'green') : 'grey'}">${link.enabled ? (link.last_error ? 'Needs attention' : 'Connected') : 'Paused'}</span>` : ''}</div>
     ${!link?.cx_property_id ? `
-      <ol class="cx-steps"><li><b>Set up</b> — NammaStay creates your ${W.units} and prices on the channel manager.</li><li><b>Connect your OTAs</b> — sign in to Booking.com, MakeMyTrip… once, inside NammaStay.</li><li><b>Done</b> — everything stays in sync automatically.</li></ol>
+      <ol class="cx-steps"><li><b>Set up</b> — TheNammaStay creates your ${W.units} and prices on the channel manager.</li><li><b>Connect your OTAs</b> — sign in to Booking.com, MakeMyTrip… once, inside NammaStay.</li><li><b>Done</b> — everything stays in sync automatically.</li></ol>
       <div class="cx-acts"><button type="button" class="ns-btn" id="cx-setup">Set up channel manager</button>${ctx.isAdmin ? '<a class="ns-btn-ghost" href="channel-manager.html">🔑 Channex key</a>' : ''}
         <details class="cx-adv"><summary>Already have a Channex property?</summary><div style="display:flex;gap:8px;margin-top:6px"><input class="ns-input" id="cx-existing" placeholder="Channex property ID" style="height:36px"><button type="button" class="ns-btn-ghost" id="cx-link" style="height:36px">Link it</button></div></details></div>`
     : `
@@ -201,7 +201,7 @@ async function cxCard(ctx) {
   host.querySelector('#cx-change-id')?.addEventListener('click', () => {
     modal({
       title: 'Change Channex property',
-      body: `<p style="margin:0 0 12px;font-size:13.5px;line-height:1.6">Enter the new property ID provided by your NammaStay admin. It must belong to the same Channex account and Test/Live environment as the saved API key.</p>
+      body: `<p style="margin:0 0 12px;font-size:13.5px;line-height:1.6">Enter the new property ID provided by your TheNammaStay admin. It must belong to the same Channex account and Test/Live environment as the saved API key.</p>
         <div class="ns-field"><label for="cx-new-id">New Channex property ID</label><input class="ns-input" id="cx-new-id" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
         <div class="cx-err" style="margin-top:12px">Changing this ID recreates room mappings and resumes syncing on the new Channex property. Reconnect your OTAs there. The old Channex property and its OTA connections are not deleted.</div>`,
       actions: [
@@ -210,7 +210,7 @@ async function cxCard(ctx) {
           const id = dialog.querySelector('#cx-new-id').value.trim();
           if (!isChannexPropertyId(id)) throw new Error('Paste a valid Channex property ID.');
           if (id === link.cx_property_id) throw new Error('That is already the linked Channex property ID.');
-          if (!await confirmDialog('Confirm property change', 'NammaStay will link this property to the new Channex ID, recreate its room mappings, and resume syncing. You will need to connect your OTAs again on the new Channex property.', { confirmLabel: 'Replace property', danger: true })) return false;
+          if (!await confirmDialog('Confirm property change', 'TheNammaStay will link this property to the new Channex ID, recreate its room mappings, and resume syncing. You will need to connect your OTAs again on the new Channex property.', { confirmLabel: 'Replace property', danger: true })) return false;
           const result = await call({ action: 'setup', cx_property_id: id });
           toast(`Channex property changed — ${result.rooms} room type${result.rooms === 1 ? '' : 's'} set up. Reconnect your OTAs on the new property.`);
           cxCard(ctx);
@@ -237,8 +237,8 @@ async function cxCard(ctx) {
     try {
       const { url } = await call({ action: 'iframe' });
       const connectionModal = modal({ title: 'Connect your OTAs', width: 1200,
-        body: `<div class="ns-muted" style="font-size:12.5px;margin-bottom:8px">Choose an OTA (Booking.com, MakeMyTrip, Agoda…), sign in with your OTA account, then match each OTA room to a NammaStay room. Each OTA may also need you to approve NammaStay’s channel manager in its own extranet.</div>
-          ${url === 'demo' ? `<div class="cx-frame cx-demo-frame"><div><b>Channex’s “Connect a channel” screen opens here</b><br>Pick an OTA → sign in with your Booking.com / MakeMyTrip / Hostelworld account → match each OTA room to a NammaStay room (e.g. “Mixed Dorm bed” → “6-Bed Mixed Dorm · ₹700”) → Activate.<br><br><span class="ns-muted">Demo: nothing to connect here — tap Done, then Sync now.</span></div></div>`
+        body: `<div class="ns-muted" style="font-size:12.5px;margin-bottom:8px">Choose an OTA (Booking.com, MakeMyTrip, Agoda…), sign in with your OTA account, then match each OTA room to a room in TheNammaStay. Each OTA may also need you to approve TheNammaStay’s channel manager in its own extranet.</div>
+          ${url === 'demo' ? `<div class="cx-frame cx-demo-frame"><div><b>Channex’s “Connect a channel” screen opens here</b><br>Pick an OTA → sign in with your Booking.com / MakeMyTrip / Hostelworld account → match each OTA room to a room in TheNammaStay (e.g. “Mixed Dorm bed” → “6-Bed Mixed Dorm · ₹700”) → Activate.<br><br><span class="ns-muted">Demo: nothing to connect here — tap Done, then Sync now.</span></div></div>`
             : `<iframe class="cx-frame" src="${esc(url)}" title="Connect OTAs"></iframe>`}`,
         actions: [{ label: 'Done', kind: 'primary', onClick: () => { setTimeout(() => cxCard(ctx), 50); } }] });
       connectionModal.el.querySelector('.ns-modal').classList.add('cx-connect-modal');

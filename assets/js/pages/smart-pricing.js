@@ -61,7 +61,7 @@ function hero() {
       <div class="sp-hero-text">
         <span class="sp-kicker${on ? '' : ' is-off'}">${I(P.trend, 15, 2.2)} Smart pricing is ${on ? 'on' : 'off'}</span>
         <h2 class="sp-title">${on ? 'Prices follow demand — inside the limits you set' : 'Let prices follow demand'}</h2>
-        <p class="sp-lead">Every morning NammaStay checks the next 60 nights: how full each night is, how fast ${W.units} are going and how close the date is. Busy nights go up, quiet nights a few days away get a small discount. Bookings already made keep their price.</p>
+        <p class="sp-lead">Every morning TheNammaStay checks the next 60 nights: how full each night is, how fast ${W.units} are going and how close the date is. Busy nights go up, quiet nights a few days away get a small discount. Bookings already made keep their price.</p>
       </div>
       <div class="sp-mode">
         <span class="sp-mode-l" id="sp-mode-l">How it works for you</span>

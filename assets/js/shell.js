@@ -60,12 +60,12 @@
       var settings = sidebar.querySelector('.ns-sidebar-foot a[href="settings.html"]'); if (settings) settings.remove();
       var brand = sidebar.querySelector('.ns-brand');
       if (brand) { brand.setAttribute('href', 'admin.html'); if (!brand.querySelector('.ns-admin-tag')) brand.insertAdjacentHTML('beforeend', '<span class="ns-admin-tag">Admin</span>'); }
-      var sub = sidebar.querySelector('.ns-user-sub'); if (sub) sub.textContent = 'NammaStay admin';
+      var sub = sidebar.querySelector('.ns-user-sub'); if (sub) sub.textContent = 'TheNammaStay admin';
       document.body.classList.add('ns-admin-area');
       document.documentElement.classList.add('ns-chrome-ready');
     };
     try { saved = JSON.parse(localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell') || 'null'); } catch (e) { saved = null; }
-    if (!saved || saved.area !== area || !saved.nav) { paintAdminDefault(); return; }
+    if (!saved || saved.area !== area || !saved.nav || saved.branding !== 'TheNammaStay') { paintAdminDefault(); return; }
     var lang = 'en'; try { lang = localStorage.getItem('ns.lang') || 'en'; } catch (e) { /* ignore */ }
     if ((saved.lang || 'en') !== lang) { paintAdminDefault(); return; }   // menu was saved in another language
     var prop = ''; try { prop = localStorage.getItem('ns.property') || ''; } catch (e) { /* ignore */ }

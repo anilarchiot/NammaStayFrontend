@@ -9,7 +9,7 @@ const month0 = () => { const d = new Date(); return new Date(d.getFullYear(), d.
 
 let view = 'check', queue = [], selId = null, billMonth = month0();
 
-const head = (title) => `<div class="row2" style="flex-wrap:wrap;margin-bottom:14px"><div><div class="kick">NammaStay admin · Search</div><h1 style="font-size:28px">${title}</h1></div>
+const head = (title) => `<div class="row2" style="flex-wrap:wrap;margin-bottom:14px"><div><div class="kick">TheNammaStay admin · Search</div><h1 style="font-size:28px">${title}</h1></div>
   <div style="display:flex;gap:8px">${[['check', `To check · ${queue.filter((l) => ['pending', 'changes'].includes(l.review_status)).length}`], ['bills', 'Bills'], ['all', 'All listings']].map(([k, n]) => `<button class="btn ${view === k ? '' : 'ghost'}" style="${view === k ? 'background:var(--navy);border-color:var(--navy)' : ''}" data-v="${k}">${n}</button>`).join('')}
   <button class="btn ghost" id="so">Sign out</button></div></div>`;
 const wire = () => {
@@ -22,7 +22,7 @@ async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return login();
   const r = await sb.rpc('mk2_admin_queue');
-  if (r.error) return (app.innerHTML = `${note(/Admins only/.test(r.error.message) ? 'This account is not a NammaStay Search admin.' : r.error.message, true)}<button class="btn ghost" id="so">Sign out</button>`, app.querySelector('#so').onclick = async () => { await sb.auth.signOut(); boot(); });
+  if (r.error) return (app.innerHTML = `${note(/Admins only/.test(r.error.message) ? 'This account is not a Search admin for TheNammaStay.' : r.error.message, true)}<button class="btn ghost" id="so">Sign out</button>`, app.querySelector('#so').onclick = async () => { await sb.auth.signOut(); boot(); });
   queue = r.data;
   const first = queue.find((l) => ['pending', 'changes'].includes(l.review_status));
   if (!queue.some((l) => l.id === selId)) selId = first?.id || queue[0]?.id;
@@ -80,13 +80,13 @@ async function bills() {
   const { data, error } = await sb.rpc('mk2_admin_bills', { p_month: billMonth });
   if (error) return (app.innerHTML = head('Bills for free listings') + note(error.message, true), wire());
   const s = data.settings, months = [0, -1, -2, -3].map((o) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + o, 1, 12).toISOString().slice(0, 10); });
-  app.innerHTML = head('Bills for free listings') + `<div class="card"><div class="row2" style="flex-wrap:wrap"><span><b>Launch offer:</b> 0% for everyone until <b>${fmtD(s.launch_until)}</b></span><span><b>Free listings:</b> ${s.fee_pct}% of stays NammaStay brought</span><span><b>PG:</b> ${s.fee_pct}% of the first month's rent, once</span><span><b>Subscribers:</b> 0%, always</span><button class="btn ghost" id="chg">Change</button></div></div>
+  app.innerHTML = head('Bills for free listings') + `<div class="card"><div class="row2" style="flex-wrap:wrap"><span><b>Launch offer:</b> 0% for everyone until <b>${fmtD(s.launch_until)}</b></span><span><b>Free listings:</b> ${s.fee_pct}% of stays TheNammaStay brought</span><span><b>PG:</b> ${s.fee_pct}% of the first month's rent, once</span><span><b>Subscribers:</b> 0%, always</span><button class="btn ghost" id="chg">Change</button></div></div>
     <div class="row2" style="margin-bottom:10px"><label style="margin:0">Month <select id="mo" style="width:auto;margin-left:8px">${months.map((m) => `<option value="${m}" ${m === data.month ? 'selected' : ''}>${new Date(m + 'T12:00:00').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</option>`).join('')}</select></label>
       <span class="mute">Bills go out on the 1st. Due on the 7th. Unpaid after ${s.pause_days} days: listing pauses by itself.</span></div>
     <div class="card" style="padding:0;overflow:auto"><table class="tbl"><tr><th>Property</th><th>Guests stayed</th><th class="r">Stay value</th><th class="r">Fee ${s.fee_pct}%</th><th>Status</th><th></th></tr>
       ${data.rows.map((r) => { const b = r.bill; const st = { paid: ['green', 'Paid'], waived: ['green', b.subscriber ? 'Subscriber · 0%' : 'Launch offer · 0%'], utr: ['amber', 'UTR to confirm'], open: ['amber', 'Due ' + fmtD(b.due)], overdue: ['red', b.paused ? 'Overdue · paused' : 'Overdue'] }[b.status];
         return `<tr><td><b>${esc(r.title)}</b><div class="mute">${r.kind === 'pg' ? 'PG' : 'Hostel'} · ${esc(r.city)}</div></td><td>${b.count}${b.no_shows ? ` (${b.no_shows} no-show)` : ''}</td><td class="r">${inr(b.value_paise)}</td><td class="r"><b>${inr(b.fee_paise)}</b></td>
-          <td><span class="pill ${st[0]}">${st[1]}</span>${b.utr ? `<div class="mute">UTR ${esc(b.utr)}</div>` : ''}</td><td class="r">${b.status === 'utr' ? `<button class="btn sm" data-p="${esc(r.listing_id)}">Confirm paid</button>` : b.status === 'overdue' && r.phone ? `<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/${String(r.phone).replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent(`Hi, your NammaStay fee for ${new Date(data.month + 'T12:00:00').toLocaleDateString('en-IN', { month: 'long' })} (${inr(b.fee_paise)}) is due. Please pay by UPI and send us the UTR.`)}">Remind on WhatsApp</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="mute">No approved listings yet.</td></tr>'}</table></div>`;
+          <td><span class="pill ${st[0]}">${st[1]}</span>${b.utr ? `<div class="mute">UTR ${esc(b.utr)}</div>` : ''}</td><td class="r">${b.status === 'utr' ? `<button class="btn sm" data-p="${esc(r.listing_id)}">Confirm paid</button>` : b.status === 'overdue' && r.phone ? `<a class="btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/${String(r.phone).replace(/\D/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent(`Hi, your TheNammaStay fee for ${new Date(data.month + 'T12:00:00').toLocaleDateString('en-IN', { month: 'long' })} (${inr(b.fee_paise)}) is due. Please pay by UPI and send us the UTR.`)}">Remind on WhatsApp</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="mute">No approved listings yet.</td></tr>'}</table></div>`;
   wire();
   app.querySelector('#mo').onchange = (e) => { billMonth = e.target.value; bills(); };
   app.querySelectorAll('[data-p]').forEach((b) => b.onclick = async () => {

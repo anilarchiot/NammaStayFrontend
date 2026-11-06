@@ -18,7 +18,7 @@ export async function pgGuestProfile(ctx, id, editGuest) {
   if (titleEl) titleEl.textContent = 'Tenant profile';
   const [d, ts] = await Promise.all([rpc('guest_profile', { p_guest: id }), tenanciesOf(ctx, id)]);
   const g = d.guest;
-  document.title = `${g.full_name} · NammaStay`;
+  document.title = `${g.full_name} · TheNammaStay`;
   setSubtitle(`Tenant profile · ${ctx.property_name}`);
   const now = ts.find((t) => t.status !== 'moved_out');
   const head = headerActions();

@@ -77,7 +77,7 @@ export async function drawMilestoneCard(o) {
   // footer
   const logo = await loadImg('assets/img/logo.png');
   const fy = H - L.foot; g.textAlign = 'left'; g.font = '800 34px Sora, Manrope, sans-serif';
-  const label = 'Managed with NammaStay'; const lw = g.measureText(label).width; const lx = cx - (lw + 76) / 2;
+  const label = 'Managed with TheNammaStay'; const lw = g.measureText(label).width; const lx = cx - (lw + 76) / 2;
   if (logo) { g.save(); g.beginPath(); g.arc(lx + 28, fy - 12, 28, 0, Math.PI * 2); g.clip(); g.drawImage(logo, lx, fy - 40, 56, 56); g.restore(); }
   g.fillStyle = T.text; g.fillText(label, lx + 76, fy); g.textAlign = 'center'; g.fillStyle = T.sub; g.font = '600 26px Manrope, sans-serif'; g.fillText('thenammastay.com', cx, fy + 44);
   return c;

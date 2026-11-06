@@ -58,7 +58,7 @@ page('channex', async (ctx) => {
     if (!conn) {
       content(`<div class="ns-card" style="max-width:640px">
         <div class="ns-h3">Connect this property to Channex</div>
-        <div class="ns-muted" style="margin:6px 0 14px">Paste the property ID from Channex (Properties → your property → ID). ${meta.enabled ? '' : '<b>Channex is not switched on by NammaStay yet.</b>'}</div>
+        <div class="ns-muted" style="margin:6px 0 14px">Paste the property ID from Channex (Properties → your property → ID). ${meta.enabled ? '' : '<b>Channex is not switched on by TheNammaStay yet.</b>'}</div>
         <div class="ns-field"><label for="cx-id">Channex property ID</label><input class="ns-input" id="cx-id" placeholder="e.g. 716305c4-561a-4561-a187-7f5b8aeb5920" autocomplete="off" ${isOwner ? '' : 'disabled'}></div>
         <div style="margin-top:14px"><button type="button" class="ns-btn" id="cx-connect" ${isOwner ? '' : 'disabled'}>Connect</button>${isOwner ? '' : ' <span class="ns-muted">Only the owner can connect.</span>'}</div></div>`);
       $('#cx-connect')?.addEventListener('click', async () => {
@@ -75,7 +75,7 @@ page('channex', async (ctx) => {
     const roomsMapped = groups.filter((g) => g.ota_room_id);
     const roomOptions = [...new Map(roomsMapped.map((g) => [g.ota_room_id, g.title])).entries()];
     const planOptions = view.plans.map((p) => [p.ota_rate_id, p.title]);
-    const badge = conn.status === 'live' ? ['#E9F5EE', '#157A56', 'Live'] : conn.status === 'waiting' ? ['#FCF0DC', '#966016', 'Waiting for NammaStay to switch Channex on'] : conn.status === 'paused' ? ['#F3EFE1', '#7A7154', 'Paused'] : ['#F3EFE1', '#7A7154', 'Set up'];
+    const badge = conn.status === 'live' ? ['#E9F5EE', '#157A56', 'Live'] : conn.status === 'waiting' ? ['#FCF0DC', '#966016', 'Waiting for TheNammaStay to switch Channex on'] : conn.status === 'paused' ? ['#F3EFE1', '#7A7154', 'Paused'] : ['#F3EFE1', '#7A7154', 'Set up'];
 
     content(`
       <div class="ns-card">
@@ -94,8 +94,8 @@ page('channex', async (ctx) => {
 
       <div class="ns-card">
         <div class="ns-h3">Rooms &amp; rate plans</div>
-        <div class="ns-muted" style="margin:4px 0 12px">Match each Channex rate plan with a NammaStay room. All rate plans of one Channex room type must use the same NammaStay room. Leave the room empty to skip a rate plan. The price is optional: empty = NammaStay’s own price for the room.</div>
-        ${(conn.ota_rooms || []).length ? `<div style="overflow:auto"><table class="cx-table"><thead><tr><th>Channex room</th><th>Rate plan</th><th>NammaStay room</th><th>Price</th></tr></thead><tbody>
+        <div class="ns-muted" style="margin:4px 0 12px">Match each Channex rate plan with a room in TheNammaStay. All rate plans of one Channex room type must use the same TheNammaStay room. Leave the room empty to skip a rate plan. The price is optional: empty = TheNammaStay’s own price for the room.</div>
+        ${(conn.ota_rooms || []).length ? `<div style="overflow:auto"><table class="cx-table"><thead><tr><th>Channex room</th><th>Rate plan</th><th>TheNammaStay room</th><th>Price</th></tr></thead><tbody>
           ${conn.ota_rooms.filter((r) => r.ota_rate_id).map((r) => { const p = planByRate[r.ota_rate_id]; return `<tr data-rate="${esc(r.ota_rate_id)}" data-room="${esc(r.ota_room_id)}" data-title="${esc(r.rate_name || r.ota_rate_id)}">
             <td>${esc(r.room_name)}</td><td>${esc(r.rate_name || r.ota_rate_id)}</td>
             <td><select class="ns-input" data-g>${opts([['', '— skip —'], ...groups.map((g) => [g.group_key, g.title])], p?.group_key || '')}</select></td>
@@ -127,7 +127,7 @@ page('channex', async (ctx) => {
       ${roomOptions.length ? `
       <div class="ns-card">
         <div class="ns-h3">Availability</div>
-        <div class="ns-muted" style="margin:4px 0 12px">The number of rooms offered on Channex per night. It is never more than what is really free in NammaStay, and it drops by itself when a booking is made. Leave the number empty to offer everything that is free.</div>
+        <div class="ns-muted" style="margin:4px 0 12px">The number of rooms offered on Channex per night. It is never more than what is really free in TheNammaStay, and it drops by itself when a booking is made. Leave the number empty to offer everything that is free.</div>
         <div class="cx-grid">
           <div class="ns-field"><label>Room</label><select class="ns-input" id="a-room">${opts(roomOptions)}</select></div>
           <div class="ns-field"><label>From</label><input class="ns-input" type="date" id="a-from"></div>
@@ -199,7 +199,7 @@ page('channex', async (ctx) => {
       catch (e) { toast(e.message, { error: true }); btn.disabled = false; }
     };
     $('#cx-load')?.addEventListener('click', (e) => busy(e.currentTarget, () => fn({ action: 'rooms', connection_id: conn.id }), (r) => `Found ${(r.rooms || []).length} room / rate plan(s) in Channex`));
-    $('#cx-live')?.addEventListener('click', (e) => busy(e.currentTarget, () => rpc('cn_go_live', { p_connection: conn.id }), (s) => (s === 'live' ? 'Live — sending to Channex' : 'Saved — waiting for NammaStay to switch Channex on')));
+    $('#cx-live')?.addEventListener('click', (e) => busy(e.currentTarget, () => rpc('cn_go_live', { p_connection: conn.id }), (s) => (s === 'live' ? 'Live — sending to Channex' : 'Saved — waiting for TheNammaStay to switch Channex on')));
     $('#cx-hook')?.addEventListener('click', (e) => busy(e.currentTarget, () => fn({ action: 'cx_webhook', connection_id: conn.id }), 'Booking webhook registered ✓'));
     $('#cx-sync')?.addEventListener('click', (e) => busy(e.currentTarget, () => fn({ action: 'sync', connection_id: conn.id }), summary));
     $('#cx-full')?.addEventListener('click', async (e) => {
@@ -211,7 +211,7 @@ page('channex', async (ctx) => {
         const price = $('[data-price]', tr).value.trim();
         return { group_key: $('[data-g]', tr).value, ota_room_id: tr.dataset.room, ota_rate_id: tr.dataset.rate, title: tr.dataset.title, base_rate_paise: price === '' ? null : Math.round(parseFloat(price) * 100) };
       });
-      if (!rows.length) throw new Error('Choose a NammaStay room for at least one rate plan.');
+      if (!rows.length) throw new Error('Choose a room in TheNammaStay for at least one rate plan.');
       return rpc('cn_cx_plans_save', { p_connection: conn.id, p_plans: rows });
     }, 'Matching saved ✓'));
 

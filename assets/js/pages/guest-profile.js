@@ -11,7 +11,7 @@ page('guests', async (ctx) => {
   if (back) back.setAttribute('href', 'guest-profile.html');
   const d = await rpc('guest_profile', { p_guest: id });
   const g = d.guest;
-  document.title = `${g.full_name} · NammaStay`;
+  document.title = `${g.full_name} · TheNammaStay`;
   const head = headerActions();
   const wa = g.phone ? `https://wa.me/${g.phone.replace(/\D/g, '')}` : null;
   head.innerHTML = `${wa ? `<a class="ns-btn-ghost" href="${esc(wa)}" target="_blank" rel="noopener">Message guest</a>` : ''}

@@ -28,7 +28,7 @@ async function askCode() {
   const f = (data?.totp || []).find((x) => x.status === 'verified');
   if (!f) return setUp();
   const el = step(`<div class="adm-title">Enter your 6-digit code</div>
-    <div class="adm-sub">Open your authenticator app (Google Authenticator, Microsoft Authenticator, Authy…) and type the code for <b>NammaStay admin</b>.</div>
+    <div class="adm-sub">Open your authenticator app (Google Authenticator, Microsoft Authenticator, Authy…) and type the code for <b>TheNammaStay admin</b>.</div>
     ${codeInput}<div class="ns-error" hidden></div><button type="button" class="ns-btn ns-btn-lg" data-ok>Verify</button>${signOutLink}
     <div class="adm-sub" style="font-size:12px">Lost your phone? Another admin can reset your 2-step login (see the guide).</div>`);
   wireOut(el); const inp = el.querySelector('.adm-code'); inp.focus();
@@ -47,7 +47,7 @@ async function setUp() {
   // remove half-finished setups first, then start a new one
   const { data: list } = await sb.auth.mfa.listFactors();
   for (const f of (list?.all || []).filter((x) => x.status !== 'verified')) await sb.auth.mfa.unenroll({ factorId: f.id }).catch(() => {});
-  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'NammaStay admin' });
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'TheNammaStay admin' });
   if (error) {
     step(`<div class="adm-title">2-step login isn’t available</div><div class="adm-sub">${esc(error.message)}<br>Turn on <b>MFA → TOTP</b> in Supabase (Authentication → Multi-factor), then try again.</div>${signOutLink}`);
     wireOut(main.querySelector('.adm-step')); return;
@@ -76,13 +76,13 @@ async function setUp() {
 async function afterPassword() {
   if (DEMO) return go();
   const info = await rpc('admin_mfa_info').catch(() => null);
-  if (!info?.admin) { await sb.auth.signOut(); return fail('This account doesn’t have NammaStay admin access.'); }
+  if (!info?.admin) { await sb.auth.signOut(); return fail('This account doesn’t have TheNammaStay admin access.'); }
   if (info.aal === 'aal2') return go();
   return info.has_factor ? askCode() : setUp();
 }
 
 async function init() {
-  if (NOT_CONNECTED) { main.innerHTML = '<div class="ns-card">NammaStay isn’t connected yet.</div>'; reveal(); return; }
+  if (NOT_CONNECTED) { main.innerHTML = '<div class="ns-card">TheNammaStay isn’t connected yet.</div>'; reveal(); return; }
   if (DEMO) { email.value = 'admin@thenammastay.com'; pw.value = 'demo-password'; }
   const { data: { session } } = await sb.auth.getSession();
   if (session) {

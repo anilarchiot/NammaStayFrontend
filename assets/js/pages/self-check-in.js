@@ -57,7 +57,7 @@ async function init() {
   const pgi = await sb.rpc('pg_selfcheckin_info', { p_token: token }).then((r) => r.data || {}, () => ({}));
   if (pgi.tenant) {
     const t = document.querySelector('.ns-phone [style*="font-size:20px"]'); if (t) t.textContent = 'Tenant registration';
-    document.title = 'Tenant registration · NammaStay';
+    document.title = 'Tenant registration · TheNammaStay';
   }
   if (b.submitted && pgi.tenant) { step(3, 'All set'); done('You’re registered', `${b.property} already has your details. Thank you!`); return reveal(); }
   if (b.submitted) { step(3, 'All set'); done('You’re checked in online', `We have your details for ${b.code}. Just show a photo ID at the front desk when you arrive.`); await showGuide(); return reveal(); }

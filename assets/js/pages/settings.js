@@ -230,8 +230,8 @@ page('settings', async (ctx) => {
       let coupon = null;                                                            // { code, plan, amount_paise }
       const KIND = { hostel: 'hostels & PGs', hotel: 'hotels', homestay: 'homestays' };
       const tierNote = `Prices for ${KIND[b.kind] || 'your property'} · you have ${b.units} ${b.units === 1 ? W.unit : W.units}`;
-      const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for NammaStay for ' + ctx.property_name)}`
-        : b.pay_to?.support_email ? `mailto:${b.pay_to.support_email}?subject=${encodeURIComponent('NammaStay quote — ' + ctx.property_name)}` : null;
+      const contact = b.pay_to?.support_whatsapp ? `https://wa.me/${String(b.pay_to.support_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent('Hi, I’d like a quote for TheNammaStay for ' + ctx.property_name)}`
+        : b.pay_to?.support_email ? `mailto:${b.pay_to.support_email}?subject=${encodeURIComponent('TheNammaStay quote — ' + ctx.property_name)}` : null;
       const owner = ctx.can('owner'); const upi = b.pay_to?.upi_id;
       const until = a.state === 'trial' ? `Trial ends ${fmtDate(a.trial_ends_at)}` : a.state === 'active' ? `Paid until ${fmtDate(a.paid_until)}`
         : a.state === 'complimentary' ? 'No payment needed' : `Ended ${fmtDate(a.ends_at)}`;
@@ -239,11 +239,11 @@ page('settings', async (ctx) => {
       content(`
         <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px">
           <div class="ns-card" style="display:flex;flex-direction:column;gap:12px;align-self:start">
-            <div class="ns-h3">Your NammaStay plan</div>
+            <div class="ns-h3">Your TheNammaStay plan</div>
             <div>${pill(label, color)}</div>
             <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800">${a.days_left != null ? `${a.days_left} day${a.days_left === 1 ? '' : 's'} left` : esc(label)}</div>
             <div class="ns-muted" style="font-size:13.5px">${esc(until)}</div>
-            ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using NammaStay meanwhile.</div>' : ''}
+            ${a.pending_payment ? '<div class="ns-demo-hint">We’ve received your payment details and will confirm shortly. You can keep using TheNammaStay meanwhile.</div>' : ''}
             ${a.state === 'expired' ? '<div class="ns-error">New bookings are paused. Your data is safe — renew below to continue.</div>' : ''}
             <div class="ns-muted" style="font-size:12.5px;line-height:1.6">One flat price per property for the core plan, with unlimited staff and bookings. Housekeeping is optional at ${housekeepingPrice().text}/month.
               ${b.pay_to?.support_whatsapp || b.pay_to?.support_email ? `<br>Questions? ${b.pay_to.support_whatsapp ? `<a href="https://wa.me/${esc(b.pay_to.support_whatsapp.replace(/\D/g, ''))}" target="_blank" rel="noopener" style="font-weight:700">WhatsApp us</a>` : ''} ${b.pay_to.support_email ? `<a href="mailto:${esc(b.pay_to.support_email)}" style="font-weight:700">${esc(b.pay_to.support_email)}</a>` : ''}` : ''}</div>
@@ -261,7 +261,7 @@ page('settings', async (ctx) => {
                 <span class="price">${rupees(x.price_paise)} <small>/ ${x.period_months === 1 ? 'month' : x.period_months === 12 ? 'year' : x.period_months + ' months'}</small></span>
                 <span class="ns-muted">${esc(x.description || '')}</span></button>`).join('')}
             </div>
-            ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact NammaStay support.</div>' : `
+            ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact TheNammaStay support.</div>' : `
             <div class="cp-row"><input class="ns-input" id="coupon" placeholder="Have a coupon code?" maxlength="20" style="text-transform:uppercase" autocomplete="off">
               <button type="button" class="ns-btn-ghost" id="coupon-apply">Apply</button><span id="coupon-msg" class="ns-muted" style="font-size:12.5px"></span></div>
             <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
@@ -286,7 +286,7 @@ page('settings', async (ctx) => {
         if (!$('#qr') || !chosen) return;
         const due = coupon && coupon.plan === chosen.id ? coupon.amount_paise : chosen.price_paise;
         $('#amt').innerHTML = due !== chosen.price_paise ? `${rupees(due)} <s class="ns-muted" style="font-weight:600">${rupees(chosen.price_paise)}</s>` : rupees(due);
-        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: due, note: `NammaStay ${ctx.property_name}`.slice(0, 40) });
+        const link = upiLink({ upiId: upi, payee: b.pay_to.payee_name, amountPaise: due, note: `TheNammaStay ${ctx.property_name}`.slice(0, 40) });
         $('#upi-open').href = link;
         const url = await qrDataUrl(link);
         if (url) $('#qr').src = url; else $('#qr-box').hidden = true;
@@ -563,7 +563,7 @@ async function razorpayCard(ctx) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <div class="ns-h3">💳 Online payments (Razorpay)</div>
       ${st.connected ? `<span class="ns-pill green">Connected · ${st.mode === 'live' ? 'Live' : 'Test mode'} · ${esc(st.key_hint)}</span>` : '<span class="ns-pill grey">Not connected</span>'}</div>
-    <div class="ns-muted" style="font-size:13px">Send guests a payment link (UPI, card, net banking). Money goes straight to <b>your</b> Razorpay account, and NammaStay marks the booking paid automatically. Razorpay charges its own fee per payment.</div>
+    <div class="ns-muted" style="font-size:13px">Send guests a payment link (UPI, card, net banking). Money goes straight to <b>your</b> Razorpay account, and TheNammaStay marks the booking paid automatically. Razorpay charges its own fee per payment.</div>
     ${owner ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
         ${field('Key ID', `<input class="ns-input" name="rzp_id" placeholder="rzp_live_XXXXXXXX" value="${esc(st.connected ? '' : '')}" autocomplete="off">`, st.connected ? 'Saved — type a new one only to change it.' : 'Razorpay → Account & Settings → API Keys')}
         ${field('Key Secret', `<input class="ns-input" type="password" name="rzp_secret" placeholder="${st.connected ? '•••••••• saved' : 'Shown once when you create the key'}" autocomplete="new-password">`)}
@@ -572,7 +572,7 @@ async function razorpayCard(ctx) {
         <div style="font-size:12.5px;line-height:1.6;margin-top:8px">Razorpay → Account & Settings → <b>Webhooks</b> → <b>Add new webhook</b>:<br>
           URL: <input class="ns-input" readonly value="${esc(hook)}" style="height:34px;font-size:12px;margin:4px 0" id="rzp-hook-url"><br>
           Secret: the same <b>Webhook secret</b> as above · Events: tick <b>payment_link.paid</b>, <b>payment_link.expired</b>, <b>payment_link.cancelled</b>.<br>
-          Without a webhook, NammaStay still checks for payment whenever the booking is opened.</div></details>
+          Without a webhook, TheNammaStay still checks for payment whenever the booking is opened.</div></details>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ns-btn" id="rzp-save">Save</button>
         ${st.connected ? '<button type="button" class="ns-btn-ghost" id="rzp-test">Test connection</button><button type="button" class="ns-btn-ghost" id="rzp-off" style="color:#B23A3A">Disconnect</button>' : ''}</div>`
     : '<div class="ns-help">Only the owner can connect or change Razorpay.</div>'}
@@ -672,7 +672,7 @@ async function billingExtras(ctx) {
   host.insertAdjacentHTML('beforeend', `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:20px">
     <div class="ns-card" style="display:flex;flex-direction:column;gap:12px" id="bill-det">
       <div class="ns-h3">Billing details for your invoices</div>
-      <div class="ns-muted" style="font-size:12.5px">Shown on the invoices NammaStay sends you. Add your GSTIN to claim input tax credit.</div>
+      <div class="ns-muted" style="font-size:12.5px">Shown on the invoices TheNammaStay sends you. Add your GSTIN to claim input tax credit.</div>
       ${field('Name on invoice', `<input class="ns-input" name="bill_name" maxlength="120" value="${esc(det.bill_name || '')}" placeholder="${esc(det.name)}">`)}
       ${field('GSTIN (optional)', `<input class="ns-input" name="bill_gstin" maxlength="15" value="${esc(det.bill_gstin || '')}" placeholder="33ABCDE1234F1Z5" style="text-transform:uppercase">`)}
       ${field('Billing address', `<input class="ns-input" name="bill_address" maxlength="300" value="${esc(det.bill_address || '')}" placeholder="Door no, street, city, PIN">`)}
@@ -794,7 +794,7 @@ async function apiKeysCard(ctx) {
   <div class="ns-card" style="padding:0;overflow:hidden;margin-top:20px" id="api-card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 20px">
       <div><div class="ns-h3">🔌 API keys</div>
-        <div class="ns-muted" style="font-size:13px;margin-top:4px;max-width:640px">Let other software use your NammaStay data — e.g. a booking form on your own website, a partner, or a script. Each key works only for this property.</div></div>
+        <div class="ns-muted" style="font-size:13px;margin-top:4px;max-width:640px">Let other software use your TheNammaStay data — e.g. a booking form on your own website, a partner, or a script. Each key works only for this property.</div></div>
       <button type="button" class="ns-btn" id="api-new">+ Create API key</button>
     </div>
     <div style="padding:0 20px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px">
@@ -832,7 +832,7 @@ async function apiKeysCard(ctx) {
     const m = modal({
       title: 'Your new API key', width: 520,
       body: `<div style="display:flex;flex-direction:column;gap:12px">
-        <div class="ns-demo-hint" style="margin:0"><b>Copy it now.</b> For your safety NammaStay shows this key only once. If you lose it, revoke it and create a new one.</div>
+        <div class="ns-demo-hint" style="margin:0"><b>Copy it now.</b> For your safety TheNammaStay shows this key only once. If you lose it, revoke it and create a new one.</div>
         <code id="api-key-val" style="display:block;background:#0E1B3D;color:#FBF3DE;border-radius:10px;padding:14px;font-size:13px;word-break:break-all;user-select:all">${esc(key)}</code>
         <div class="ns-muted" style="font-size:12.5px">Keep it secret like a password — put it on your server, not in a public web page. Send it in the <code>X-Api-Key</code> header.</div>
       </div>`,

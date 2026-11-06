@@ -94,7 +94,7 @@ page('investment', async (ctx) => {
     return `<section class="ns-card ivs-welcome">
       <div><div class="ns-h3" style="font-size:20px">How much did you invest to start ${esc(ctx.property_name)}?</div>
         <p class="ns-muted" style="margin:6px 0 0;line-height:1.55">Add what you spent before opening (interiors, beds, deposit, kitchen) and any upgrades later.
-        NammaStay then shows how much of it your profit has paid back, when you'll break even, and celebrates each milestone.
+        TheNammaStay then shows how much of it your profit has paid back, when you'll break even, and celebrates each milestone.
         Profit so far since ${esc(fmtDate(S.opened_on))}: <b>${rupees(S.recovered_paise)}</b>.</p></div>
       <span style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="ns-btn" data-inv-list>Choose from a list of usual items</button>
         <button type="button" class="ns-btn-ghost" data-inv-first>Add one item</button></span></section>`;

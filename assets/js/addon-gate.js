@@ -28,7 +28,7 @@ export async function requireAddon(ctx, cfg) {
           ${cfg.channels ? `<div class="ota-tiles" aria-label="Supported OTAs">${OTA_LIST.map((o) => otaTile(o)).join('')}<span class="ota-tile is-more"><b>+ any OTA with an iCal link</b></span></div>` : ''}
           ${cfg.features ? `<ul class="hk-addon-features">${cfg.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
           ${addon.active_until ? `<div class="hk-addon-note">Access ended ${esc(fmtDate(addon.active_until))}.</div>` : ''}
-          ${addon.pending ? `<div class="hk-addon-note is-pending">Payment submitted. ${esc(cfg.name)} will turn on after NammaStay confirms it.</div>` : ''}
+          ${addon.pending ? `<div class="hk-addon-note is-pending">Payment submitted. ${esc(cfg.name)} will turn on after TheNammaStay confirms it.</div>` : ''}
           ${owner && addon.last_status === 'rejected' ? `<div class="hk-addon-note is-rejected">${esc(addon.review_note || 'The last payment could not be confirmed. Check the UTR and try again.')}</div>` : ''}
           ${owner && !addon.pending ? `<div class="hk-addon-price">${price.text} <span>/ month</span></div><button type="button" class="ns-btn" id="hk-addon-pay">${esc(cfg.ctaLabel)}</button>` : ''}
           ${owner ? '<div class="hk-addon-footnote">Monthly access starts when your payment is approved.</div>' : ''}
@@ -44,10 +44,10 @@ export async function requireAddon(ctx, cfg) {
   async function startPayment() {
     const billing = await rpc('billing_info', { p_property: ctx.property_id });
     const payTo = billing.pay_to || {};
-    if (!payTo.upi_id) { toast('UPI payment details are not set up. Contact NammaStay support.', { error: true }); return; }
+    if (!payTo.upi_id) { toast('UPI payment details are not set up. Contact TheNammaStay support.', { error: true }); return; }
     const price = addonPrice();
     const inr = rupees(ADDON_PRICE_INR_PAISE);
-    const link = upiLink({ upiId: payTo.upi_id, payee: payTo.payee_name || 'NammaStay', amountPaise: ADDON_PRICE_INR_PAISE, note: `${cfg.name} ${ctx.property_name}`.slice(0, 40) });
+    const link = upiLink({ upiId: payTo.upi_id, payee: payTo.payee_name || 'TheNammaStay', amountPaise: ADDON_PRICE_INR_PAISE, note: `${cfg.name} ${ctx.property_name}`.slice(0, 40) });
     const payment = modal({
       title: cfg.ctaLabel,
       body: `<div class="hk-addon-payment"><div class="hk-addon-payment-amount">${price.text} <span>/ month</span></div>

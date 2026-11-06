@@ -418,7 +418,7 @@ function adminChrome(user, hasProperty) {
     + (hasProperty ? `<div class="ns-nav-section">Your property</div><a href="${hostelHref('dashboard.html')}" class="ns-nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>Open hostel app</span></a>` : '');
   $$('.ns-sidebar a[href="settings.html"], .ns-sidebar .ns-demo-badge, .ns-bell, .ns-mobilebar .ns-bell').forEach((e) => e.remove());
   const nm = $('.ns-sidebar .ns-user-name'); const sub = $('.ns-sidebar .ns-user-sub'); const av = $('.ns-sidebar .ns-user .ns-avatar, .ns-sidebar .ns-user > div:first-child');
-  if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'NammaStay admin';
+  if (nm) nm.textContent = user?.email || 'Admin'; if (sub) sub.textContent = 'TheNammaStay admin';
   if (av && av.children.length === 0) av.textContent = (user?.email || 'A')[0].toUpperCase();
   const so = $('.ns-sidebar .ns-signout');
   if (so) { so.href = 'login.html'; so.addEventListener('click', async (e) => { e.preventDefault(); await sb.auth.signOut().catch(() => {}); location.replace('login.html'); }); }
@@ -444,7 +444,7 @@ export function adminPage(fn) {
       if (!isAdmin) {
         const host = $('.ns-content'); host.style.padding = '24px';
         host.innerHTML = `<div class="ns-card" style="max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center">
-          <div class="ns-h3">This account doesn’t have NammaStay admin access.</div>
+          <div class="ns-h3">This account doesn’t have TheNammaStay admin access.</div>
           <button type="button" class="ns-btn" id="adm-switch">Sign in with an admin account</button></div>`;
         $('#adm-switch').onclick = async () => { await sb.auth.signOut().catch(() => {}); location.replace('admin-login.html'); };
         reveal(); return;
@@ -554,7 +554,7 @@ async function bootApp() {
       m.role === 'manager' && (typeof rolePerms.manage_rooms === 'boolean' ? rolePerms.manage_rooms : permDefault(m.role, 'manage_rooms'))
     ),
   };
-  ctx.isAdmin = await adminP;                                         // NammaStay platform admin
+  ctx.isAdmin = await adminP;                                         // TheNammaStay platform admin
   ctx.isPg = (await pgP) === true;                                    // PG / co-living property (031)
   ctx.isResort = (await resortP) === true;                            // resort (034)
   if (ctx.isResort) { setKind('resort'); ctx.kind = W.kind; ctx.words = W; }
@@ -837,10 +837,10 @@ function applyChrome(ctx) {
       after.insertAdjacentElement('afterend', a);
     }
   }
-  if (ctx.isAdmin && !$('.ns-sidebar a[data-admin-link]')) {   // NammaStay admins only: admin pages right in the menu
+  if (ctx.isAdmin && !$('.ns-sidebar a[data-admin-link]')) {   // TheNammaStay admins only: admin pages right in the menu
     const nav = $('.ns-sidebar .ns-nav');
     if (nav) {
-      const h = document.createElement('div'); h.className = 'ns-nav-section'; h.textContent = 'NammaStay admin';
+      const h = document.createElement('div'); h.className = 'ns-nav-section'; h.textContent = 'TheNammaStay admin';
       nav.append(h);
       ADMIN_NAV.forEach(([href, label, svg]) => {
         const a = document.createElement('a'); a.href = href; a.className = 'ns-nav-link'; a.dataset.adminLink = '1';
@@ -951,7 +951,7 @@ function accessBanner(ctx) {
   const main = $('.ns-main') || $('.ns-dialog');
   if (a?.state === 'suspended' && main) {
     const el = document.createElement('div'); el.className = 'ns-access-banner danger'; el.setAttribute('role', 'alert');
-    el.innerHTML = '<b>This account is suspended — new bookings are paused.</b> Your data is safe. Please contact NammaStay support.';
+    el.innerHTML = '<b>This account is suspended — new bookings are paused.</b> Your data is safe. Please contact TheNammaStay support.';
     const mb = $('.ns-mobilebar'); if (mb && mb.parentNode === main) mb.insertAdjacentElement('afterend', el); else main.prepend(el);
     rpc('property_suspension', { p_property: ctx.property_id }).then((x) => { if (x?.reason) el.insertAdjacentHTML('beforeend', ` <span style="font-weight:600">Reason: ${esc(x.reason)}</span>`); }).catch(() => {});
     return;
@@ -985,7 +985,7 @@ function saveShell(admin) {
     unmark(nav);
     const banner = $('.ns-main > .ns-access-banner');
     const data = {
-      nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin, lang: getLang(),
+      nav: nav.innerHTML, banner: banner ? banner.outerHTML : '', admin, lang: getLang(), branding: 'TheNammaStay',
       area: admin ? 'admin' : 'app',
       property: admin ? '' : localStorage.getItem('ns.property') || '',
     };
@@ -1022,7 +1022,7 @@ function demoBadge() {
         <label>View as<select data-role-as>${opt([['owner', 'Owner'], ['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']], role)}</select></label>
         <label>Property type<select data-kind>${opt([['hostel', 'Hostel'], ['pg', 'PG / Co-living'], ['hotel', 'Hotel'], ['homestay', 'Homestay'], ['resort', 'Resort']], k)}</select></label>
         <div class="ns-demo-acts"><button type="button" data-reset>Reset data</button><button type="button" data-exit>Exit demo</button></div>
-        <a href="admin-login.html?demo=1" class="ns-demo-admin">Open NammaStay admin area →</a>
+        <a href="admin-login.html?demo=1" class="ns-demo-admin">Open TheNammaStay admin area →</a>
         <div class="ns-demo-note">Sample data, saved only in this browser.</div>
       </div></details>`;
   el.querySelector('[data-role-as]').addEventListener('change', (e) => {
@@ -1354,7 +1354,7 @@ export function drawBookingCard(i) {
   x.fillStyle = C.ink; x.font = F(700, 28);
   if (i.address) x.fillText(fit(x, '📍 ' + i.address, W - 160, 28, 700, 'Manrope'), 80, 1205);
   if (i.phone) { x.fillStyle = C.ink; x.font = F(700, 28); x.fillText('📞 ' + i.phone, 80, 1255); }
-  x.fillStyle = C.muted; x.font = F(700, 22); x.fillText(`${i.nights} night${i.nights > 1 ? 's' : ''}  ·  Powered by NammaStay`, 80, 1310);
+  x.fillStyle = C.muted; x.font = F(700, 22); x.fillText(`${i.nights} night${i.nights > 1 ? 's' : ''}  ·  Powered by TheNammaStay`, 80, 1310);
   return c;
 }
 

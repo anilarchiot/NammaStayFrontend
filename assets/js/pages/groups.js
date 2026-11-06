@@ -27,7 +27,7 @@ async function groupView(ctx, id, staff) {
   const back = document.querySelector('.ns-main > [style*="height:76px"] [style*="font-size:21px"]');
   const g = await rpc('group_get', { p_group: id });
   if (back) back.innerHTML = `<a href="groups.html" style="color:inherit">Groups</a> › ${esc(g.name)}`;
-  document.title = `${g.name} · NammaStay`;
+  document.title = `${g.name} · TheNammaStay`;
   setSubtitle(`${esc(KIND[g.kind] || g.kind)}${g.check_in_at ? ` · ${fmtDay(g.check_in_at)} – ${fmtDate(g.check_out_at)}` : ''} · ${g.rooms} room${g.rooms === 1 ? '' : 's'} · ${g.guests} guests`);
   const head = headerActions();
   const canPay = ctx.allow('record_payments');

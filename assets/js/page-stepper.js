@@ -26,7 +26,7 @@ const GUIDES = {
 
 const TARGETS = {
   dashboard: [
-    { selectors: ['.ns-content > div:first-child'], label: 'Today at a glance' },
+    { selectors: ['.ns-content > div:not(.ns-page-stepper)'], label: 'Today at a glance' },
     { selectors: ['.ns-content .ns-bars', '.ns-content [href="check-in.html?new=1"]'], label: 'Occupancy and quick actions' },
     { selectors: ['.ns-content a[href^="booking-detail.html"]'], label: 'Today’s bookings' },
   ],
@@ -179,10 +179,13 @@ export function mountPageStepper(ctx, route) {
     const config = targets[activeStep];
     const selectors = config?.selectors || [];
     for (const selector of selectors) {
-      const match = document.querySelector(selector);
-      if (match && !guide.contains(match)) return match.matches('input,select,textarea') ? match.closest('.ns-field') || match : match;
+      for (const match of document.querySelectorAll(selector)) {
+        if (guide.contains(match) || !match.getClientRects().length) continue;
+        const target = match.matches('input,select,textarea') ? match.closest('.ns-field') || match : match;
+        if (target !== host && target.getClientRects().length) return target;
+      }
     }
-    return [...host.children].find((child) => child !== guide) || null;
+    return config ? null : [...host.children].find((child) => child !== guide && child.getClientRects().length) || null;
   };
   const clearHighlight = () => {
     highlighted?.classList.remove('ns-page-stepper-target');
@@ -201,12 +204,18 @@ export function mountPageStepper(ctx, route) {
   };
   const finish = () => {
     try { localStorage.setItem(storageKey, 'done'); } catch { /* The guide still dismisses for this visit. */ }
+    observer.disconnect();
+    if (pendingRender) cancelAnimationFrame(pendingRender);
     clearHighlight();
     backdrop.remove();
     guide.remove();
   };
   const render = (scroll = false) => {
     clearHighlight();
+    const suspended = host.classList.contains('br-creating');
+    guide.hidden = suspended;
+    backdrop.hidden = suspended;
+    if (suspended) return;
     const targetConfig = targets[activeStep];
     highlighted = findTarget();
     const section = highlighted && [...host.children].find((child) => child !== guide && (child === highlighted || child.contains(highlighted)));
@@ -220,7 +229,7 @@ export function mountPageStepper(ctx, route) {
     highlighted?.classList.add('ns-page-stepper-target');
     progress.textContent = `Step ${activeStep + 1} of ${messages.length}`;
     stepText.textContent = messages[activeStep];
-    focusText.textContent = `On this page: ${targetConfig?.label || route.title}`;
+    focusText.textContent = highlighted ? `On this page: ${targetConfig?.label || route.title}` : 'This section is not available in the current view.';
     bar.style.width = `${((activeStep + 1) / messages.length) * 100}%`;
     guide.querySelector('.ns-page-stepper-track').setAttribute('aria-valuenow', String(activeStep + 1));
     back.disabled = activeStep === 0;
@@ -232,6 +241,21 @@ export function mountPageStepper(ctx, route) {
   next.addEventListener('click', () => { if (activeStep === messages.length - 1) finish(); else { activeStep++; render(true); } });
   show.addEventListener('click', showTarget);
   guide.querySelector('[data-dismiss]').addEventListener('click', finish);
+  let pendingRender = 0;
+  const observer = new MutationObserver((records) => {
+    const relevant = records.some((record) => {
+      if (record.type === 'attributes') return record.target === host;
+      if (guide.contains(record.target)) return false;
+      return [...record.addedNodes, ...record.removedNodes].some((node) => node !== guide && !guide.contains(node));
+    });
+    if (!relevant || pendingRender) return;
+    pendingRender = requestAnimationFrame(() => {
+      pendingRender = 0;
+      const suspended = host.classList.contains('br-creating');
+      if (suspended !== guide.hidden || (!suspended && (!guide.isConnected || findTarget() !== highlighted))) render();
+    });
+  });
+  observer.observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   document.body.append(backdrop);
   render();
 }

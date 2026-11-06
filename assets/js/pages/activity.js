@@ -18,7 +18,7 @@ adminPage(async () => {
   const list = await rpc('admin_actions_list', { p_limit: 500 });
   function draw() {
     const rows = list.filter((a) => !q || [a.admin_email, a.property, LABEL[a.action] || a.action, a.details?.code, a.details?.name].some((x) => String(x || '').toLowerCase().includes(q)));
-    setSubtitle(`${rows.length} change${rows.length === 1 ? '' : 's'} by NammaStay admins`);
+    setSubtitle(`${rows.length} change${rows.length === 1 ? '' : 's'} by TheNammaStay admins`);
     content(`<div class="ns-card" style="padding:0;overflow:hidden">${rows.length ? rows.map((a) => {
       const ch = a.details?.changes || {};
       const keys = Object.keys(ch).filter((k) => FIELD[k]).slice(0, 4);

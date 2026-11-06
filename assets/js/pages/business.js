@@ -193,7 +193,7 @@ function loansCard(B) {
 
 function partnersCard(B, ctx) {
   const P = B.partners; const items = P.items;
-  const statement = (x) => `${ctx.property_name} — partner statement (${monthYear(B.today)})\n${x.name}: ${pct(x.share_pct)} share\nInvested: ${rr(x.invested_paise)}\nProfit share so far (after loan interest): ${rr(x.profit_share_paise)}\nPaid out: ${rr(x.paid_out_paise)}\nBalance due: ${rr(x.profit_share_paise - x.paid_out_paise)}\n— from NammaStay`;
+  const statement = (x) => `${ctx.property_name} — partner statement (${monthYear(B.today)})\n${x.name}: ${pct(x.share_pct)} share\nInvested: ${rr(x.invested_paise)}\nProfit share so far (after loan interest): ${rr(x.profit_share_paise)}\nPaid out: ${rr(x.paid_out_paise)}\nBalance due: ${rr(x.profit_share_paise - x.paid_out_paise)}\n— from TheNammaStay`;
   const rows = items.map((x) => {
     const bal = x.profit_share_paise - x.paid_out_paise;
     return `<tr><td><b>${esc(x.name)}</b>${x.is_me ? ' <span class="ivs-pill ivs-pill-grey">you</span>' : ''}<div class="ns-muted" style="font-size:12px">${pct(x.share_pct)} share</div></td>

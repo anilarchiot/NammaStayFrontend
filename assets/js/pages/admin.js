@@ -13,7 +13,7 @@ const ago = (iso) => {
 };
 
 adminPage(async (ctx) => {
-  if (!ctx.isAdmin) { showFatal('This screen is only for NammaStay admins.'); return; }
+  if (!ctx.isAdmin) { showFatal('This screen is only for TheNammaStay admins.'); return; }
   const id = param('id');
   if (uuidOk(id)) return propertyView(id);
   return overview();
@@ -38,7 +38,7 @@ async function overview() {
       renew_7d: ['Renews in 7 days', 'blue'], renew_1d: ['Plan ends tomorrow', 'amber'], expired: ['Plan ended', 'red'] };
     const wa = (r) => {
       const first = String(r.owner || '').split(/[\s@]/)[0] || 'there';
-      const msg = `Hello ${first}, this is NammaStay. ${r.text.title} for ${r.property}. ${/ended/.test(r.text.title) ? 'Choose a plan in Settings → Billing to keep using NammaStay' : 'You can choose a plan any time in Settings → Billing'} — reply here if you need help. Thank you!`;
+      const msg = `Hello ${first}, this is NammaStay. ${r.text.title} for ${r.property}. ${/ended/.test(r.text.title) ? 'Choose a plan in Settings → Billing to keep using TheNammaStay' : 'You can choose a plan any time in Settings → Billing'} — reply here if you need help. Thank you!`;
       return `https://wa.me/${String(r.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
     };
     host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
@@ -151,7 +151,7 @@ async function overview() {
   };
   setTimeout(drawStorage, 0);
   const c = d.counts;
-  setSubtitle(`${d.total} properties on NammaStay`);
+  setSubtitle(`${d.total} properties on TheNammaStay`);
   const stat = (l, v, sub = '', dark = false) => `<div class="ns-stat${dark ? ' is-dark' : ''}"><div class="ns-stat-label">${l}</div><div class="ns-stat-value">${v}</div>${sub ? `<div class="ns-stat-sub">${sub}</div>` : ''}</div>`;
   const maxW = Math.max(1, ...d.weekly_signups.map((w) => w.n));
   const att = (title, rows, render, empty) => `<div class="ns-card" style="display:flex;flex-direction:column;gap:6px">
@@ -186,7 +186,7 @@ async function overview() {
     <div class="ns-card" id="rem-card" style="display:flex;flex-direction:column;gap:8px"></div>
     <div class="ns-card" id="health-card" style="display:flex;flex-direction:column;gap:8px"></div>
     <div class="ns-card" id="storage-card" style="display:flex;flex-direction:column;gap:8px"></div>
-    ${att('Not using NammaStay lately', d.inactive, (r) => `last active ${ago(r.last_seen_at || r.last_booking_at).toLowerCase()}`, 'Everyone has been active in the last 2 weeks.')}
+    ${att('Not using TheNammaStay lately', d.inactive, (r) => `last active ${ago(r.last_seen_at || r.last_booking_at).toLowerCase()}`, 'Everyone has been active in the last 2 weeks.')}
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div class="ns-h3">All properties</div>
@@ -236,7 +236,7 @@ async function propertyView(id) {
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-pinv]'); if (b && invBy[b.dataset.pinv]) openPlatformInvoice(invBy[b.dataset.pinv].doc); });
   const p = d.property; const s = d.subscription; const u = d.usage;
   const owner = d.members.find((m) => m.role === 'owner');
-  document.title = `${p.name} · Admin · NammaStay`;
+  document.title = `${p.name} · Admin · TheNammaStay`;
   setSubtitle(`${[p.city, p.kind].filter(Boolean).join(' · ')} · joined ${fmtDate(p.created_at)}`);
   const title = $('.ns-main > [style*="height:76px"] [style*="font-size:21px"]'); if (title) title.textContent = p.name;
   const wa = waNumber(p.phone);
@@ -343,7 +343,7 @@ function addPropertyDialog(pre = {}) {
         <div style="grid-column:1/-1">${field('Address', '<input class="ns-input" name="address" maxlength="300">')}</div>
         ${field('Owner’s name', '<input class="ns-input" name="owner_name" maxlength="80">')}
         ${field('Owner’s phone / WhatsApp', '<input class="ns-input" name="phone" type="tel" maxlength="20" placeholder="+91 98400 12233">')}
-        <div style="grid-column:1/-1">${field('Owner’s email *', '<input class="ns-input" name="owner_email" type="email">', 'They sign in with this email. If they already use NammaStay, the property is added to their account right away.')}</div>
+        <div style="grid-column:1/-1">${field('Owner’s email *', '<input class="ns-input" name="owner_email" type="email">', 'They sign in with this email. If they already use TheNammaStay, the property is added to their account right away.')}</div>
         ${field('Access', `<select class="ns-input" name="access">${options([['trial', 'Free trial'], ['comp', 'Complimentary (free forever)']], 'trial')}</select>`)}
         <div id="trial-days">${field('Trial', '<input class="ns-input" name="trial_days" type="number" min="7" max="7" value="7" readonly>')}</div>
         <label style="grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600">
@@ -373,19 +373,19 @@ function addPropertyDialog(pre = {}) {
 function inviteMessage({ name, email, owner, phone, linked, propertyId, addedMe }) {
   const first = (owner || '').split(/\s+/)[0] || 'there';
   const link = `${SITE_URL}/${linked ? 'login.html' : 'signup.html?email=' + encodeURIComponent(email)}`;
-  const text = `Hi ${first}! 🙏\n\nYour NammaStay account for *${name}* is ready.\n\n`
+  const text = `Hi ${first}! 🙏\n\nYour TheNammaStay account for *${name}* is ready.\n\n`
     + (linked ? `Sign in with ${email} and you’ll find ${name} in your account:\n${link}`
       : `Create your login with this email (${email}) — ${name} will be waiting for you:\n${link}`)
-    + `\n\nAny questions, just reply here.\n— NammaStay`;
+    + `\n\nAny questions, just reply here.\n— TheNammaStay`;
   const wa = waNumber(phone);
   const m = modal({
     title: linked ? 'Property added to their account ✓' : 'Send the owner their sign-up link', width: 560,
-    body: `${linked ? `<div class="ns-demo-hint" style="background:#E9F5EE;color:#157A56">${esc(email)} already has a NammaStay login — ${esc(name)} is in their account now.</div>` : ''}
+    body: `${linked ? `<div class="ns-demo-hint" style="background:#E9F5EE;color:#157A56">${esc(email)} already has a login for TheNammaStay — ${esc(name)} is in their account now.</div>` : ''}
       ${addedMe && propertyId ? '<div class="ns-help" style="font-size:13px">You’re a manager on this property: tap the property name under your name (bottom of the menu) to switch to it and set up its rooms, beds and rates.</div>' : ''}
       <textarea class="ns-input" id="inv-text" rows="9" style="font-size:13px;line-height:1.5">${esc(text)}</textarea>`,
     actions: [{ label: 'Done', onClick: () => { if (propertyId) location.href = 'admin.html?id=' + propertyId; } },
       { label: 'Copy', onClick: async (el) => { try { await navigator.clipboard.writeText(el.querySelector('#inv-text').value); toast('Copied.'); } catch { toast('Select and copy the text.'); } return false; } },
-      { label: 'Email', onClick: (el) => { location.href = `mailto:${email}?subject=${encodeURIComponent('Your NammaStay account for ' + name)}&body=${encodeURIComponent(el.querySelector('#inv-text').value)}`; return false; } },
+      { label: 'Email', onClick: (el) => { location.href = `mailto:${email}?subject=${encodeURIComponent('Your TheNammaStay account for ' + name)}&body=${encodeURIComponent(el.querySelector('#inv-text').value)}`; return false; } },
       { label: wa ? 'WhatsApp' : 'WhatsApp (pick contact)', kind: 'primary', onClick: (el) => {
         window.open(`https://wa.me/${wa}?text=${encodeURIComponent(el.querySelector('#inv-text').value)}`, '_blank', 'noopener'); return false; } }],
   });

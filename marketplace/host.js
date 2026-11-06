@@ -85,7 +85,7 @@ async function loadListings() {
   for (const l of ls ?? []) {
     const { data: bs } = await sb.from('mk_bookings').select('id,ref,guest_name,guest_phone,check_in,check_out,amount_paise,status').eq('listing_id', l.id).order('check_in', { ascending: false }).limit(50);
     out.push(`<div class="card"><h3>${esc(l.title)} <span class="mute">${esc(l.city)} · ${esc(l.status)}</span></h3>
-      <p class="mute">NammaStay app sync — listing code: <span class="code">${esc(l.code)}</span>. In the NammaStay app open Connect → nammaBookings and enter this code.</p>
+      <p class="mute">TheNammaStay app sync — listing code: <span class="code">${esc(l.code)}</span>. In TheNammaStay app open Connect → nammaBookings and enter this code.</p>
       ${bs.length ? `<table><tr><th>Ref</th><th>Guest</th><th>Dates</th><th>Amount</th><th></th></tr>${bs.map((b) => `
         <tr><td>${esc(b.ref)}</td><td>${esc(b.guest_name)}<br><span class="mute">${esc(b.guest_phone)}</span></td><td>${esc(b.check_in)} → ${esc(b.check_out)}</td>
         <td>${inr(b.amount_paise)}</td><td>${b.status === 'cancelled' ? 'Cancelled' : `<button class="danger" data-cancel="${esc(b.id)}">Cancel</button>`}</td></tr>`).join('')}</table>`

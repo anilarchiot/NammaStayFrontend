@@ -49,7 +49,7 @@ export const COMMON = [
     who: 'District magistrate / commissioner of police', links: [L.sarais] },
   { key: 'frro', title: 'Foreign guests: FRRO registration + Form C within 24 hours', doc: 'frro', need: ALL('if'),
     when: 'You host foreign nationals',
-    what: 'Register your property once with the immigration office, then submit Form C for every foreign guest within 24 hours of arrival (Immigration and Foreigners Act 2025, s.8; Rules 2025, r.17). Penalty up to ₹50,000 per guest. NammaStay’s Form C page helps.',
+    what: 'Register your property once with the immigration office, then submit Form C for every foreign guest within 24 hours of arrival (Immigration and Foreigners Act 2025, s.8; Rules 2025, r.17). Penalty up to ₹50,000 per guest. TheNammaStay’s Form C page helps.',
     who: 'Bureau of Immigration / FRRO', links: [L.frro, L.formc] },
   { key: 'pollution', title: 'Pollution Control Board consent (CTE / CTO)', doc: 'pollution', need: { hostel: 'check', homestay: 'opt', pg: 'opt', hotel: 'yes', resort: 'yes' },
     when: 'By size (CPCB, July 2026): up to 20 rooms Green; 21–300 rooms Orange; above 300 Red',

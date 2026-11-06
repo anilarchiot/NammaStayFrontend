@@ -141,7 +141,7 @@ export function mountPurni(ctx) {
         if (!/^\d{8,15}$/.test(phone) || !/^purni-[0-9a-f]{32}$/.test(code)) {
           throw new Error('The WhatsApp connection is not configured correctly.');
         }
-        addMessage('This links your WhatsApp number to your NammaStay account so Purni can reply with read-only property summaries. Tap below and send the pre-filled message; the one-time link expires in 10 minutes. Message “unlink” any time to disconnect.', 'purni', {
+        addMessage('This links your WhatsApp number to your TheNammaStay account so Purni can reply with read-only property summaries. Tap below and send the pre-filled message; the one-time link expires in 10 minutes. Message “unlink” any time to disconnect.', 'purni', {
           href: `https://wa.me/${phone}?text=${encodeURIComponent(code)}`,
           label: 'Open WhatsApp to connect',
         });
@@ -303,7 +303,7 @@ export function mountPurni(ctx) {
       const percent = total ? Math.round((occupied / total) * 100) : 0;
       return { text: `Here’s the day at a glance: ${percent}% occupied with ${available} ${W.units} available; ${arrivals.length} arrivals and ${departures.length} departures; ${rupees(data.revenue_today || 0)} recorded and ${rupees(data.dues_paise || 0)} still due.`, link: { href: 'dashboard.html', label: 'Open dashboard' }, prompts: [['Housekeeping', 'What needs cleaning?'], ['Form C', 'Are any Form C reports due?'], ['Pending dues', 'How much is still due?']] };
     }
-    return { text: `That’s outside what I can help with here, ${firstName}. I can help with today’s property tasks; for anything else, I’ve prepared an email to the NammaStay support team.`, link: supportMailLink(ctx, question), prompts: initialShortcuts.slice(0, 3) };
+    return { text: `That’s outside what I can help with here, ${firstName}. I can help with today’s property tasks; for anything else, I’ve prepared an email to TheNammaStay support team.`, link: supportMailLink(ctx, question), prompts: initialShortcuts.slice(0, 3) };
   }
 
   async function invokeWhatsApp(body) {
@@ -366,9 +366,9 @@ function escapeHtml(value) {
 }
 
 function supportMailLink(ctx, question) {
-  const subject = `Purni support request - ${ctx.property_name || 'NammaStay'}`;
+  const subject = `Purni support request - ${ctx.property_name || 'TheNammaStay'}`;
   const body = [
-    'Hi NammaStay support,',
+    'Hi TheNammaStay support,',
     '',
     `I need help with: ${question}`,
     `Property: ${ctx.property_name || 'Not specified'}`,
@@ -376,6 +376,6 @@ function supportMailLink(ctx, question) {
   ].join('\n');
   return {
     href: `mailto:hello@thenammastay.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-    label: 'Email NammaStay support',
+    label: 'Email TheNammaStay support',
   };
 }

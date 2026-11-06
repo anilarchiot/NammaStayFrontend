@@ -53,7 +53,7 @@ page('reports', async (ctx) => {
   $('#range').onchange = draw;
   $('#csv').onclick = () => {
     if (!last) return;
-    const rows = [['NammaStay report', ctx.property_name], ['From', last.from], ['To', t], [],
+    const rows = [['TheNammaStay report', ctx.property_name], ['From', last.from], ['To', t], [],
       ['Revenue (₹)', last.revenue / 100], ['Avg occupancy %', Math.round(last.occupancy * 100)], ['Avg length of stay', last.alos], ['RevPAB (₹)', last.revpab / 100], [],
       ['Week starting', 'UPI+card (₹)', 'Cash (₹)'], ...last.weekly.map((w) => [w.start, w.digital / 100, w.cash / 100]), [],
       ['Room type', 'Beds', 'Occupancy %', 'Revenue (₹)'], ...last.rooms.map((x) => [x.name, x.beds, Math.round(x.occupancy * 100), x.revenue / 100]), [],
