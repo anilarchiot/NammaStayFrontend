@@ -244,7 +244,7 @@ tr[data-href]:hover{background:#FBF9F1}
 @keyframes ns-loader-spin{to{transform:rotate(360deg)}}
 
 .ns-card{background:#FFFFFF;border:1px solid var(--line);border-radius:16px;padding:20px}
-.ns-page-stepper{position:relative;z-index:150!important;align-self:stretch;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:20px;margin:0 0 16px;padding:16px 18px;background:#F1F8F4;border-color:#BFE3CF;border-radius:18px;box-shadow:0 6px 20px rgba(28,154,108,.14);pointer-events:auto;scroll-margin-top:80px}
+.ns-page-stepper{position:relative;z-index:150!important;grid-column:1 / -1;align-self:start;min-width:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;margin:0 0 16px;padding:16px 18px;background:#F1F8F4;border-color:#BFE3CF;border-radius:18px;box-shadow:0 6px 20px rgba(28,154,108,.14);pointer-events:auto;scroll-margin-top:80px}
 .ns-page-stepper-backdrop{position:fixed;inset:0;z-index:110;background:rgba(14,27,61,.08);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);pointer-events:none}
 .ns-page-stepper-copy{min-width:0;flex:1}
 .ns-page-stepper-heading{display:flex;align-items:center;gap:10px;font-size:13px}
@@ -253,7 +253,7 @@ tr[data-href]:hover{background:#FBF9F1}
 .ns-page-stepper-focus{margin-top:4px;color:#2D5FA6;font-size:11px;font-weight:700}
 .ns-page-stepper-track{height:4px;max-width:280px;margin-top:10px;border-radius:999px;background:#EAF1FB;overflow:hidden}
 .ns-page-stepper-track i{display:block;height:100%;border-radius:inherit;background:#2D5FA6;transition:width .18s ease}
-.ns-page-stepper-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ns-page-stepper-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}
 .ns-page-stepper-actions button{height:36px;padding:0 14px;font-size:12px;border-radius:999px}
 .ns-page-stepper-actions button:disabled{opacity:.45;cursor:not-allowed}
 .ns-page-stepper-target{position:relative!important;z-index:130!important;outline:3px solid #2D5FA6!important;outline-offset:4px;border-radius:12px!important;box-shadow:0 0 0 6px rgba(45,95,166,.2)!important;scroll-margin-block:100px}

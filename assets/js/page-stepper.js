@@ -210,7 +210,9 @@ export function mountPageStepper(ctx, route) {
     const targetConfig = targets[activeStep];
     highlighted = findTarget();
     const section = highlighted && [...host.children].find((child) => child !== guide && (child === highlighted || child.contains(highlighted)));
-    const anchor = section || host.firstElementChild;
+    const anchor = getComputedStyle(host).display === 'grid'
+      ? [...host.children].find((child) => child !== guide)
+      : section || host.firstElementChild;
     if (anchor && anchor !== guide && guide.nextElementSibling !== anchor) host.insertBefore(guide, anchor);
     else if (!anchor && guide.parentElement !== host) host.prepend(guide);
     elevatedOverlay = highlighted?.closest('.ns-overlay') || null;
