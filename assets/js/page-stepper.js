@@ -66,7 +66,7 @@ const TARGETS = {
     { selectors: ['.ns-content #checkin-now', '.ns-content [data-checkin]'], label: 'Confirm check-in' },
   ],
   branches: [
-    { selectors: ['.ns-content .br-grid'], label: 'Branch overview' },
+    { selectors: ['.ns-content .br-grid .br-card'], label: 'Branch overview' },
     { selectors: ['.ns-content .br-cmp'], label: 'Branch comparison' },
     { selectors: ['.ns-content .br-team'], label: 'Branch team' },
   ],
@@ -175,7 +175,6 @@ export function mountPageStepper(ctx, route) {
   const next = guide.querySelector('[data-next]');
   let highlighted = null;
   let elevatedOverlay = null;
-  let observer = null;
   const findTarget = () => {
     const config = targets[activeStep];
     const selectors = config?.selectors || [];
@@ -193,23 +192,30 @@ export function mountPageStepper(ctx, route) {
   };
   const showTarget = () => {
     if (!highlighted) return;
-    highlighted.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    const topbar = document.querySelector('.ns-main > .ns-topbar');
+    const offset = Math.max(0, topbar?.getBoundingClientRect().bottom || 0) + 12;
+    window.scrollBy({
+      top: guide.getBoundingClientRect().top - offset,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
   };
   const finish = () => {
     try { localStorage.setItem(storageKey, 'done'); } catch { /* The guide still dismisses for this visit. */ }
-    observer?.disconnect();
     clearHighlight();
     backdrop.remove();
     guide.remove();
   };
   const render = (scroll = false) => {
     clearHighlight();
-    guide.classList.add('ns-page-stepper-soft-pulse');
     const targetConfig = targets[activeStep];
     highlighted = findTarget();
+    const section = highlighted && [...host.children].find((child) => child !== guide && (child === highlighted || child.contains(highlighted)));
+    const anchor = section || host.firstElementChild;
+    if (anchor && anchor !== guide && guide.nextElementSibling !== anchor) host.insertBefore(guide, anchor);
+    else if (!anchor && guide.parentElement !== host) host.prepend(guide);
     elevatedOverlay = highlighted?.closest('.ns-overlay') || null;
     elevatedOverlay?.classList.add('ns-page-stepper-modal');
-    highlighted?.classList.add('ns-page-stepper-target', 'ns-page-stepper-soft-pulse');
+    highlighted?.classList.add('ns-page-stepper-target');
     progress.textContent = `Step ${activeStep + 1} of ${messages.length}`;
     stepText.textContent = messages[activeStep];
     focusText.textContent = `On this page: ${targetConfig?.label || route.title}`;
@@ -225,8 +231,5 @@ export function mountPageStepper(ctx, route) {
   show.addEventListener('click', showTarget);
   guide.querySelector('[data-dismiss]').addEventListener('click', finish);
   document.body.append(backdrop);
-  host.parentNode.insertBefore(guide, host);
   render();
-  observer = new MutationObserver(() => render());
-  observer.observe(host, { childList: true, subtree: true });
 }

@@ -240,6 +240,12 @@ export function setLang(l) {
 }
 // Maps text in any supported language back to its English key, so already-translated text
 // (restored menus, previously translated nodes) can be translated into the newly chosen language.
+Object.assign(I18N, {
+  'Overview': ['கண்ணோட்டம்', 'ಅವಲೋಕನ', 'అవలోకనం', 'അവലോകനം'],
+  'Guest operations': ['விருந்தினர் செயல்பாடுகள்', 'ಅತಿಥಿ ಕಾರ್ಯಾಚರಣೆಗಳು', 'అతిథి కార్యకలాపాలు', 'അതിഥി പ്രവർത്തനങ്ങൾ'],
+  'Property operations': ['சொத்து செயல்பாடுகள்', 'ಆಸ್ತಿ ಕಾರ್ಯಾಚರಣೆಗಳು', 'ప్రాపర్టీ కార్యకలాపాలు', 'പ്രോപ്പർട്ടി പ്രവർത്തനങ്ങൾ'],
+  'Finance & insights': ['நிதி மற்றும் பகுப்பாய்வு', 'ಹಣಕಾಸು ಮತ್ತು ಒಳನೋಟಗಳು', 'ఆర్థికం మరియు విశ్లేషణ', 'ധനകാര്യവും വിശകലനവും'],
+});
 const I18N_SOURCE = new Map();
 for (const [en, list] of Object.entries(I18N)) {
   I18N_SOURCE.set(en, en);
@@ -520,15 +526,27 @@ async function bootApp() {
   const accessP = rpc('property_access', { p_property: m.property_id }).catch(() => null);
   const pgP = rpc('pg_mode', { p_property: m.property_id }).catch(() => false);    // PG / co-living property (031)
   const resortP = rpc('resort_mode', { p_property: m.property_id }).catch(() => false);   // resort (034)
-  const kindRow = await sb.from('properties').select('kind, role_permissions').eq('id', m.property_id).limit(1)
-    .then((r) => (r.data && r.data[0]) || {}, () => sb.from('properties').select('kind').eq('id', m.property_id).limit(1).then((r2) => (r2.data && r2.data[0]) || {}, () => ({})));
+  const propertyRows = (await Promise.all(mems.map(async (membership) => {
+    let result = await sb.from('properties').select('id, kind, city, role_permissions')
+      .eq('id', membership.property_id).limit(1);
+    if (result.error) result = await sb.from('properties').select('id, kind, city')
+      .eq('id', membership.property_id).limit(1);
+    if (result.error) {
+      console.warn(`Property picker details could not be loaded for ${membership.property_name}`, result.error);
+      return null;
+    }
+    return result.data?.[0] || null;
+  }))).filter(Boolean);
+  const propertyDetails = new Map(propertyRows.map((row) => [row.id, row]));
+  const kindRow = propertyDetails.get(m.property_id) || {};
   setKind(kindRow.kind);
   const rolePerms = (kindRow.role_permissions && kindRow.role_permissions[m.role]) || {};
   const ctx = {
     kind: W.kind, words: W, rolePermissions: kindRow.role_permissions || {},
+    memberships: mems.map((membership) => ({ ...membership, ...propertyDetails.get(membership.property_id) })),
     /** What this person's role may do (owner: everything). Mirrors the database rules. */
     allow: (perm) => m.role === 'owner' || (typeof rolePerms[perm] === 'boolean' ? rolePerms[perm] : permDefault(m.role, perm)),
-    user: session.user, memberships: mems,
+    user: session.user,
     property_id: m.property_id, property_name: m.property_name, role: m.role,
     name: m.display_name || session.user.email,
     can: (...roles) => roles.includes(m.role),
@@ -551,6 +569,24 @@ async function bootApp() {
   return ctx;
 }
 
+function propertyKind(ctx, membership) {
+  if (membership.property_id === ctx.property_id) {
+    if (ctx.isPg) return 'pg';
+    if (ctx.isResort) return 'resort';
+  }
+  return membership.kind || 'hostel';
+}
+
+function propertyKindClass(kind) {
+  return `is-${['hostel', 'hotel', 'homestay', 'resort', 'pg'].includes(kind) ? kind : 'hostel'}`;
+}
+
+function propertyMetaText(ctx, membership) {
+  const kind = propertyKind(ctx, membership);
+  const labels = { hostel: 'Hostel', hotel: 'Hotel', homestay: 'Homestay', resort: 'Resort', pg: 'PG / Co-living' };
+  return [labels[kind] || 'Property', membership.city].filter(Boolean).join(' · ');
+}
+
 function mountTopbar(ctx) {
   const main = $('.ns-main');
   if (!main) return;
@@ -563,31 +599,101 @@ function mountTopbar(ctx) {
   property.className = 'ns-topbar-popover ns-property-picker';
   const propertySummary = document.createElement('summary');
   propertySummary.className = 'ns-property-trigger';
-  propertySummary.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>';
-  const propertyName = document.createElement('span');
+  const currentMembership = ctx.memberships.find((item) => item.property_id === ctx.property_id);
+  const propertyBadge = document.createElement('span');
+  propertyBadge.className = `ns-property-avatar ${propertyKindClass(propertyKind(ctx, currentMembership))}`;
+  propertyBadge.textContent = initials(ctx.property_name);
+  propertyBadge.setAttribute('aria-hidden', 'true');
+  const propertyCopy = document.createElement('span');
+  propertyCopy.className = 'ns-property-copy';
+  const propertyName = document.createElement('strong');
   propertyName.className = 'ns-property-name';
   propertyName.textContent = ctx.property_name;
-  propertySummary.append(propertyName);
+  const propertyMeta = document.createElement('small');
+  propertyMeta.className = 'ns-property-meta';
+  propertyMeta.textContent = propertyMetaText(ctx, currentMembership);
+  propertyCopy.append(propertyName, propertyMeta);
+  propertySummary.append(propertyBadge, propertyCopy);
   propertySummary.insertAdjacentHTML('beforeend', '<svg class="ns-topbar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>');
+  propertySummary.setAttribute('aria-label', `Switch property. Current property: ${ctx.property_name}`);
   property.append(propertySummary);
   const propertyMenu = document.createElement('div');
   propertyMenu.className = 'ns-topbar-menu ns-property-menu';
   propertyMenu.setAttribute('aria-label', 'Switch property');
+  const propertyHeading = document.createElement('div');
+  propertyHeading.className = 'ns-property-menu-heading';
+  propertyHeading.textContent = `Your properties · ${ctx.memberships.length}`;
+  propertyMenu.append(propertyHeading);
+  const propertyOptions = new Map();
   ctx.memberships.forEach((membership) => {
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'ns-property-option';
-    option.textContent = membership.property_name;
-    if (membership.property_id === ctx.property_id) option.setAttribute('aria-current', 'true');
+    option.dataset.propertyId = membership.property_id;
+    const isCurrent = membership.property_id === ctx.property_id;
+    const badge = document.createElement('span');
+    badge.className = `ns-property-avatar ${propertyKindClass(membership.kind)}`;
+    badge.textContent = initials(membership.property_name);
+    badge.setAttribute('aria-hidden', 'true');
+    const copy = document.createElement('span');
+    copy.className = 'ns-property-copy';
+    const name = document.createElement('strong');
+    name.textContent = membership.property_name;
+    const meta = document.createElement('small');
+    meta.className = 'ns-property-meta';
+    meta.textContent = propertyMetaText(ctx, membership);
+    copy.append(name, meta);
+    const check = document.createElement('span');
+    check.className = 'ns-property-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"></path></svg>';
+    option.append(badge, copy, check);
+    if (isCurrent) option.setAttribute('aria-current', 'true');
+    option.setAttribute('aria-label', `${membership.property_name}${isCurrent ? ', current property' : ''}`);
+    propertyOptions.set(membership.property_id, { option, meta });
     option.addEventListener('click', () => {
       property.open = false;
-      if (membership.property_id === ctx.property_id) return;
+      if (isCurrent) return;
       localStorage.setItem('ns.property', membership.property_id);
       location.reload();
     });
     propertyMenu.append(option);
   });
+  if (ctx.role === 'owner') {
+    const actions = document.createElement('div');
+    actions.className = 'ns-property-menu-actions';
+    if (ctx.memberships.length > 1) {
+      const compare = document.createElement('a');
+      compare.href = 'branches.html#br-compare';
+      compare.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V10"></path><path d="M12 19V5"></path><path d="M20 19v-7"></path></svg><span>Compare all properties</span>';
+      actions.append(compare);
+    }
+    const add = document.createElement('a');
+    add.href = 'branches.html?add=1';
+    add.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span>Add a property</span>';
+    actions.append(add);
+    propertyMenu.append(actions);
+  }
   property.append(propertyMenu);
+  let propertyCountsLoaded = false;
+  property.addEventListener('toggle', () => {
+    if (!property.open || !LIVE || propertyCountsLoaded) return;
+    propertyCountsLoaded = true;
+    Promise.all(ctx.memberships.map(async (membership) => {
+      const { count, error } = await sb.from('beds').select('id', { count: 'exact', head: true })
+        .eq('property_id', membership.property_id).eq('is_active', true);
+      if (error) {
+        console.error(`Could not load unit count for ${membership.property_name}`, error);
+        return;
+      }
+      const kind = propertyKind(ctx, membership);
+      const unit = kind === 'hostel' || kind === 'pg' ? 'beds' : 'rooms';
+      const text = `${propertyMetaText(ctx, membership)}${count == null ? '' : ` · ${count} ${unit}`}`;
+      const option = propertyOptions.get(membership.property_id);
+      if (option) option.meta.textContent = text;
+      if (membership.property_id === ctx.property_id) propertyMeta.textContent = text;
+    })).catch((error) => console.error('Property unit counts could not be loaded', error));
+  });
 
   const actions = document.createElement('div');
   actions.className = 'ns-topbar-actions';
@@ -656,6 +762,15 @@ function applyChrome(ctx) {
     const k = NAV_KEY[a.getAttribute('href')];
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
+  let propertiesLink = $('.ns-sidebar a[href="branches.html"]');
+  if (ctx.role === 'owner') {
+    if (!propertiesLink) {
+      propertiesLink = document.createElement('a'); propertiesLink.href = 'branches.html'; propertiesLink.className = 'ns-nav-link';
+      propertiesLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>My properties</span>';
+    }
+    const dashboardLink = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
+    if (dashboardLink) dashboardLink.insertAdjacentElement('afterend', propertiesLink);
+  } else propertiesLink?.remove();
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
   let otaLink = $('.ns-sidebar a[href="ota.html"]');
   if (['owner', 'manager'].includes(ctx.role)) {
@@ -665,15 +780,7 @@ function applyChrome(ctx) {
     }
     if (roomsLink?.parentElement) roomsLink.parentElement.insertAdjacentElement('afterend', otaLink);
   } else otaLink?.remove();
-  let cxLink = $('.ns-sidebar a[href="channex.html"]');
-  if (['owner', 'manager'].includes(ctx.role)) {
-    if (!cxLink) {
-      cxLink = document.createElement('a'); cxLink.href = 'channex.html'; cxLink.className = 'ns-nav-link';
-      cxLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3"></path><path d="M20 17H7l3 3"></path></svg><span>Channex</span>';
-      if (/channex\.html$/.test(__PATH())) { cxLink.classList.add('is-active'); cxLink.setAttribute('aria-current', 'page'); }
-    }
-    (otaLink || roomsLink?.parentElement)?.insertAdjacentElement('afterend', cxLink);
-  } else cxLink?.remove();
+  $('.ns-sidebar a[href="channex.html"]')?.remove();
   $('.ns-sidebar .ns-lang')?.closest('div')?.remove();
   if (!ctx.allow('view_reports')) $$('a[href="reports.html"]').forEach((a) => { a.style.display = 'none'; });
   if (['owner', 'manager', 'front_desk'].includes(ctx.role) && !$('.ns-sidebar a[href="housekeeping.html"]')) {   // Housekeeping
@@ -754,6 +861,7 @@ function applyChrome(ctx) {
   }
   pgMenu(ctx);                                                          // PG / co-living menu (032)
   resortMenu(ctx);                                                      // resorts: Activities, Day visitors, Groups (034)
+  groupPropertyNav();
   mountTopbar(ctx);
   if (DEMO) demoBadge();
   const out = $('.ns-signout');
@@ -767,6 +875,31 @@ function applyChrome(ctx) {
   window.nsMarkActiveNav?.();
   window.nsRestoreNavScroll?.();
   document.documentElement.classList.add('ns-chrome-ready');
+}
+
+function groupPropertyNav() {
+  const nav = $('.ns-sidebar .ns-nav');
+  if (!nav) return;
+  nav.querySelectorAll('[data-nav-group]').forEach((heading) => heading.remove());
+  const adminHeading = [...nav.children].find((child) => child.classList.contains('ns-nav-section'));
+  const groups = [
+    ['Overview', ['dashboard.html', 'branches.html']],
+    ['Guest operations', ['bookings.html', 'calendar.html', 'tenants.html', 'guest-profile.html', 'check-in.html', 'formc.html', 'activities.html', 'day-visitors.html', 'groups.html']],
+    ['Property operations', ['rooms.html', 'housekeeping.html', 'ota.html']],
+    ['Finance & insights', ['payments.html', 'pg-payments.html', 'reports.html', 'pg-report.html', 'health.html', 'expenses.html', 'investment.html']],
+  ];
+  groups.forEach(([label, paths]) => {
+    const links = paths.flatMap((path) => [...nav.querySelectorAll(`a[href="${path}"]`)]);
+    if (!links.length) return;
+    if (links.some((link) => link.style.display !== 'none' && !link.hidden)) {
+      const heading = document.createElement('div');
+      heading.className = 'ns-nav-section ns-nav-group';
+      heading.dataset.navGroup = '';
+      heading.textContent = tr(label);
+      nav.insertBefore(heading, adminHeading || null);
+    }
+    links.forEach((link) => nav.insertBefore(link, adminHeading || null));
+  });
 }
 
 // PG / co-living: a menu made for monthly tenants — no nightly bookings, check-in, or booking payments/reports

@@ -1,4 +1,4 @@
-import { rpc, rupees, W } from '../core.js';
+import { LIVE, rpc, rupees, sb, W } from '../core.js';
 
 const SHORTCUTS = [
   ["Today's snapshot", 'What is happening today?'],
@@ -20,6 +20,9 @@ export function mountPurni(ctx) {
       <header class="purni-head">
         <div class="purni-mark" aria-hidden="true">P</div>
         <div class="purni-head-copy"><h2 id="purni-title">Purni</h2><p><span class="purni-status-dot"></span>Ready for ${escapeHtml(ctx.property_name)} questions</p></div>
+        <button type="button" class="purni-wa" id="purni-wa" aria-label="Connect Purni to WhatsApp" title="Connect Purni to WhatsApp" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.8 7.3L3 20l1.2-4.4A8.5 8.5 0 1 1 20.5 11.5Z"></path><path d="M9 8.5c.3-.6.7-.6 1-.1l.8 1.3c.2.3.1.6-.2.9l-.5.5c.6 1.1 1.5 2 2.6 2.6l.5-.5c.3-.3.6-.4.9-.2l1.3.8c.5.3.5.7-.1 1-1 .6-2.1.5-3.5-.2a9.5 9.5 0 0 1-3.5-3.5C8.5 10.6 8.4 9.5 9 8.5Z"></path></svg>
+        </button>
         <button type="button" class="purni-close" aria-label="Close Purni">×</button>
       </header>
       <div class="purni-messages" id="purni-messages" aria-live="polite" aria-relevant="additions"></div>
@@ -32,7 +35,19 @@ export function mountPurni(ctx) {
       <p class="purni-note">I can organize your day. You approve changes to records or guest messages.</p>
     </section>
     <button type="button" class="purni-launcher" id="purni-launcher" aria-controls="purni-panel" aria-expanded="false">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg>
+      <svg class="purni-avatar" width="38" height="38" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <circle cx="24" cy="24" r="23" fill="#FDF2D7"/>
+        <path d="M11 22c0-10 5-16 13-16s13 6 13 16v9H11z" fill="#26304A"/>
+        <path d="M9 46c1-8 7-13 15-13s14 5 15 13" fill="#E88855"/>
+        <path d="M20 30h8v6c-2 2-6 2-8 0z" fill="#B56D4D"/>
+        <ellipse cx="24" cy="21" rx="10" ry="12" fill="#D99972"/>
+        <path d="M14 20c0-9 4-13 10-13 7 0 10 5 10 13-3-1-6-4-7-7-3 4-8 6-13 7z" fill="#26304A"/>
+        <circle cx="24" cy="17" r="1.2" fill="#B93139"/>
+        <circle cx="20" cy="22" r="1" fill="#26304A"/><circle cx="28" cy="22" r="1" fill="#26304A"/>
+        <path d="M20.5 27c2 2 5 2 7 0" fill="none" stroke="#8D4B3D" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="13.8" cy="24" r="1.4" fill="#E4A73F"/><circle cx="34.2" cy="24" r="1.4" fill="#E4A73F"/>
+        <g class="purni-avatar-wave"><path d="M34 38c2-3 4-5 5-8" fill="none" stroke="#E88855" stroke-width="5" stroke-linecap="round"/><path d="M39 31c-2-2-2-5-1-7 .5-1 1.4-.7 1.5.3l.2 2.1 1-3c.4-1 1.3-.6 1.2.3l-.5 3 1-1.6c.6-.8 1.4-.2 1 .7l-1.4 3.6c-.7 1.5-2 2-3 1.6z" fill="#D99972"/></g>
+      </svg>
       <span>Ask Purni</span>
     </button>`;
   document.body.append(root);
@@ -43,6 +58,7 @@ export function mountPurni(ctx) {
   const suggestions = root.querySelector('#purni-suggestions');
   const input = root.querySelector('#purni-input');
   const form = root.querySelector('#purni-form');
+  const whatsappButton = root.querySelector('#purni-wa');
 
   const addMessage = (text, sender, link, extraClass = '') => {
     const item = document.createElement('div');
@@ -54,6 +70,10 @@ export function mountPurni(ctx) {
       const anchor = document.createElement('a');
       anchor.href = link.href;
       anchor.textContent = link.label;
+      if (/^https:\/\//i.test(link.href)) {
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+      }
       item.append(anchor);
     }
     messages.append(item);
@@ -102,6 +122,37 @@ export function mountPurni(ctx) {
 
   launcher.addEventListener('click', () => open(panel.hidden));
   root.querySelector('.purni-close').addEventListener('click', () => open(false));
+  if (LIVE) {
+    whatsappButton.hidden = false;
+    whatsappButton.addEventListener('click', async () => {
+      whatsappButton.disabled = true;
+      try {
+        const status = await invokeWhatsApp({ action: 'status' });
+        if (status.linked) {
+          if (!window.confirm(`Disconnect Purni from the WhatsApp number ending in ${status.phone_last4}?`)) return;
+          await invokeWhatsApp({ action: 'unlink' });
+          addMessage('Purni is disconnected from WhatsApp. You can link it again any time.', 'purni');
+          return;
+        }
+
+        const pairing = await invokeWhatsApp({ action: 'pair' });
+        const phone = String(pairing.phone_number || '').replace(/\D/g, '');
+        const code = String(pairing.code || '');
+        if (!/^\d{8,15}$/.test(phone) || !/^purni-[0-9a-f]{32}$/.test(code)) {
+          throw new Error('The WhatsApp connection is not configured correctly.');
+        }
+        addMessage('This links your WhatsApp number to your NammaStay account so Purni can reply with read-only property summaries. Tap below and send the pre-filled message; the one-time link expires in 10 minutes. Message “unlink” any time to disconnect.', 'purni', {
+          href: `https://wa.me/${phone}?text=${encodeURIComponent(code)}`,
+          label: 'Open WhatsApp to connect',
+        });
+      } catch (error) {
+        console.error('Purni WhatsApp connection failed', error);
+        addMessage('I could not connect WhatsApp just now. Please check the Meta WhatsApp setup or try again later.', 'purni');
+      } finally {
+        whatsappButton.disabled = false;
+      }
+    });
+  }
   root.addEventListener('click', (event) => {
     const button = event.target.closest('[data-prompt]');
     if (button) ask(button.dataset.prompt);
@@ -253,6 +304,13 @@ export function mountPurni(ctx) {
       return { text: `Here’s the day at a glance: ${percent}% occupied with ${available} ${W.units} available; ${arrivals.length} arrivals and ${departures.length} departures; ${rupees(data.revenue_today || 0)} recorded and ${rupees(data.dues_paise || 0)} still due.`, link: { href: 'dashboard.html', label: 'Open dashboard' }, prompts: [['Housekeeping', 'What needs cleaning?'], ['Form C', 'Are any Form C reports due?'], ['Pending dues', 'How much is still due?']] };
     }
     return { text: `That’s outside what I can help with here, ${firstName}. I can help with today’s property tasks; for anything else, I’ve prepared an email to the NammaStay support team.`, link: supportMailLink(ctx, question), prompts: initialShortcuts.slice(0, 3) };
+  }
+
+  async function invokeWhatsApp(body) {
+    const { data, error } = await sb.functions.invoke('purni-whatsapp', { body });
+    if (error) throw error;
+    if (!data || data.error) throw new Error(data?.error || 'The WhatsApp service returned no response.');
+    return data;
   }
 
   async function dailyBriefing(context) {

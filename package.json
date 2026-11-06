@@ -11,6 +11,7 @@
   "main": "desktop/main.cjs",
   "scripts": {
     "dev": "node scripts/serve-local.cjs",
+    "sync:type-tokens": "node scripts/sync-type-tokens.cjs",
     "stays:dev": "npx --yes http-server marketplace -p 4174 -c-1",
     "stays:deploy": "npm run build:live && wrangler deploy --config marketplace/wrangler.jsonc",
     "build:live": "node scripts/build-live.cjs",

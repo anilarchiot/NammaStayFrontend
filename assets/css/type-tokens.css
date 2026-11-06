@@ -1,0 +1,20 @@
+/* Generated from marketplace/travel.css. Run npm run sync:type-tokens after changing its type system. */
+:root{
+  --font-head:'Sora',system-ui,sans-serif;
+  --font-body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --fs-display:clamp(30px,4.2vw,52px);
+  --fs-h1:clamp(26px,3.2vw,38px);
+  --fs-h2:clamp(20px,2.2vw,26px);
+  --fs-h3:17px;
+  --fs-body:15px;
+  --fs-small:13.5px;
+  --fs-label:13px;
+  --fs-kicker:11.5px;
+  --fs-input:16px;
+  --fs-btn:15px;
+  --fw-heading:800;
+  --fw-strong:700;
+  --fw-body:500;
+  --lh-heading:1.15;
+  --lh-body:1.5;
+}

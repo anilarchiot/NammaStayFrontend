@@ -74,6 +74,7 @@
     var brand = sidebar.querySelector('.ns-brand');
     var foot = sidebar.querySelector('.ns-sidebar-foot');
     nav.innerHTML = saved.nav;
+    nav.querySelectorAll('a[href="channex.html"]').forEach(function (link) { link.remove(); });
     if (area === 'app' && saved.topbar) restoreTopbar(saved.topbar);
     if (foot && saved.foot) {
       var holder = document.createElement('div');

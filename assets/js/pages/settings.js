@@ -2,6 +2,7 @@ import { housekeepingPrice } from '../housekeeping-price.js';
 import { hostExtras, isResort, isHomestay, ymd, W, GST_STATES, openPlatformInvoice, SITE_URL, FUNCTIONS_URL, PERMS, PERM_LOCKED, permDefault, page, DEMO, rpc, q, sb, content, esc, rupees, toPaise, field, options, modal, confirmDialog, toast, ROLE_LABEL, fmtDayTime, fmtDate, avatar, pill, upiLink, qrDataUrl, $, $$ } from '../core.js';
 import { mountGuideCard, mountMealPlansCard } from './homestay.js';   // homestays (033)
 import { mountResortSettings } from './resort.js';            // resorts (034)
+import { changeBranchAccess } from '../team-access.js';
 
 const ROLE_PILL = { owner: 'navy', manager: 'green', front_desk: 'blue', accountant: 'amber' };
 const TABS = ['property', 'team', 'rooms', 'notifications', 'billing', 'account'];
@@ -115,6 +116,7 @@ page('settings', async (ctx) => {
     async team() {
       const members = await rpc('list_members', { p_property: ctx.property_id });
       content(`
+        ${owner ? '<section class="st-cross-team" aria-label="Team across properties"><div class="ns-card ns-empty">Loading team across properties…</div></section>' : ''}
         <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px">
           <div class="ns-card" style="padding:0;overflow:hidden">
             <div style="padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -153,6 +155,7 @@ page('settings', async (ctx) => {
         } }],
       });
       $('#invite')?.addEventListener('click', () => memberDialog(null));
+      if (owner) mountCrossPropertyTeam(ctx, () => memberDialog(null), () => show('team'));
       permsCard(ctx);
       $('#signout-all')?.addEventListener('click', async () => {
         if (!await confirmDialog('Sign out on all devices', 'You’ll be signed out everywhere — this computer, your phone and any other device. Staff accounts are not affected.', { confirmLabel: 'Sign out everywhere' })) return;
@@ -419,6 +422,44 @@ page('settings', async (ctx) => {
 
   await show(new URLSearchParams(location.search).get('tab') || 'property');
 });
+
+async function mountCrossPropertyTeam(ctx, invite, refresh) {
+  const host = $('.st-cross-team');
+  const branches = ctx.memberships.filter((m) => m.role === 'owner').map((m) => ({ id: m.property_id, name: m.property_name }));
+  let team;
+  try { team = await rpc('branch_team'); }
+  catch (error) {
+    if (host.isConnected) host.innerHTML = `<div class="ns-card st-team-error" role="alert">Could not load team across properties: ${esc(error.message)}</div>`;
+    return;
+  }
+  if (!host.isConnected) return;
+  const roles = [['', 'No access'], ['manager', 'Manager'], ['front_desk', 'Front desk'], ['accountant', 'Accountant']];
+  host.innerHTML = `<div class="st-team-head"><div><h2>Team across properties</h2><p>One login per person, a role at each property.</p></div>
+    <div class="st-team-actions"><a class="ns-btn-ghost" href="branches.html">All properties</a><button type="button" class="ns-btn" data-st-invite>+ Invite a person</button></div></div>
+    <div class="st-team-scroll"><table class="st-team-table"><thead><tr><th scope="col">Person</th>${branches.map((b) => `<th scope="col">${esc(b.name)}</th>`).join('')}</tr></thead>
+      <tbody><tr><th scope="row"><strong>${esc(ctx.name || 'Owner')}</strong><small>You</small></th>${branches.map(() => '<td><span class="st-team-owner">Owner</span></td>').join('')}</tr>
+      ${team.map((person) => `<tr><th scope="row"><strong>${esc(person.name)}</strong>${person.email && person.email !== person.name ? `<small>${esc(person.email)}</small>` : ''}</th>${branches.map((branch) => {
+    const role = (person.access || []).find((a) => a.property_id === branch.id)?.role || '';
+    return `<td><select class="st-team-role${role ? ' has-access' : ''}" data-user="${esc(person.user_id)}" data-property="${esc(branch.id)}" data-cur="${esc(role)}" aria-label="${esc(person.name)} at ${esc(branch.name)}">${options(roles, role)}</select></td>`;
+  }).join('')}</tr>`).join('')}</tbody></table></div>
+    ${team.length ? '' : '<p class="st-team-empty">Invite a team member to give them access to your properties.</p>'}
+    <div class="st-team-legend">${[['Owner', 'Everything, including billing, add-ons and adding properties'], ['Manager', 'Bookings, rooms and prices, payments, reports'], [ROLE_LABEL.front_desk, 'Check-in and out, bookings, guest profiles, payments'], ['Accountant', 'Payments and reports, read-only elsewhere; no guest ID data']]
+    .map(([role, description]) => `<div><strong>${esc(role)}</strong><p>${esc(description)}</p></div>`).join('')}</div>`;
+  host.querySelector('[data-st-invite]').addEventListener('click', invite);
+  host.querySelectorAll('.st-team-role').forEach((select) => select.addEventListener('change', async () => {
+    const person = team.find((p) => p.user_id === select.dataset.user);
+    const branch = branches.find((b) => b.id === select.dataset.property);
+    const controls = [...host.querySelectorAll('.st-team-role')];
+    controls.forEach((control) => { control.disabled = true; });
+    try {
+      if (await changeBranchAccess(select, person, branch)) {
+        toast(`Access for ${person.name} at ${branch.name} updated.`);
+        if (host.isConnected) await refresh();
+      }
+    } catch (error) { toast(error.message, { error: true }); }
+    finally { controls.forEach((control) => { control.disabled = false; }); }
+  }));
+}
 
 // ------------------------------------------------------------ Extras & services price list
 const EXTRA_CATS = [['food', 'Food & drinks'], ['laundry', 'Laundry'], ['rental', 'Rentals'], ['transport', 'Transport'], ['tour', 'Tours & activities'], ['other', 'Other']];

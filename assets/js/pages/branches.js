@@ -1,7 +1,8 @@
 // Branches (043_branches.sql): owners with more than one property.
 // One screen for every branch (today / this month), "full here, free there", compare, team across branches, + Add branch.
 // Owner only. Each branch stays its own property: own bookings, guests, money and subscription.
-import { page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDate, modal, field, options, toast, confirmDialog, waNumber, param, SITE_URL, $, $$ } from '../core.js';
+import { page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDate, options, toast, waNumber, param, SITE_URL, $, $$ } from '../core.js';
+import { changeBranchAccess } from '../team-access.js';
 
 const I = (d, w = 18, sw = 2) => `<svg aria-hidden="true" width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const P = {
@@ -28,8 +29,10 @@ let D = null; let CTX = null; let period = 'today';
 
 /** Open another branch: the app works on one property at a time (the same switch as the menu). */
 function go(id, href) {
-  try { localStorage.setItem('ns.property', id); } catch { /* blocked storage: the switch still works for this tab */ }
+  try { localStorage.setItem('ns.property', id); }
+  catch { toast('Could not switch properties. Check browser storage and try again.', { error: true }); return false; }
   location.href = href;
+  return true;
 }
 
 page('branches', async (ctx) => {
@@ -38,14 +41,14 @@ page('branches', async (ctx) => {
   try { if (localStorage.getItem('ns.br.period') === 'month') period = 'month'; } catch { /* default: today */ }
   headerActions().innerHTML = `<div class="br-seg" role="group" aria-label="Show numbers for">
       <button type="button" data-period="today">Today</button><button type="button" data-period="month">This month</button></div>
-    <button type="button" class="ns-btn" id="br-add">${I(P.plus, 16, 2.4)} Add branch</button>`;
+    <button type="button" class="ns-btn" id="br-add">${I(P.plus, 16, 2.4)} Add a property</button>`;
   $$('[data-period]').forEach((b) => b.addEventListener('click', () => {
     period = b.dataset.period; try { localStorage.setItem('ns.br.period', period); } catch { /* fine */ }
     draw();
   }));
   $('#br-add').addEventListener('click', addDialog);
   await load();
-  if (param('add')) { history.replaceState(null, '', 'branches.html'); addDialog(); }
+  if (param('add') && D) { history.replaceState(null, '', 'branches.html'); addDialog(); }
 });
 
 async function load() {
@@ -66,9 +69,10 @@ function draw() {
   content(`
     ${totals(B)}
     ${B.length === 1 ? intro(B[0]) : suggestions(B)}
-    <section class="br-grid" aria-label="Your branches">${B.map(card).join('')}</section>
+    <section class="br-grid${B.length === 1 ? ' is-single' : ''}" aria-label="Your branches">${B.map(card).join('')}</section>
     ${B.length > 1 ? compare(B) : ''}
     ${team(B)}`);
+  if (location.hash === '#br-compare') $('#br-compare')?.scrollIntoView({ block: 'start' });
   wire();
 }
 
@@ -104,7 +108,7 @@ function intro(b) {
   return `<section class="br-intro">
     <div><h2>Run more than one property?</h2>
       <p>Add each one as a branch. Same login, one tap to switch, and this page shows all of them together. Each branch has its own bookings, guests, money and its own plan, with a free trial to start.</p></div>
-    <button type="button" class="ns-btn" data-add>${I(P.plus, 16, 2.4)} Add a branch</button>
+    <button type="button" class="ns-btn" data-add>${I(P.plus, 16, 2.4)} Add a property</button>
   </section>`;
 }
 
@@ -191,7 +195,7 @@ function compare(B) {
   const R = rows(B); const t = (f) => R.reduce((s, r) => s + (r[f] || 0), 0);
   const cap = B.reduce((s, b) => s + b.units * b.month.days, 0); const sold = B.reduce((s, b) => s + b.month.nights_sold, 0);
   const td = (v, cls = '') => `<td class="${cls}">${v}</td>`;
-  return `<section class="ns-card br-cmp" aria-label="Compare branches">
+  return `<section class="ns-card br-cmp" id="br-compare" aria-label="Compare branches">
     <div class="br-sec-h"><h2>${I(P.chart)} This month, side by side</h2>
       <button type="button" class="ns-btn-ghost br-sm" id="br-csv">${I(P.down, 15)} Download for my accountant</button></div>
     <div class="br-scroll"><table class="br-table">
@@ -236,19 +240,15 @@ function team(B) {
 }
 
 async function setRole(sel) {
-  const role = sel.value || null; const prev = sel.dataset.cur || '';
+  const role = sel.value || null;
   const person = (D.team || []).find((p) => p.user_id === sel.dataset.user);
   const branch = D.branches.find((b) => b.id === sel.dataset.prop);
-  const left = (person?.access || []).filter((x) => x.property_id !== branch.id).length;
-  if (!role && !left && !(await confirmDialog('Remove all access?', `${person.name} will no longer be able to sign in to any of your branches.`, { confirmLabel: 'Remove', danger: true }))) {
-    sel.value = prev; return;
-  }
   sel.disabled = true;
   try {
-    await rpc('branch_access_set', { p_user: sel.dataset.user, p_property: sel.dataset.prop, p_role: role });
+    if (!await changeBranchAccess(sel, person, branch)) return;
     toast(role ? `${person.name} is now ${ROLE[role].toLowerCase()} at ${branch.name}.` : `${person.name} no longer has access to ${branch.name}.`);
     D = await rpc('branches_overview'); draw();
-  } catch (e) { sel.value = prev; toast(e.message, { error: true }); }
+  } catch (e) { toast(e.message, { error: true }); }
   finally { sel.disabled = false; }
 }
 
@@ -266,63 +266,133 @@ function wire() {
 
 // ---------------------------------------------------------------- add a branch
 function addDialog() {
-  const B = D?.branches || []; const F = D?.features || {};
+  if (!D) { toast('Property details could not be loaded. Please try again.', { error: true }); return; }
+  const host = $('.ns-content');
+  if (host.classList.contains('br-creating')) return;
+  const B = D.branches || []; const F = D.features || {}; const T = D.team || [];
   const cur = B.find((b) => b.id === CTX.property_id) || B[0];
-  const types = [['hostel', 'Hostel'], ['hotel', 'Hotel / guest house'], ['homestay', 'Homestay']];
-  if (F.pg) types.push(['pg', 'PG / Co-living']);
-  if (F.resort) types.push(['resort', 'Resort']);
-  const T = D?.team || [];
-  const box = (k, label, on = true) => `<label class="br-check"><input type="checkbox" name="copy" value="${k}" ${on ? 'checked' : ''}><span>${label}</span></label>`;
-  const body = `<div class="br-form">
-    ${field('Branch name', '<input class="ns-input" name="name" maxlength="120" required autocomplete="off" placeholder="e.g. Social Backpackers – HSR Layout">', 'Tip: add the area so guests and staff can tell your branches apart.')}
-    <div class="br-two">
-      ${field('Type', `<select class="ns-input" name="kind">${options(types, cur && types.some(([k]) => k === cur.mode) ? cur.mode : 'hostel')}</select>`)}
-      ${field('City', `<input class="ns-input" name="city" maxlength="80" value="${esc(cur?.city || '')}">`)}
-    </div>
-    ${field('Phone for this branch', `<input class="ns-input" name="phone" inputmode="tel" maxlength="20" placeholder="${esc(cur?.phone || 'Same as now')}">`, 'Leave empty to use the same phone as the branch you copy from.')}
-    ${B.length ? `<fieldset class="br-copy"><legend>Copy from an existing branch (saves setup time)</legend>
-      ${field('Copy from', `<select class="ns-input" name="copy_from">${options([['', 'Don’t copy, start empty'], ...B.map((b) => [b.id, b.name])], cur?.id || '')}</select>`)}
-      <div class="br-copy-list">
-        ${box('rooms', 'Rooms, beds and prices (with weekend & season prices and extras). You can rename rooms after.')}
-        <p class="br-note is-amber" data-rooms-note hidden>Rooms can only be copied from a branch of the same type.</p>
-        ${box('details', 'Check-in & check-out times, GST, UPI and billing details')}
-        ${F.guide ? box('guide', 'House rules and guest guide (not Wi-Fi or directions)') : ''}
-        ${F.staff ? box('shifts', 'Staff shifts (not the staff themselves)', false) : ''}
+  const types = [['hostel', 'Hostel'], ...(F.pg ? [['pg', 'PG / co-living']] : []), ['homestay', 'Homestay'], ['hotel', 'Hotel'], ...(F.resort ? [['resort', 'Resort']] : [])];
+  const kind = types.some(([k]) => k === cur?.mode) ? cur.mode : 'hostel';
+  const header = $('.ns-main > [style*="height:76px"] > div:first-child > div:first-child');
+  const oldTitle = header?.textContent;
+  const subtitle = $('.ns-main > [style*="height:76px"] [style*="font-size:13px;color:#6B7280"]');
+  const oldSubtitle = subtitle?.textContent;
+  const actions = headerActions();
+  const oldActions = [...actions.childNodes];
+  actions.replaceChildren();
+  const cancel = document.createElement('button');
+  cancel.type = 'button'; cancel.className = 'ns-btn-ghost'; cancel.textContent = 'Cancel';
+  actions.append(cancel);
+  if (header) header.textContent = 'Add a property';
+  setSubtitle('It gets its own dashboard, rooms, bookings, reports and plan.');
+  const form = document.createElement('form');
+  form.className = 'br-create';
+  form.innerHTML = `<div class="br-create-main">
+    <section class="ns-card br-create-card">
+      <h2>1 · The property</h2>
+      <label class="br-create-field">Property name<input class="ns-input" name="name" minlength="2" maxlength="120" required autocomplete="off" placeholder="e.g. Social Backpackers – HSR Layout"></label>
+      <fieldset class="br-create-types"><legend>Type</legend><div>${types.map(([k, label]) => `<label><input type="radio" name="kind" value="${k}" ${k === kind ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div></fieldset>
+      <div class="br-create-pair">
+        <label class="br-create-field">City<input class="ns-input" name="city" autocomplete="address-level2" maxlength="80" value="${esc(cur?.city || '')}"></label>
+        <label class="br-create-field">Phone / WhatsApp<input class="ns-input" name="phone" type="tel" maxlength="20" placeholder="${esc(cur?.phone || 'Optional')}"></label>
       </div>
-      ${T.length ? `<div class="br-team-pick"><b>Give these people access too</b>${T.map((p) => {
-        const r = (p.access || [])[0]?.role;
-        return `<label class="br-check"><input type="checkbox" name="team" value="${esc(p.user_id)}"><span>${esc(p.name)}${r ? ` · ${esc(ROLE[r] || r)}` : ''}</span></label>`;
-      }).join('')}</div>` : ''}
-    </fieldset>` : ''}
-    ${field('Invoice number prefix', '<input class="ns-input" name="invoice_prefix" maxlength="10" placeholder="Automatic, e.g. HSR" style="text-transform:uppercase">', 'Each branch numbers its own invoices, so they never repeat.')}
-    <p class="br-note">Same login, nothing new to remember. This branch starts its <b>own free trial</b>, then needs <b>its own plan</b> (Settings → Billing inside the branch). Guests, bookings and money stay separate for each branch.</p>
-  </div>`;
-  const m = modal({ title: 'Add a branch', width: 560, body, actions: [{ label: 'Cancel' }, { label: 'Create branch', kind: 'primary', onClick: async (el) => {
-    const v = (n) => el.querySelector(`[name="${n}"]`)?.value?.trim() || '';
-    const src = v('copy_from');
-    const p = { name: v('name'), kind: v('kind'), city: v('city'), phone: v('phone'), invoice_prefix: v('invoice_prefix').toUpperCase(), copy_from: src || null,
-      copy: src ? [...el.querySelectorAll('[name="copy"]:checked:not(:disabled)')].map((x) => x.value) : [],
-      team: [...el.querySelectorAll('[name="team"]:checked')].map((x) => x.value) };
-    if (p.name.length < 2) throw new Error('Enter the branch name.');
-    const r = await rpc('branch_create', { p });
-    toast(`${p.name} is ready. Opening it so you can finish setup…`);
-    setTimeout(() => go(r.property_id, 'setup.html'), 700);
-    return false;
-  } }] });
-  const el = m.el;
+      <details class="br-create-advanced">
+        <summary>Advanced property settings</summary>
+        <label class="br-create-field">Invoice number prefix <span>Optional; generated automatically if blank.</span><input class="ns-input br-create-prefix" name="invoice_prefix" maxlength="10" pattern="[A-Za-z0-9-]{1,10}" placeholder="e.g. HSR"></label>
+      </details>
+    </section>
+    <section class="ns-card br-create-card">
+      <h2>2 · Rooms and settings</h2>
+      ${B.length ? `<div class="br-create-choice">
+        <label class="br-create-choice-label"><input type="radio" name="copy_mode" value="copy" checked><span><b>Copy from one of your properties</b><small>Room types, bed prices, house rules, check-in times and billing details. Bookings, guests and money are never copied.</small></span></label>
+        <div class="br-create-copy">
+        <label class="br-vh" for="br-copy-from">Copy from</label><select class="ns-input" id="br-copy-from" name="copy_from">${options(B.map((b) => [b.id, b.name]), cur?.id || '')}</select>
+        <p class="br-create-warning" data-rooms-note hidden>Rooms and prices can only be copied from a property of the same type.</p>
+        <details class="br-create-advanced">
+        <summary>Choose what to copy</summary>
+        <label class="br-check"><input type="checkbox" name="copy" value="rooms" checked><span>Rooms, beds, prices and extras</span></label>
+        <label class="br-check"><input type="checkbox" name="copy" value="details" checked><span>Check-in times, billing and other property settings</span></label>
+        ${F.guide ? '<label class="br-check"><input type="checkbox" name="copy" value="guide" checked><span>House rules and guest guide</span></label>' : ''}
+        ${F.staff ? '<label class="br-check"><input type="checkbox" name="copy" value="shifts"><span>Staff shifts</span></label>' : ''}
+        </details>
+        </div>
+      </div>
+      <div class="br-create-choice"><label class="br-create-choice-label"><input type="radio" name="copy_mode" value="empty"><span><b>Start empty</b><small>Set up rooms and prices from scratch after creating it.</small></span></label></div>` : '<p>Set up rooms and prices after creating the property.</p>'}
+    </section>
+    <section class="ns-card br-create-card">
+      <h2>3 · Who can work here</h2>
+      <p>You are the owner. Give existing team members access now, or invite people later in Settings → Users &amp; roles.</p>
+      ${T.length ? `<div class="br-create-team">${T.map((p) => {
+    return `<label><input type="checkbox" name="team" value="${esc(p.user_id)}"><span>${esc(p.name)}</span><small data-team-role="${esc(p.user_id)}"></small></label>`;
+  }).join('')}</div>` : '<p>No other team members yet.</p>'}
+    </section>
+  </div>
+  <aside class="br-create-plan"><span>Its own plan</span><h2>Your new property has its own plan</h2>
+    <p>A new property gets its own trial and subscription. Trial length and plan prices depend on your current billing settings.</p>
+    <p>Bookings, guests and money stay separate. Add-ons can be enabled in the new property’s billing settings.</p>
+    <p class="br-create-error" role="alert" hidden></p>
+    <button class="ns-btn" type="submit">Create property</button>
+    <small>After creation, you’ll open its setup. Your other properties stay as they are.</small>
+  </aside>`;
+  host.classList.add('br-creating');
+  host.append(form);
+  cancel.addEventListener('click', () => {
+    form.remove(); host.classList.remove('br-creating');
+    actions.replaceChildren(...oldActions);
+    if (header) header.textContent = oldTitle;
+    if (subtitle) subtitle.textContent = oldSubtitle;
+    $('#br-add')?.focus();
+  });
   const sync = () => {
-    const src = B.find((b) => b.id === el.querySelector('[name="copy_from"]')?.value);
-    const kind = el.querySelector('[name="kind"]').value;
-    const rooms = el.querySelector('[name="copy"][value="rooms"]');
-    el.querySelectorAll('[name="copy"], [name="team"]').forEach((x) => { x.disabled = !src; });
+    const copying = form.querySelector('[name="copy_mode"]:checked')?.value === 'copy';
+    const source = B.find((b) => b.id === form.querySelector('[name="copy_from"]')?.value);
+    const selectedKind = form.querySelector('[name="kind"]:checked').value;
+    const priority = { manager: 1, front_desk: 2, accountant: 3 };
+    T.forEach((person) => {
+      const access = person.access || [];
+      const role = (copying && access.find((a) => a.property_id === source?.id)?.role)
+        || [...access].sort((a, b) => (priority[a.role] || 4) - (priority[b.role] || 4))[0]?.role;
+      const label = [...form.querySelectorAll('[data-team-role]')].find((el) => el.dataset.teamRole === person.user_id);
+      if (label) label.textContent = ROLE[role] || role || '';
+    });
+    const rooms = form.querySelector('[name="copy"][value="rooms"]');
+    form.querySelectorAll('[name="copy"]').forEach((input) => { input.disabled = !copying; });
+    const sourceSelect = form.querySelector('[name="copy_from"]');
+    if (sourceSelect) sourceSelect.disabled = !copying;
+    const copyDetails = form.querySelector('.br-create-copy');
+    if (copyDetails) copyDetails.hidden = !copying;
     if (rooms) {
-      const same = src && src.mode === kind;
-      rooms.disabled = !same; if (!same) rooms.checked = false; else if (!rooms.dataset.touched) rooms.checked = true;
-      const note = el.querySelector('[data-rooms-note]'); if (note) note.hidden = !src || same;
+      rooms.disabled = !copying || !source || source.mode !== selectedKind;
+      form.querySelector('[data-rooms-note]').hidden = !copying || !source || source.mode === selectedKind;
     }
   };
-  el.querySelector('[name="copy"][value="rooms"]')?.addEventListener('change', (e) => { e.target.dataset.touched = '1'; });
-  el.querySelector('[name="kind"]').addEventListener('change', sync);
-  el.querySelector('[name="copy_from"]')?.addEventListener('change', sync);
+  form.addEventListener('change', sync);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const value = (name) => form.querySelector(`[name="${name}"]`)?.value.trim() || '';
+    const copying = form.querySelector('[name="copy_mode"]:checked')?.value === 'copy';
+    const p = { name: value('name'), kind: form.querySelector('[name="kind"]:checked').value,
+      city: value('city'), phone: value('phone'), invoice_prefix: value('invoice_prefix').toUpperCase(),
+      copy_from: copying ? value('copy_from') : null,
+      copy: copying ? [...form.querySelectorAll('[name="copy"]:checked:not(:disabled)')].map((input) => input.value) : [],
+      team: [...form.querySelectorAll('[name="team"]:checked')].map((input) => input.value) };
+    const error = form.querySelector('.br-create-error');
+    const submit = form.querySelector('[type="submit"]');
+    if (p.name.length < 2) { error.textContent = 'Enter a property name with at least two characters.'; error.hidden = false; return; }
+    error.hidden = true; submit.disabled = true; cancel.disabled = true;
+    try {
+      const result = await rpc('branch_create', { p });
+      if (!result?.property_id) throw new Error('The property was not returned by the server. Refresh My properties before trying again.');
+      toast(`${p.name} is ready. Opening it so you can finish setup…`);
+      if (!go(result.property_id, 'setup.html')) {
+        error.textContent = `${p.name} was created, but could not be opened. Enable browser storage and refresh My properties.`;
+        error.hidden = false;
+      }
+    } catch (e) {
+      error.textContent = e.message || 'Could not create the property. Please try again.';
+      error.hidden = false; submit.disabled = false; cancel.disabled = false;
+    }
+  });
   sync();
+  form.querySelector('[name="name"]').focus();
 }

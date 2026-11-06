@@ -1,5 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { checkTypeTokens } = require('./sync-type-tokens.cjs');
+
+checkTypeTokens();
 
 const root = path.resolve(__dirname, '..');
 const routesFile = path.join(root, 'assets', 'js', 'routes.js');

@@ -10,7 +10,7 @@ export const ROUTES = Object.freeze([
   { key: null, path: 'booking-detail.html', title: 'Booking details', module: './pages/booking-detail.js' },
   { key: 'guests', path: 'guest-profile.html', title: 'Guests', module: './pages/guest-profile.js', roles: ['owner', 'manager', 'front_desk'] },
   { key: 'checkin', path: 'check-in.html', title: 'Check-in', module: './pages/check-in.js', roles: ['owner', 'manager', 'front_desk'] },
-  { key: 'branches', path: 'branches.html', title: 'Branches', module: './pages/branches.js' },
+  { key: 'branches', path: 'branches.html', title: 'My properties', module: './pages/branches.js' },
   { key: 'formc', path: 'formc.html', title: 'Form C', module: './pages/formc.js', roles: ['owner', 'manager', 'front_desk'] },
   { key: 'housekeeping', path: 'housekeeping.html', title: 'Housekeeping', module: './pages/housekeeping.js', roles: ['owner', 'manager', 'front_desk'] },
   { key: 'setup', path: 'setup.html', title: 'Setup', module: './pages/setup.js', roles: ['owner', 'manager'] },

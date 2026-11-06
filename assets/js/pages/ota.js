@@ -28,6 +28,7 @@ const HOWTO = [
   ['vrbo', 'Vrbo', 'Calendar → <b>Import & export</b>. Same two steps.'],
   ['google', 'Google Calendar', 'Settings → your calendar → <b>Secret address in iCal format</b> → add it here (e.g. owner’s personal blocks).'],
 ];
+const isChannexPropertyId = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 page('ota', async (ctx) => {
   if (!ctx.isAdmin && !ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
@@ -168,9 +169,11 @@ async function cxCard(ctx) {
     : `
       <div class="cx-stats"><span>Prices &amp; availability sent <b>${ago(link.last_push_at)}</b></span><span>Bookings checked <b>${ago(link.last_pull_at)}</b></span><span>${mapped.length} ${mapped.length === 1 ? 'room type' : 'room types'} linked</span></div>
       ${link.last_error ? `<div class="cx-err">⚠ ${esc(link.last_error)}</div>` : ''}
+      ${owner ? `<div class="ns-muted" style="font-size:12.5px">Channex property ID: <code>${esc(link.cx_property_id)}</code></div>` : ''}
       ${unmappedGroups.length ? `<div class="cx-err" style="background:#FFF7E8;border-color:#F3D9A6;color:#7A4F0F">${unmappedGroups.length} new ${unmappedGroups.length === 1 ? 'room/price group isn’t' : 'room/price groups aren’t'} on the channel manager yet — tap <b>Update rooms</b>.</div>` : ''}
       <div class="cx-acts"><button type="button" class="ns-btn" id="cx-connect">🔗 Connect your OTAs</button><button type="button" class="ns-btn-ghost cx-sync-button" id="cx-sync"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>
         ${unmappedGroups.length ? '<button type="button" class="ns-btn-ghost" id="cx-setup">Update rooms</button>' : ''}
+        ${owner ? '<button type="button" class="ns-btn-ghost" id="cx-change-id">Change property ID</button>' : ''}
         ${owner ? `<button type="button" class="ns-btn-ghost" id="cx-toggle" style="margin-left:auto">${link.enabled ? 'Pause' : 'Resume'}</button>` : ''}</div>
       <details class="cx-adv"><summary>Rooms on the channel manager (${mapped.length})</summary>
         ${mapped.map((m) => `<div class="pl-row"><span><b>${esc(m.title)}</b> · ${m.beds} ${m.beds === 1 ? W.unit : W.units}</span><span class="ns-muted">${rupees(m.rate_paise)} base</span></div>`).join('')}</details>
@@ -191,9 +194,29 @@ async function cxCard(ctx) {
     catch (err) { toast(err.message, { error: true }); done(e.target); }
   });
   host.querySelector('#cx-link')?.addEventListener('click', async (e) => {
-    const id = host.querySelector('#cx-existing').value.trim(); if (!/^[0-9a-f-]{36}$/i.test(id)) return toast('Paste the Channex property ID (36 characters).', { error: true });
+    const id = host.querySelector('#cx-existing').value.trim(); if (!isChannexPropertyId(id)) return toast('Paste a valid Channex property ID.', { error: true });
     busy(e.target, 'Linking…');
     try { await call({ action: 'setup', cx_property_id: id }); toast('Linked.'); cxCard(ctx); } catch (err) { toast(err.message, { error: true }); done(e.target); }
+  });
+  host.querySelector('#cx-change-id')?.addEventListener('click', () => {
+    modal({
+      title: 'Change Channex property',
+      body: `<p style="margin:0 0 12px;font-size:13.5px;line-height:1.6">Enter the new property ID provided by your NammaStay admin. It must belong to the same Channex account and Test/Live environment as the saved API key.</p>
+        <div class="ns-field"><label for="cx-new-id">New Channex property ID</label><input class="ns-input" id="cx-new-id" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+        <div class="cx-err" style="margin-top:12px">Changing this ID recreates room mappings and resumes syncing on the new Channex property. Reconnect your OTAs there. The old Channex property and its OTA connections are not deleted.</div>`,
+      actions: [
+        { label: 'Cancel' },
+        { label: 'Change property', kind: 'primary', onClick: async (dialog) => {
+          const id = dialog.querySelector('#cx-new-id').value.trim();
+          if (!isChannexPropertyId(id)) throw new Error('Paste a valid Channex property ID.');
+          if (id === link.cx_property_id) throw new Error('That is already the linked Channex property ID.');
+          if (!await confirmDialog('Confirm property change', 'NammaStay will link this property to the new Channex ID, recreate its room mappings, and resume syncing. You will need to connect your OTAs again on the new Channex property.', { confirmLabel: 'Replace property', danger: true })) return false;
+          const result = await call({ action: 'setup', cx_property_id: id });
+          toast(`Channex property changed — ${result.rooms} room type${result.rooms === 1 ? '' : 's'} set up. Reconnect your OTAs on the new property.`);
+          cxCard(ctx);
+        } },
+      ],
+    });
   });
   host.querySelector('#cx-sync')?.addEventListener('click', async (e) => {
     const button = e.currentTarget;
