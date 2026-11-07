@@ -91,6 +91,11 @@ body:not(.ns-admin-area) .ns-sidebar-foot{display:none}
 .ns-property-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-body);font-size:var(--fs-kicker);font-weight:var(--fw-body);color:var(--nav-text)}
 .ns-topbar-chevron{flex:0 0 auto;color:var(--nav-text)}
 .ns-topbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;flex:0 0 auto}
+.ns-topbar-trial{min-width:0;padding:10px;border:1px solid #2A3963;border-radius:8px;background:#15244A;color:var(--cream);font-family:var(--font-body);font-size:var(--fs-small);font-weight:var(--fw-body)}
+.ns-topbar-trial.warn{color:#FFE7AD}
+.ns-topbar-trial b,.ns-topbar-trial a{font-weight:var(--fw-strong)}
+.ns-topbar-trial a{color:#86E4BE;text-decoration:underline}
+.ns-topbar-trial a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 .ns-topbar .ns-bell{width:40px;height:40px;flex:0 0 40px;border:1px solid #2A3963;border-radius:8px;background:#15244A;color:var(--cream)}
 .ns-topbar .ns-bell:hover{background:#22305A;color:#FFFFFF}
 .ns-topbar-language{height:40px;display:flex;align-items:center;gap:6px;padding:0 9px;border:1px solid #2A3963;border-radius:8px;background:#15244A;color:var(--cream)}
@@ -203,6 +208,9 @@ tr[data-href]:hover{background:#FBF9F1}
 }
 
 @media (max-width:700px){
+  .ns-topbar{flex-wrap:wrap}
+  .ns-topbar-actions{margin-left:auto;max-width:100%;flex-wrap:wrap}
+  .ns-topbar-trial{order:1;flex-basis:100%;text-align:right}
   [style*="grid-column:1/3"]{grid-column:1/-1 !important}
   .ns-content [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
 }

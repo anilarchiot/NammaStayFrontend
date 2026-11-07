@@ -944,9 +944,10 @@ function resortMenu(ctx) {
     });
 }
 
-// Trial / expiry banner at the top of every screen
+// Trial notice in the header; other subscription notices remain above the page.
 function accessBanner(ctx) {
   $$('.ns-access-banner[data-shell]').forEach((e) => e.remove());
+  $('.ns-topbar-trial')?.remove();
   const a = ctx.access;
   const main = $('.ns-main') || $('.ns-dialog');
   if (a?.state === 'suspended' && main) {
@@ -966,6 +967,12 @@ function accessBanner(ctx) {
   else if (a.state === 'grace') { text = '<b>Your subscription has ended.</b> New bookings stop in a few days.' + link; cls = 'warn'; }
   else { text = '<b>Subscription ended — new bookings are paused.</b> Your data is safe and still visible.' + link; cls = 'danger'; }
   const el = document.createElement('div');
+  const actions = $('.ns-topbar-actions', main);
+  if (a.state === 'trial' && !a.pending_payment && actions) {
+    el.className = 'ns-topbar-trial ' + cls; el.setAttribute('role', 'status'); el.innerHTML = text;
+    actions.insertBefore(el, actions.firstChild);
+    return;
+  }
   el.className = 'ns-access-banner ' + cls; el.setAttribute('role', 'status'); el.innerHTML = text;
   const mobilebar = $('.ns-mobilebar');
   if (mobilebar && mobilebar.parentNode === main) mobilebar.insertAdjacentElement('afterend', el); else main.prepend(el);
