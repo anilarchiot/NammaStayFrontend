@@ -1,0 +1,6 @@
+{
+  "folders": [
+    { "name": "NammaStay Frontend", "path": "." },
+    { "name": "NammaStay Backend", "path": "backend" }
+  ]
+}
