@@ -5,6 +5,7 @@ import { hostExtras, isResort, isHomestay, unitName, guestFace, newId, countryOp
 import { mountCheckinResort } from './resort.js';          // add-on: resorts — stay package, group / event (034)
 import { mountCheckinGuests } from './checkin-guests.js';   // add-on: other guests in the room (030)
 import { mountCheckinHomestay } from './homestay.js';        // add-on: homestays — whole home, meal plan (033)
+import { createBookingDraftSync } from './booking-draft.js';
 
 page('checkin', async (ctx) => {
   // No booking details in the link → show today's arrivals first; the form opens with "+ New registration"
@@ -20,12 +21,21 @@ page('checkin', async (ctx) => {
   const preOut = dayOk(param('out')) && param('out') > preIn ? param('out') : addDays(preIn, 1);
   const preBed = uuidOk(param('bed')) ? param('bed') : null;
   const state = { beds: [], bed: null, method: 'upi', guest: existing };
+  const draftEnabled = Boolean(param('new')) && !guestId && !preBed && !param('in');
+  let draft = null; let draftError = '';
+  if (draftEnabled) {
+    try { draft = await rpc('booking_draft_get', { p_property: ctx.property_id }); }
+    catch (e) { draftError = `Draft sync unavailable: ${e.message}`; }
+  }
 
   const L = (s) => `<div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9">${s}</div>`;
   content(`
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
       <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
         <div class="ns-h3">Guest details</div>
+        ${draftEnabled ? `<div class="ns-help" id="draft-status" role="status">${esc(draftError || (draft ? 'Unfinished booking restored from your account.' : 'Guest and stay details are saved to your account as a draft.'))}</div>
+          <div class="ns-help">Drafts sync to your account on other devices. ID numbers and photos, payment details, notes and other guests are not saved in the draft.</div>
+          <button type="button" class="ns-btn-ghost" id="discard-draft" style="align-self:flex-start">Discard saved draft</button>` : ''}
         <div id="returning" hidden></div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -79,6 +89,49 @@ page('checkin', async (ctx) => {
     </div>`, 'padding:28px 32px;display:grid;grid-template-columns:1fr 380px;gap:24px;');
 
   const f = (n) => document.querySelector(`[name="${n}"]`);
+  const draftFields = ['full_name', 'phone', 'email', 'nationality', 'check_in_at', 'check_out_at', 'source', 'send_confirmation'];
+  if (draft && typeof draft === 'object') {
+    draftFields.forEach((name) => {
+      const el = f(name); const value = draft[name];
+      if (el.type === 'checkbox' && typeof value === 'boolean') el.checked = value;
+      else if (typeof value === 'string') el.value = value;
+    });
+  }
+  let draftSync = null;
+  const saveDraft = () => {
+    if (!draftSync) return;
+    const snapshot = Object.fromEntries(draftFields.map((name) => {
+      const el = f(name);
+      return [name, el.type === 'checkbox' ? el.checked : el.value];
+    }));
+    snapshot.guest_id = state.guest?.id || null;
+    snapshot.units = [...$('#units').querySelectorAll('.unit-row')].map((r) => ({
+      unit: r.querySelector('[name=unit]').value,
+      adults: r.querySelector('[name=adults]')?.value || '',
+      children: r.querySelector('[name=children]')?.value || '',
+    }));
+    draftSync.schedule(snapshot);
+  };
+  if (draftEnabled && !draftError) {
+    draftSync = createBookingDraftSync({ rpc, propertyId: ctx.property_id, status: (text, error = false) => {
+      const el = $('#draft-status');
+      if (el) { el.textContent = text; el.classList.toggle('ns-error', error); }
+    } });
+    const root = document.querySelector('.ns-content');
+    const changed = (e) => {
+      if (draftFields.includes(e.target.name) || (e.target.closest('#units') && ['unit', 'adults', 'children'].includes(e.target.name))) saveDraft();
+    };
+    root.addEventListener('input', changed);
+    root.addEventListener('change', changed);
+    onPageLeave(() => { root.removeEventListener('input', changed); root.removeEventListener('change', changed); draftSync.flush(); });
+    $('#discard-draft').addEventListener('click', async () => {
+      if (!await confirmDialog('Discard booking draft', 'Remove the saved draft and start a new booking?', { confirmLabel: 'Discard', danger: true })) return;
+      try { await draftSync.clear(); location.reload(); }
+      catch (e) { toast(`Could not discard draft: ${e.message}`, { error: true }); }
+    });
+  } else if (draftEnabled) {
+    $('#discard-draft').disabled = true;
+  }
   wireIdPreviews(document.querySelector('.ns-content'));
   if (!ctx.allow('record_payments')) {                     // this role can't take payments
     const sec = document.querySelector('[data-paysec]'); let el = sec;
@@ -144,9 +197,17 @@ page('checkin', async (ctx) => {
   }
   unitsBox.addEventListener('change', (e) => { if (e.target.name === 'unit') unitsBox.querySelectorAll('[name=unit]').forEach((x) => { if (x !== e.target) fillSelect(x); }); summary(); });
   unitsBox.addEventListener('input', (e) => { if (['adults', 'children'].includes(e.target.name)) summary(); });
-  unitsBox.addEventListener('click', (e) => { const b = e.target.closest('[data-remove]'); if (b) { b.closest('.unit-row').remove(); unitsBox.querySelectorAll('[name=unit]').forEach((x) => fillSelect(x)); summary(); } });
-  $('#add-unit').addEventListener('click', () => addRow(false));
+  unitsBox.addEventListener('click', (e) => { const b = e.target.closest('[data-remove]'); if (b) { b.closest('.unit-row').remove(); unitsBox.querySelectorAll('[name=unit]').forEach((x) => fillSelect(x)); summary(); saveDraft(); } });
+  $('#add-unit').addEventListener('click', () => { addRow(false); saveDraft(); });
   addRow(true);
+  if (Array.isArray(draft?.units)) {
+    draft.units.slice(1, 10).forEach(() => addRow(false));
+    [...unitsBox.querySelectorAll('.unit-row')].forEach((row, i) => {
+      const unit = draft.units[i];
+      if (typeof unit?.adults === 'string' && row.querySelector('[name=adults]')) row.querySelector('[name=adults]').value = unit.adults;
+      if (typeof unit?.children === 'string' && row.querySelector('[name=children]')) row.querySelector('[name=children]').value = unit.children;
+    });
+  }
   const others = await mountCheckinGuests({ ctx, unitsBox, after: unitsBox.closest('.ns-card') }).catch(() => null);   // other guests (030)
   if (hostExtras()) hs = await mountCheckinHomestay({ ctx, unitsBox, addRow, units: () => state.beds, refresh: summary }).catch(() => null);   // (033)
   if (isResort()) rs = await mountCheckinResort({ ctx, unitsBox, refresh: summary }).catch(() => null);   // (034)
@@ -178,7 +239,7 @@ page('checkin', async (ctx) => {
         <span class="gs-last">${g.last_check_in ? 'Last stay<br>' + esc(new Date(g.last_check_in).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep')) : 'No stays yet'}</span></button>`).join('');
     list.hidden = false;
   }
-  async function selectGuest(id) {
+  async function selectGuest(id, persist = true) {
     hideList();
     const g = await q(sb.from('guests').select('*').eq('id', id).single());
     const prof = await rpc('guest_profile', { p_guest: id }).catch(() => null);
@@ -199,12 +260,14 @@ page('checkin', async (ctx) => {
       <a class="ns-btn-ghost" style="height:32px;font-size:12px" href="guest-profile.html?id=${esc(g.id)}&edit=1" target="_blank" rel="noopener">Edit profile</a>
       <button type="button" class="ns-btn-ghost" id="gs-clear" style="height:32px;font-size:12px">Not them? Clear</button></div>`;
     $('#gs-clear').onclick = clearGuest;
+    if (persist) saveDraft();
   }
   function clearGuest() {
     state.guest = null; $('#returning').hidden = true; $('#returning').innerHTML = '';
     GF.forEach((n) => { f(n).readOnly = false; f(n).disabled = false; f(n).classList.remove('is-filled'); if (f(n).tagName !== 'SELECT') f(n).value = ''; });
     f('nationality').innerHTML = countryOptions('India'); f('id_type').value = 'aadhaar';
     $('#id-help').textContent = 'Compressed before upload. Deleted automatically after the retention period in Settings.';
+    saveDraft();
     f('full_name').focus();
   }
   ['full_name', 'phone'].forEach((n) => f(n).addEventListener('input', debounce(() => suggest(f(n)), 300)));
@@ -222,7 +285,8 @@ page('checkin', async (ctx) => {
   document.addEventListener('click', onDocumentClick);
   document.addEventListener('keydown', onDocumentKeydown);
   onPageLeave(() => { document.removeEventListener('click', onDocumentClick); document.removeEventListener('keydown', onDocumentKeydown); });
-  if (existing) await selectGuest(existing.id);
+  if (existing) await selectGuest(existing.id, false);
+  else if (uuidOk(draft?.guest_id)) await selectGuest(draft.guest_id, false);
 
   async function submit(status, btn) {
     const err = $('#err'); err.hidden = true;
@@ -273,6 +337,10 @@ page('checkin', async (ctx) => {
       const ml = hs ? await hs.save(made).catch(() => ({ failed: 1 })) : null;   // meal plan (033)
       if (ml?.failed) toast('Booking saved, but the meal plan couldn’t be added — choose it on the booking page.', { error: true });
       if (rs) await rs.save(made).catch(() => null);                // stay package + group (034)
+      if (draftSync) {
+        try { await draftSync.clear(); }
+        catch (e) { toast(`Booking saved, but the draft could not be cleared: ${e.message}`, { error: true }); }
+      }
       toast(made.length > 1 ? `${made.length} ${W.units} booked: ${made.map((x) => x.code).join(', ')}` : `${made[0].code} saved.`);
       location.href = `booking-detail.html?id=${made[0].id}&new=1`;
     } catch (e) {
@@ -284,6 +352,19 @@ page('checkin', async (ctx) => {
   $('#save-confirmed').addEventListener('click', (e) => submit('confirmed', e.currentTarget));
 
   await loadBeds();
+  if (Array.isArray(draft?.units)) {
+    let unavailable = false;
+    [...unitsBox.querySelectorAll('[name=unit]')].forEach((sel, i) => {
+      const saved = draft.units[i]?.unit;
+      if (typeof saved === 'string') {
+        fillSelect(sel, saved);
+        if (saved && sel.value !== saved) unavailable = true;
+      }
+    });
+    if (unavailable) toast(`A saved ${W.unit} is no longer available. Please choose another.`, { error: true });
+    summary();
+    unitsBox.dispatchEvent(new Event('change', { bubbles: true }));
+  }
   if (hs && param('whole')) hs.wholeHome();                      // "Book the whole home" from the calendar (033)
 });
 

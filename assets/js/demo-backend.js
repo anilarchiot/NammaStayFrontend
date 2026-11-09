@@ -1020,6 +1020,14 @@ const RPC = {
     return c;
   },
 
+  booking_draft_get: ({ p_property }) => DB.bookingDrafts?.[p_property] || null,
+  booking_draft_set: ({ p_property, p_draft }) => {
+    DB.bookingDrafts ||= {};
+    if (p_draft === null) delete DB.bookingDrafts[p_property];
+    else DB.bookingDrafts[p_property] = p_draft;
+    return null;
+  },
+
   list_bookings: ({ p_status, p_q, p_cursor_check_in, p_cursor_id, p_limit = 30 }) => {
     const q = (p_q || '').trim(); const dq = digits(q); const lq = q.toLowerCase(); const from = Date.now() - 30 * DAY;
     return DB.bookings.filter((b) => {

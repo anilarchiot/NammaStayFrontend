@@ -18,6 +18,8 @@ One repo, one website, one domain. Everything is in this folder:
 3. `assets/js/config.js`: paste the Supabase Project URL + anon key. `siteUrl` stays `https://thenammastay.com`.
 4. Supabase → Authentication → URL configuration: Site URL `https://thenammastay.com`, Redirect URLs `https://thenammastay.com/**`.
 
+For cross-device drafts in New booking, apply `supabase/migrations/059_booking_drafts.sql` to the Supabase project before deploying the frontend. Drafts are scoped to the signed-in staff member and property and are cleared after a successful booking or using **Discard saved draft**. Guest contact details, stay dates, room selections and booking source are saved; ID numbers, photos, payment details, notes and additional guest details are not. An internet connection is required to sync, and simultaneous edits on different devices use the last saved draft. Demo drafts remain on the current browser.
+
 The admin pages are safe on the same site: every admin screen and every admin database function checks
 `is_platform_admin()` on the server (plus the authenticator-app code when it is turned on). Hostel staff who open
 `admin.html` are simply sent back to the admin login.
