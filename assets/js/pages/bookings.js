@@ -7,7 +7,7 @@ const CHIPS = [['', 'All'], ['confirmed', 'Confirmed'], ['pending', 'Pending'], 
   ['checked_out', 'Checked-out'], ['cancelled', 'Cancelled'], ['no_show', 'No-show']];
 
 page('bookings', async (ctx) => {
-  const state = { status: param('status') || '', q: param('q') || '', cursor: null, loading: false };
+  const state = { status: param('status') || '', q: param('q') || '', cursor: null, loading: false, nearest: false, upcoming: [], shown: 0, request: 0 };
   headerSearch('Search name, phone or BK-number…', (v) => { state.q = v; reload(); }, state.q);
 
   const today = ymd();
@@ -31,12 +31,15 @@ page('bookings', async (ctx) => {
         ${avail.map((a) => a.cell).join('')}
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <div style="display:flex;gap:8px;flex-wrap:wrap" role="tablist" aria-label="Filter by status">
         ${CHIPS.map(([v, l]) => `<button type="button" class="ns-chip${v === state.status ? ' is-on' : ''}" data-status="${v}" role="tab" aria-selected="${v === state.status}">
             ${l} (${v ? counts[v] || 0 : counts.all || 0})</button>`).join('')}
       </div>
-      <div class="ns-muted" style="font-weight:600">Newest check-in first</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button type="button" class="ns-chip" id="nearest" aria-pressed="false">Nearest check-in</button>
+        <div class="ns-muted" style="font-weight:600" id="sort-label">Newest check-in first</div>
+      </div>
     </div>
     <div class="ns-card" style="padding:0;overflow:hidden">
       <div style="overflow-x:auto">
@@ -57,6 +60,13 @@ page('bookings', async (ctx) => {
     });
     reload();
   }));
+  $('#nearest').addEventListener('click', (e) => {
+    state.nearest = !state.nearest;
+    e.currentTarget.classList.toggle('is-on', state.nearest);
+    e.currentTarget.setAttribute('aria-pressed', String(state.nearest));
+    $('#sort-label').textContent = state.nearest ? 'Upcoming check-ins, nearest first' : 'Newest check-in first';
+    reload();
+  });
   $('#more').addEventListener('click', () => load(false));
 
   const tbody = $('#rows');
@@ -67,28 +77,71 @@ page('bookings', async (ctx) => {
     const tr = e.target.closest('tr[data-href]'); if (tr && e.key === 'Enter') location.href = tr.dataset.href;
   });
 
-  function reload() { state.cursor = null; tbody.innerHTML = ''; load(true); }
+  function reload() {
+    state.request++;
+    state.loading = false;
+    state.cursor = null;
+    state.upcoming = [];
+    state.shown = 0;
+    tbody.innerHTML = '';
+    $('#more-wrap').hidden = true;
+    load(true);
+  }
 
   async function load(first) {
     if (state.loading) return;
     state.loading = true;
     $('#more').disabled = true;
+    const request = state.request;
+    const nearest = state.nearest;
+    const status = state.status;
+    const q = state.q;
+    const query = (cursor, limit) => rpc('list_bookings', {
+      p_property: ctx.property_id, p_status: status || null, p_q: q || null,
+      p_cursor_check_in: cursor?.at || null, p_cursor_id: cursor?.id || null, p_limit: limit,
+    });
     try {
-      const rows = await rpc('list_bookings', {
-        p_property: ctx.property_id, p_status: state.status || null, p_q: state.q || null,
-        p_cursor_check_in: state.cursor?.at || null, p_cursor_id: state.cursor?.id || null, p_limit: 30,
-      });
+      if (nearest) {
+        if (first) {
+          tbody.innerHTML = '<tr><td colspan="8" class="ns-empty">Loading upcoming check-ins…</td></tr>';
+          const currentDay = ymd();
+          const upcoming = [];
+          let cursor = null;
+          let batch;
+          do {
+            batch = await query(cursor, 100);
+            if (request !== state.request) return;
+            upcoming.push(...batch.filter((b) => ymd(b.check_in_at) >= currentDay));
+            const last = batch[batch.length - 1];
+            cursor = last ? { at: last.check_in_at, id: last.id } : null;
+          } while (batch.length === 100 && ymd(cursor.at) >= currentDay);
+          upcoming.sort((a, b) => new Date(a.check_in_at) - new Date(b.check_in_at) || a.id.localeCompare(b.id));
+          state.upcoming = upcoming;
+          tbody.innerHTML = '';
+        }
+        const rows = state.upcoming.slice(state.shown, state.shown + 30);
+        if (first && !rows.length) {
+          tbody.innerHTML = `<tr><td colspan="8" class="ns-empty">${q ? 'No upcoming check-ins match your search.' : 'No upcoming check-ins for this filter.'}</td></tr>`;
+        }
+        tbody.insertAdjacentHTML('beforeend', rows.map(row).join(''));
+        state.shown += rows.length;
+        $('#more-wrap').hidden = state.shown >= state.upcoming.length;
+        return;
+      }
+      const rows = await query(state.cursor, 30);
+      if (request !== state.request) return;
       if (first && !rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="ns-empty">${state.q ? 'No bookings match your search.' : 'No bookings here yet.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="ns-empty">${q ? 'No bookings match your search.' : 'No bookings here yet.'}</td></tr>`;
       }
       tbody.insertAdjacentHTML('beforeend', rows.map(row).join(''));
       const last = rows[rows.length - 1];
       state.cursor = last ? { at: last.check_in_at, id: last.id } : null;
       $('#more-wrap').hidden = rows.length < 30;
     } catch (e) {
+      if (request !== state.request) return;
       tbody.innerHTML = `<tr><td colspan="8" class="ns-empty">${esc(e.message)}</td></tr>`;
     } finally {
-      state.loading = false; $('#more').disabled = false;
+      if (request === state.request) { state.loading = false; $('#more').disabled = false; }
     }
   }
 
