@@ -1,6 +1,7 @@
 // NammaStay admin: every subscribing property, UPI payments to confirm, prices & settings.
 import { HK_PRICE_INR_PAISE } from '../housekeeping-price.js';
-import { openPlatformInvoice, GST_STATES, options, adminPage, page, rpc, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
+import { deleteSubscriber } from '../subscriber-delete.js';
+import { openPlatformInvoice, GST_STATES, options, adminPage, page, rpc, sb, content, setSubtitle, headerActions, headerSearch, esc, rupees, toPaise, fmtDate, fmtDayTime, pill, modal,
   confirmDialog, toast, field, showFatal, $, $$ } from '../core.js';
 
 const STATE = { trial: ['Trial', 'blue'], active: ['Paying', 'green'], grace: ['Payment due', 'amber'], expired: ['Ended', 'red'], complimentary: ['Complimentary', 'grey'], suspended: ['Suspended', 'red'] };
@@ -182,16 +183,16 @@ adminPage(async (ctx) => {
       if (!p) return;
       if (!await confirmDialog(
         `Delete ${p.name}?`,
-        `This permanently deletes the property and its associated records. This cannot be undone. The owner's TheNammaStay login is not deleted.`,
+        `This permanently deletes the property, its associated records and property uploads. This cannot be undone. User logins are not deleted. Files are deleted first and cannot be restored if the database deletion fails.`,
         { confirmLabel: 'Delete property', danger: true },
       )) return;
       b.disabled = true;
       try {
-        await rpc('admin_delete_subscriber', { p_property: p.property_id });
+        await deleteSubscriber(rpc, sb.storage, p.property_id);
         toast(`${p.name} deleted.`);
         draw();
       } catch (e) {
-        toast(e.message, { error: true });
+        toast(`Deletion incomplete: ${e.message} Some files may already have been deleted.`, { error: true });
         b.disabled = false;
       }
     });

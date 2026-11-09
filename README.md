@@ -24,6 +24,17 @@ The admin pages are safe on the same site: every admin screen and every admin da
 `is_platform_admin()` on the server (plus the authenticator-app code when it is turned on). Hostel staff who open
 `admin.html` are simply sent back to the admin login.
 
+The subscriber deletion update requires `supabase/migrations/060_platform_admin_access.sql` on the Supabase project
+before deploying the frontend. Deletion validates the database operation first, then removes property-prefixed
+files from `guest-ids`, `owner-docs`, `staff-docs`, and `stay-photos` through the Storage API, and finally deletes
+the property and its records. User login accounts are retained. Storage and database deletion are not atomic:
+if deletion fails after files have been removed, correct the error and retry; removed files cannot be restored by
+the application. Avoid uploads during deletion. Marketplace listings and `mk-photos` are owned separately by
+host accounts and are not deleted by this operation.
+This update does not yet grant platform admins every property action: business health, branches, some add-on
+functions, and subscription enforcement have separate access checks. Do not treat it as complete platform-wide
+admin access until those checks have also been updated and tested.
+
 ## Windows desktop app (foundation)
 The desktop shell and installer are built with Electron:
 

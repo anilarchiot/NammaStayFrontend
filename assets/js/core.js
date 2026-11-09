@@ -125,7 +125,7 @@ function friendly(error) {
   if (/subscription has ended|account is suspended/i.test(m)) return m;
   const fn = (/Could not find the function (?:public\.)?(\w+)|function public\.(\w+)\(.*\) does not exist/i.exec(m) || []).slice(1).find(Boolean);
   if (fn) {                                                     // the website is newer than the database: an SQL update hasn't been run yet
-    const upd = fn === 'admin_delete_subscriber' ? '058_admin_delete_subscriber.sql'
+    const upd = /^(admin_delete_subscriber|admin_subscriber_files|admin_validate_subscriber_delete)$/.test(fn) ? '060_platform_admin_access.sql'
       : /^(booking_guest)/.test(fn) ? '030_booking_guests.sql' : /^pg_(dashboard|payments|report|income|selfcheckin_info)$/.test(fn) ? '032_pg_app.sql'
       : /^(resort_|activit|dayout_|day_visit|stay_package|booking_package|booking_extra_beds|booking_resort|group_|groups_)/.test(fn) ? '034_resort.sql'
       : /^(meal_plan|booking_meal|kitchen_list|guide_)/.test(fn) ? '033_homestay.sql'
