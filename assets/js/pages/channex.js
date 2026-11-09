@@ -96,8 +96,8 @@ page('channex', async (ctx) => {
 
       <div class="ns-card">
         <div class="ns-h3">Bookings from Channex</div>
-        ${bookings.length ? `<div style="overflow:auto"><table class="cx-table"><thead><tr><th>Received</th><th>Channex booking ID</th><th>Reference</th><th>Status</th><th>Guest</th><th>Stay</th><th>Amount</th></tr></thead><tbody>
-          ${bookings.map((b) => `<tr><td>${esc(fmtDayTime(b.received_at))}</td><td><code>${esc(b.cx_booking_id)}</code></td><td>${esc(b.code || '')}</td><td>${esc(b.status || '')}</td><td>${esc(b.guest || '')}</td><td>${esc(range(b.arrival || '', b.departure || ''))}</td><td>${esc(b.currency || '')} ${esc(b.amount ?? '')}${b.problem ? `<div class="ns-error">${esc(b.problem)}</div>` : ''}</td></tr>`).join('')}
+        ${bookings.length ? `<div style="overflow:auto"><table class="cx-table"><thead><tr><th>Received</th><th>Channex booking ID</th><th>Reference</th><th>Status</th><th>Guest</th><th>Stay</th><th>Amount</th><th>Share</th></tr></thead><tbody>
+          ${[...bookings].sort((a, b) => new Date(b.received_at) - new Date(a.received_at)).map((b) => `<tr><td>${esc(fmtDayTime(b.received_at))}</td><td><code>${esc(b.cx_booking_id)}</code></td><td>${esc(b.code || '')}</td><td>${esc(b.status || '')}</td><td>${esc(b.guest || '')}</td><td>${esc(range(b.arrival || '', b.departure || ''))}</td><td>${esc(b.currency || '')} ${esc(b.amount ?? '')}${b.problem ? `<div class="ns-error">${esc(b.problem)}</div>` : ''}</td><td><button type="button" class="ns-btn-ghost cx-share-wa" data-booking="${esc(b.cx_booking_id)}" data-guest="${esc(b.guest || '')}">WhatsApp</button></td></tr>`).join('')}
           </tbody></table></div>` : '<div class="ns-muted" style="margin-top:6px">No bookings yet.</div>'}
       </div>`);
 
@@ -138,7 +138,44 @@ page('channex', async (ctx) => {
     } catch (e) { toast(e.message, { error: true }); btn.disabled = false; }
   }
 
+  function cacheFormData() {
+    const data = {
+      r_plan: $('#r-plan')?.value || '',
+      r_from: $('#r-from')?.value || '',
+      r_to: $('#r-to')?.value || '',
+      r_rate: $('#r-rate')?.value || '',
+      r_min: $('#r-min')?.value || '',
+      r_max: $('#r-max')?.value || '',
+      r_stop: $('#r-stop')?.value || '',
+      r_cta: $('#r-cta')?.value || '',
+      r_ctd: $('#r-ctd')?.value || '',
+      a_room: $('#a-room')?.value || '',
+      a_from: $('#a-from')?.value || '',
+      a_to: $('#a-to')?.value || '',
+      a_n: $('#a-n')?.value || '',
+    };
+    localStorage.setItem(`channex_form_${ctx.property_id}`, JSON.stringify(data));
+  }
+
+  function restoreFormData() {
+    const cached = localStorage.getItem(`channex_form_${ctx.property_id}`);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        ['r_plan', 'r_from', 'r_to', 'r_rate', 'r_min', 'r_max', 'r_stop', 'r_cta', 'r_ctd', 'a_room', 'a_from', 'a_to', 'a_n'].forEach((id) => {
+          const el = $(`#${id}`);
+          if (el && data[id]) el.value = data[id];
+        });
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function clearFormData() {
+    localStorage.removeItem(`channex_form_${ctx.property_id}`);
+  }
+
   function wire() {
+    restoreFormData();
     const busy = async (btn, work, okMsg) => {
       btn.disabled = true;
       try { const r = await work(); toast(typeof okMsg === 'function' ? okMsg(r) : okMsg); await draw(); }
@@ -149,6 +186,11 @@ page('channex', async (ctx) => {
       if (!await confirmDialog('Full sync', 'Send the next 500 days of availability, rates, minimum stay and stop sell to Channex now? This also checks for new bookings.', { confirmLabel: 'Send everything' })) return;
       busy(e.currentTarget, () => call({ action: 'sync' }), 'Everything sent to Channex ✓');
     });
+
+    const rInputs = ['#r-plan', '#r-from', '#r-to', '#r-rate', '#r-min', '#r-max', '#r-stop', '#r-cta', '#r-ctd'];
+    const aInputs = ['#a-room', '#a-from', '#a-to', '#a-n'];
+    rInputs.forEach((id) => $(id)?.addEventListener('change', cacheFormData));
+    aInputs.forEach((id) => $(id)?.addEventListener('change', cacheFormData));
 
     $('#r-add')?.addEventListener('click', () => {
       const row = { rate_plan_id: $('#r-plan').value, date_from: $('#r-from').value };
@@ -171,6 +213,27 @@ page('channex', async (ctx) => {
       row.availability = Number(n);
       staged.avail.push(row); drawLists();
     });
+
+    $$('.cx-share-wa').forEach((btn) => btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const bookingId = e.currentTarget.dataset.booking;
+      const guestName = e.currentTarget.dataset.guest;
+      e.currentTarget.disabled = true;
+      try {
+        const { data, error } = await sb.functions.invoke('channex', { 
+          body: { property_id: ctx.property_id, action: 'booking_phone', cx_booking_id: bookingId } 
+        });
+        if (error || !data?.phone) throw new Error('Phone number not found for this booking');
+        const phone = data.phone.replace(/[^0-9+]/g, '');
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${guestName}, `)}`;
+        window.open(waUrl, '_blank');
+        toast('Opening WhatsApp...');
+      } catch (err) { 
+        toast(err.message || 'Could not open WhatsApp. Phone number not available.', { error: true }); 
+      } finally { 
+        e.currentTarget.disabled = false; 
+      }
+    }));
   }
 
   await draw();
