@@ -64,7 +64,13 @@
       document.body.classList.add('ns-admin-area');
       document.documentElement.classList.add('ns-chrome-ready');
     };
-    try { saved = JSON.parse(localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell') || 'null'); } catch (e) { saved = null; }
+    try { 
+      const stored = localStorage.getItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell');
+      saved = stored ? JSON.parse(stored) : null;
+    } catch (e) { 
+      saved = null;
+      try { localStorage.removeItem(area === 'admin' ? 'ns.shell.admin' : 'ns.shell'); } catch (err) { /* ignore */ }
+    }
     if (!saved || saved.area !== area || !saved.nav || saved.branding !== 'TheNammaStay') { paintAdminDefault(); return; }
     var lang = 'en'; try { lang = localStorage.getItem('ns.lang') || 'en'; } catch (e) { /* ignore */ }
     if ((saved.lang || 'en') !== lang) { paintAdminDefault(); return; }   // menu was saved in another language
