@@ -3,6 +3,7 @@
 import { PAGE_ROLES, NAV_KEY, ROUTE_BY_KEY, resolveRoute } from './routes.js';
 import { mountPageStepper } from './page-stepper.js';
 import { createDesktopOfflineFetch } from './offline-cache.js';
+import { subscriptionNotice } from './subscription-notice.js';
 const CFG = window.NAMMASTAY_CONFIG || {};
 /** DEMO only when opened on purpose (login.html?demo=1); LIVE = real Supabase; NOT_CONNECTED = keys missing. */
 const DEMO_ON = (() => {
@@ -957,15 +958,12 @@ function accessBanner(ctx) {
     rpc('property_suspension', { p_property: ctx.property_id }).then((x) => { if (x?.reason) el.insertAdjacentHTML('beforeend', ` <span style="font-weight:600">Reason: ${esc(x.reason)}</span>`); }).catch(() => {});
     return;
   }
-  if (!a || !main || ['complimentary', 'active'].includes(a.state) && !(a.state === 'active' && a.days_left <= 5)) return;
-  const canPay = ctx.can('owner');
-  const link = canPay ? ' <a href="settings.html?tab=billing">Choose a plan →</a>' : ' Ask the owner to renew.';
-  let cls = 'info'; let text;
-  if (a.pending_payment) { text = 'Payment received — waiting for confirmation from NammaStay.'; }
-  else if (a.state === 'trial') { text = `Free trial: <b>${a.days_left} day${a.days_left === 1 ? '' : 's'} left</b>.` + link; cls = a.days_left <= 3 ? 'warn' : 'info'; }
-  else if (a.state === 'active') { text = `Your plan renews in <b>${a.days_left} day${a.days_left === 1 ? '' : 's'}</b>.` + (canPay ? ' <a href="settings.html?tab=billing">Pay now →</a>' : ''); cls = 'warn'; }
-  else if (a.state === 'grace') { text = '<b>Your subscription has ended.</b> New bookings stop in a few days.' + link; cls = 'warn'; }
-  else { text = '<b>Subscription ended — new bookings are paused.</b> Your data is safe and still visible.' + link; cls = 'danger'; }
+  if (!main) return;
+  const notice = subscriptionNotice(a, ctx.can('owner'), fmtDate);
+  if (!notice) return;
+  const { text, className: cls, dismissible } = notice;
+  const dismissKey = `ns.renewal.dismissed.${ctx.user.id}.${ctx.property_id}.${a.paid_until || ''}`;
+  if (dismissible && localStorage.getItem(dismissKey) === ymd()) return;
   const el = document.createElement('div');
   const actions = $('.ns-topbar-actions', main);
   if (a.state === 'trial' && !a.pending_payment && actions) {
@@ -974,6 +972,12 @@ function accessBanner(ctx) {
     return;
   }
   el.className = 'ns-access-banner ' + cls; el.setAttribute('role', 'status'); el.innerHTML = text;
+  if (dismissible) {
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button'; dismiss.className = 'ns-access-dismiss'; dismiss.textContent = 'Remind me later';
+    dismiss.addEventListener('click', () => { localStorage.setItem(dismissKey, ymd()); el.remove(); });
+    el.append(' ', dismiss);
+  }
   const mobilebar = $('.ns-mobilebar');
   if (mobilebar && mobilebar.parentNode === main) mobilebar.insertAdjacentElement('afterend', el); else main.prepend(el);
 }
