@@ -1,4 +1,5 @@
 import { LIVE, rpc, rupees, sb, W } from '../core.js';
+import { createStage, stageMarkup } from './purni-stage.js';
 import { localVoices as getLocalVoices, speakLocal, voiceHelpText } from '../local-voice.js';
 
 const SHORTCUTS = [
@@ -26,6 +27,7 @@ export function mountPurni(ctx) {
         </button>
         <button type="button" class="purni-close" aria-label="Close Purni">×</button>
       </header>
+      <div class="purni-stage" id="purni-stage" role="button" tabindex="0" aria-label="Say hi to Purni" data-mood="idle" data-pose="rest" data-mouth="smile">${stageMarkup}</div>
       <details class="purni-settings">
         <summary>Assistant settings</summary>
         <div class="purni-settings-body">
@@ -93,6 +95,7 @@ export function mountPurni(ctx) {
   const suggestions = root.querySelector('#purni-suggestions');
   const input = root.querySelector('#purni-input');
   const form = root.querySelector('#purni-form');
+  const stage = createStage(root.querySelector('#purni-stage'), { panel, input, suggestions });
   const whatsappButton = root.querySelector('#purni-wa');
   const voiceSelect = root.querySelector('#purni-voice');
   const voiceHelp = root.querySelector('#purni-voice-help');
@@ -107,6 +110,7 @@ export function mountPurni(ctx) {
 
   function setName(name) {
     assistantName = name;
+    stage.setName(name);
     root.querySelector('#purni-title').textContent = name;
     root.querySelector('.purni-mark').textContent = Array.from(name)[0].toUpperCase();
     root.querySelector('.purni-launcher span').textContent = `Ask ${name}`;
@@ -193,8 +197,8 @@ export function mountPurni(ctx) {
   const open = (show) => {
     panel.hidden = !show;
     launcher.setAttribute('aria-expanded', String(show));
-    if (show) input.focus();
-    else if (supported && voiceId) speech.cancel();
+    if (show) { input.focus(); stage.start(ctx.name?.trim().split(/\s+/)[0]); }
+    else { stage.stop(); if (supported && voiceId) speech.cancel(); }
   };
 
   const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
@@ -216,6 +220,7 @@ export function mountPurni(ctx) {
     status.setAttribute('role', 'status');
     dailyBriefing(ctx).then((brief) => {
       status.remove();
+      stage.onAnswer(brief.summary);
       addMessage(brief.summary, 'purni', null, 'is-briefing');
       if (brief.tasks.length) brief.tasks.forEach((task) => addMessage(task.text, 'purni', task.link, 'is-task'));
       else addMessage('Your board looks clear for now. I’ll be here if anything changes.', 'purni');
@@ -278,6 +283,7 @@ export function mountPurni(ctx) {
   async function ask(question) {
     if (!question || input.disabled) return;
     addMessage(question, 'user');
+    stage.onAsk();
     input.value = '';
     input.disabled = true;
     suggestions.hidden = true;
@@ -292,12 +298,14 @@ export function mountPurni(ctx) {
     try {
       const result = await answer(question);
       pending.remove();
+      stage.onAnswer(result.text, question);
       addMessage(result.text, 'purni', result.link);
       result.tasks?.forEach((task) => addMessage(task.text, 'purni', task.link, 'is-task'));
       speak([result.text, ...(result.tasks || []).map((task) => task.text)].join(' '));
       setSuggestions(result.prompts || SHORTCUTS.slice(0, 3));
     } catch {
       pending.remove();
+      stage.onFail();
       addMessage('I couldn’t reach that property information just now. Give it another try in a moment.', 'purni');
       setSuggestions(SHORTCUTS.slice(0, 3));
     } finally {

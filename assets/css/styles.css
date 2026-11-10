@@ -731,7 +731,7 @@ body:has(.ns-demo-badge) .purni-root{bottom:76px}
 @keyframes purni-wave{0%,80%,100%{rotate:0deg}84%,96%{rotate:10deg}88%,92%{rotate:-3deg}}
 @keyframes purni-greet{0%,100%{rotate:0deg}12%{rotate:10deg}30%,70%{rotate:2deg}50%{rotate:12deg}85%{rotate:0deg}}
 .purni-launcher:focus-visible,.purni-close:focus-visible,.purni-form button:focus-visible{outline:2px solid #E2A03F;outline-offset:3px}
-.purni-panel{position:absolute;right:0;bottom:62px;display:flex;flex-direction:column;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100dvh - 116px));min-height:min(360px,calc(100dvh - 116px));overflow:hidden;border:1px solid #D9E1E9;border-radius:14px;background:#FFFDF6;box-shadow:0 18px 56px rgba(14,27,61,.28)}
+.purni-panel{position:absolute;right:0;bottom:62px;display:flex;flex-direction:column;width:min(380px,calc(100vw - 32px));height:min(640px,calc(100dvh - 116px));min-height:min(360px,calc(100dvh - 116px));overflow:hidden;border:1px solid #D9E1E9;border-radius:14px;background:#FFFDF6;box-shadow:0 18px 56px rgba(14,27,61,.28)}
 .purni-panel[hidden]{display:none}
 .purni-head{display:flex;align-items:center;gap:11px;padding:14px 16px;background:#0E1B3D;color:#fff}
 .purni-mark{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:10px;background:#1C9A6C;color:#fff;font:800 16px 'Sora',sans-serif}
@@ -788,6 +788,62 @@ body:has(.ns-demo-badge) .purni-root{bottom:76px}
 .purni-form button:hover{background:#157A56}
 .purni-form button:disabled{opacity:.55;cursor:wait}
 .purni-note{margin:0;padding:0 14px 10px;background:#fff;color:#788196;font-size:10.5px}
+/* Purni stage: she looks down at the chat from the top of the panel */
+.purni-stage{--px:0;--py:1.4;--hr:0;--hy:2;position:relative;flex:none;height:148px;overflow:hidden;cursor:pointer;background:radial-gradient(ellipse 55% 80% at 50% 100%,rgba(28,154,108,.35),transparent 70%),linear-gradient(#0E1B3D,#15305A);border-bottom:3px solid #1C9A6C;-webkit-tap-highlight-color:transparent}
+.purni-stage:focus-visible{outline:2px solid #E2A03F;outline-offset:-3px}
+.purni-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,#FDF2D7 0 1px,transparent 1.5px) 18% 28%/90px 70px,radial-gradient(circle,#74D3AE 0 1px,transparent 1.5px) 70% 60%/110px 80px;opacity:.45;animation:pc-twinkle 4s ease-in-out infinite alternate}
+.purni-stage-art{position:relative;display:block;height:100%;width:auto;margin:0 auto;overflow:visible}
+.purni-stage-art *{transform-box:view-box}
+.pc-body{transform-origin:100px 120px;animation:pc-breathe 4s ease-in-out infinite}
+.pc-head-pose{transform-origin:100px 92px;transform:rotate(calc(var(--hr) * 1deg)) translateY(calc(var(--hy) * 1px));transition:transform .4s cubic-bezier(.3,.8,.3,1)}
+.pc-head-nod{transform-origin:100px 92px}
+.pc-head-nod.is-nod{animation:pc-nod .55s ease-in-out 1}
+.pc-head-idle{transform-origin:100px 92px;animation:pc-sway 6s ease-in-out infinite}
+.pc-earring{transform-origin:50% 0;animation:pc-dangle 3.2s ease-in-out infinite}
+.pc-earring-l{transform-origin:75px 64px}.pc-earring-r{transform-origin:125px 64px;animation-delay:-1.4s}
+.pc-pupil{transform:translate(calc(var(--px) * 1px),calc(var(--py) * 1px));transition:transform .18s ease-out}
+.pc-lid{--lid:.42;transform:scaleY(var(--lid));transform-box:fill-box;transform-origin:50% 0;transition:transform .12s ease}
+.is-blink .pc-lid{transform:scaleY(1)}
+.purni-stage[data-mood=think] .pc-lid,.purni-stage[data-mood=talk] .pc-lid{--lid:.28}
+.purni-stage[data-mood=happy] .pc-lid,.purni-stage[data-mood=giggle] .pc-lid{--lid:.5}
+.purni-stage[data-mood=wave] .pc-lid{--lid:.2}
+.purni-stage[data-mood=sleepy] .pc-lid{--lid:.92}
+.pc-brows{transition:transform .25s ease}
+.pc-brow-r{transition:transform .25s ease}
+.purni-stage[data-mood=listen] .pc-brows,.purni-stage[data-mood=happy] .pc-brows,.purni-stage[data-mood=wave] .pc-brows{transform:translateY(-2px)}
+.purni-stage[data-mood=think] .pc-brow-r{transform:translateY(-3px) rotate(-6deg);transform-origin:111px 51px}
+.purni-stage[data-mood=oops] .pc-brows{transform:translateY(-1px)}
+.pc-blush{opacity:0;transition:opacity .3s}
+.purni-stage[data-mood=happy] .pc-blush,.purni-stage[data-mood=giggle] .pc-blush,.purni-stage[data-mood=wave] .pc-blush{opacity:.45}
+.pc-mouth>*{opacity:0;transition:opacity .1s}
+.purni-stage[data-mouth=smile] .pc-m-smile,.purni-stage[data-mouth=flat] .pc-m-flat,.purni-stage[data-mouth=grin] .pc-m-grin,.purni-stage[data-mouth=o] .pc-m-o,.purni-stage[data-mouth=talk] .pc-m-talk{opacity:1}
+.pc-m-talk{transform-box:fill-box;transform-origin:center;animation:pc-talk .26s ease-in-out infinite alternate}
+.pc-hand-r,.pc-hand-l{transition:opacity .2s}
+.pc-arm{opacity:0;pointer-events:none;transition:opacity .2s,transform .35s cubic-bezier(.3,.8,.3,1);transform-origin:142px 108px}
+.purni-stage[data-pose=wave] .pc-arm-wave{opacity:1;animation:pc-wave .45s ease-in-out infinite alternate}
+.purni-stage[data-pose=think] .pc-arm-think{opacity:1}
+.purni-stage[data-pose=giggle] .pc-arm-think{opacity:1;transform:rotate(12deg)}
+.purni-stage:is([data-pose=wave],[data-pose=think],[data-pose=giggle]) .pc-hand-r{opacity:0}
+.purni-stage[data-mood=giggle] .pc-head-idle{animation:pc-giggle .3s ease-in-out 5}
+.purni-stage-say{position:absolute;left:12px;top:14px;max-width:132px;padding:7px 10px;border-radius:12px 12px 12px 3px;background:#FDF2D7;color:#101A3D;font:700 11.5px/1.35 'Manrope',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(6px) scale(.94);transform-origin:0 100%;transition:opacity .2s,transform .25s cubic-bezier(.3,1.4,.5,1);pointer-events:none;z-index:2}
+.purni-stage-say[hidden]{display:none}
+.purni-stage-say.is-on{opacity:1;transform:none}
+.purni-say-dots{display:none;margin-left:4px;gap:3px;vertical-align:middle}
+.purni-stage-say.has-dots .purni-say-dots{display:inline-flex}
+.purni-say-dots i{width:4px;height:4px;border-radius:50%;background:#1C9A6C;animation:purni-dot .6s ease-in-out infinite alternate}
+.purni-say-dots i:nth-child(2){animation-delay:.15s}.purni-say-dots i:nth-child(3){animation-delay:.3s}
+.purni-heart{position:absolute;left:var(--x);bottom:60px;color:#FF7A9A;font-size:15px;line-height:1;pointer-events:none;opacity:0;animation:pc-heart 1.5s ease-out forwards;z-index:2}
+@keyframes pc-breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.018)}}
+@keyframes pc-sway{0%,100%{rotate:-1.4deg}50%{rotate:1.4deg}}
+@keyframes pc-nod{0%,100%{translate:0 0}40%{translate:0 6px}}
+@keyframes pc-dangle{0%,100%{rotate:-6deg}50%{rotate:6deg}}
+@keyframes pc-talk{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
+@keyframes pc-wave{from{rotate:-9deg}to{rotate:12deg}}
+@keyframes pc-giggle{0%,100%{translate:0 0}25%{translate:-1.5px -1px}75%{translate:1.5px 1px}}
+@keyframes pc-heart{0%{opacity:0;transform:translate(0,0) scale(.6)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),-70px) scale(1.15)}}
+@keyframes pc-twinkle{from{opacity:.2}to{opacity:.6}}
+@media (max-height:700px){.purni-stage{height:104px}}
+@media (prefers-reduced-motion:reduce){.purni-stage *,.purni-stage::before,.purni-heart{animation:none!important;transition:none!important}}
 .purni-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (max-width:560px){.purni-root{right:max(12px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom))}body:has(.ns-demo-badge) .purni-root{bottom:calc(72px + env(safe-area-inset-bottom))}.purni-panel{width:calc(100vw - 24px);height:min(560px,calc(100dvh - 104px));min-height:min(320px,calc(100dvh - 104px))}.purni-launcher{height:44px;padding:0 14px}}
 @media (max-width:560px) and (max-height:500px){body:has(.ns-demo-badge) .purni-root{bottom:calc(60px + env(safe-area-inset-bottom))}body:has(.ns-demo-badge) .purni-panel{height:min(560px,calc(100dvh - 140px));min-height:min(240px,calc(100dvh - 140px))}}
