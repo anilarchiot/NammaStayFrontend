@@ -711,8 +711,25 @@ body:has(.ns-demo-badge) .purni-root{bottom:76px}
 .purni-launcher{display:flex;align-items:center;gap:9px;height:48px;padding:0 16px;border:0;border-radius:999px;background:#1C9A6C;color:#fff;box-shadow:0 8px 24px rgba(14,27,61,.22);font:700 14px 'Manrope',sans-serif;cursor:pointer}
 .purni-launcher:hover{background:#157A56}
 .purni-avatar{flex:none}
-.purni-avatar-wave{transform-origin:34px 38px;animation:purni-wave 5s ease-in-out infinite}
-@keyframes purni-wave{0%,76%,100%{transform:rotate(0)}80%,88%{transform:rotate(-13deg)}84%,92%{transform:rotate(9deg)}}
+.purni-avatar *{transform-box:view-box}
+.purni-avatar-body{transform-origin:24px 46px;animation:purni-sway 6s ease-in-out infinite}
+.purni-avatar-head{transform-origin:24px 33px;animation:purni-nod 7s ease-in-out infinite;transition:rotate .4s ease}
+.purni-avatar-hair{transform-origin:24px 8px;animation:purni-hair 3.8s ease-in-out infinite}
+.purni-avatar-gaze{transition:translate .35s ease}
+.purni-avatar-eyes{transform-origin:24px 22px;transition:transform .06s linear}
+.is-blinking .purni-avatar-eyes{transform:scaleY(.1)}
+.purni-avatar-arm{transform-origin:34px 38px;animation:purni-wave 9s ease-in-out 1.2s infinite}
+.purni-avatar-hand{transform-origin:39px 31px;animation:purni-flutter .45s ease-in-out infinite alternate paused}
+.is-greeting .purni-avatar-arm{animation:purni-greet 2.2s ease-in-out 1}
+.is-greeting .purni-avatar-hand{animation-play-state:running}
+.is-greeting .purni-avatar-gaze{translate:-1px -.6px}
+.is-greeting .purni-avatar-head{rotate:-3deg}
+@keyframes purni-sway{0%,100%{rotate:-1.2deg}50%{rotate:1.2deg}}
+@keyframes purni-nod{0%,100%{rotate:-1.6deg}50%{rotate:1.6deg}}
+@keyframes purni-hair{0%,100%{rotate:-1.4deg}50%{rotate:1.4deg}}
+@keyframes purni-flutter{from{rotate:-14deg}to{rotate:14deg}}
+@keyframes purni-wave{0%,80%,100%{rotate:0deg}84%,96%{rotate:10deg}88%,92%{rotate:-3deg}}
+@keyframes purni-greet{0%,100%{rotate:0deg}12%{rotate:10deg}30%,70%{rotate:2deg}50%{rotate:12deg}85%{rotate:0deg}}
 .purni-launcher:focus-visible,.purni-close:focus-visible,.purni-form button:focus-visible{outline:2px solid #E2A03F;outline-offset:3px}
 .purni-panel{position:absolute;right:0;bottom:62px;display:flex;flex-direction:column;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100dvh - 116px));min-height:min(360px,calc(100dvh - 116px));overflow:hidden;border:1px solid #D9E1E9;border-radius:14px;background:#FFFDF6;box-shadow:0 18px 56px rgba(14,27,61,.28)}
 .purni-panel[hidden]{display:none}
@@ -759,7 +776,7 @@ body:has(.ns-demo-badge) .purni-root{bottom:76px}
 .purni-thinking i:nth-child(2){animation-delay:.18s}.purni-thinking i:nth-child(3){animation-delay:.36s}
 @keyframes purni-arrive{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes purni-dot{from{opacity:.35;transform:translateY(1px)}to{opacity:1;transform:translateY(-2px)}}
-@media (prefers-reduced-motion:reduce){.purni-message,.purni-thinking i,.purni-avatar-wave{animation:none}}
+@media (prefers-reduced-motion:reduce){.purni-message,.purni-thinking i{animation:none}.purni-avatar *{animation:none!important;transition:none!important}}
 .purni-suggestions{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 12px}
 .purni-suggestions[hidden]{display:none}
 .purni-suggestions button{height:30px;padding:0 10px;border:1px solid #DCE3EA;border-radius:999px;background:#fff;color:#34415C;font:600 11px 'Manrope',sans-serif;cursor:pointer}

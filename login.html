@@ -24,18 +24,6 @@
   .login-admin-link:hover{color:#0E6849;background:#DDF0E5;border-color:#9CCFB2;transform:translateY(-1px)}
   .login-admin-link:focus-visible{outline:3px solid rgba(28,154,108,.35);outline-offset:3px}
   @media (prefers-reduced-motion:reduce){.login-admin-link{transition:none}}
-  .purni-login-portrait{height:210px;display:flex;align-items:center;justify-content:center;position:relative}
-  .purni-login-portrait svg{width:205px;height:210px;overflow:visible}
-  .purni-login-figure{animation:purni-login-float 3.8s ease-in-out infinite;transform-origin:center bottom}
-  .purni-login-wave{transform-box:fill-box;transform-origin:12% 90%;animation:purni-login-wave 2.8s ease-in-out infinite}
-  .purni-login-eyes{transform-box:fill-box;transform-origin:center;animation:purni-login-blink 5s infinite}
-  .purni-login-sparkle{transform-box:fill-box;transform-origin:center;animation:purni-login-sparkle 2s ease-in-out infinite}
-  .purni-login-caption{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);white-space:nowrap;color:#D9E5E4;font:600 12px Manrope,sans-serif;letter-spacing:.02em}
-  @keyframes purni-login-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-  @keyframes purni-login-wave{0%,70%,100%{transform:rotate(0)}78%,88%{transform:rotate(-11deg)}83%,93%{transform:rotate(7deg)}}
-  @keyframes purni-login-blink{0%,45%,48%,100%{transform:scaleY(1)}46.5%{transform:scaleY(.12)}}
-  @keyframes purni-login-sparkle{0%,100%{opacity:.45;transform:scale(.8)}50%{opacity:1;transform:scale(1.12)}}
-  @media (prefers-reduced-motion:reduce){.purni-login-figure,.purni-login-wave,.purni-login-eyes,.purni-login-sparkle{animation:none}}
 </style>
 </head>
 <body class="ns-page-login page-index">
@@ -59,42 +47,6 @@
     <div style="max-width:400px;">
       <div role="heading" aria-level="1" aria-label="Run your property front desk from one screen." style="font-family:'Sora',sans-serif;font-size:38px;font-weight:700;line-height:1.25;color:#FBF3DE;margin-bottom:20px;">Run your <span class="rotating-property-type" data-rotating-type="hotel|resort|PG" aria-hidden="true">hotel</span> front desk from one screen.</div>
       <div style="font-size:16px;line-height:1.7;color:#AEB6C9;">Bookings, beds, check-ins and payments for hotels, resorts, PGs and homestays — built for small property teams.</div>
-    </div>
-
-    <div class="purni-login-portrait" role="img" aria-label="Purni, your friendly property assistant">
-      <svg viewBox="0 0 220 230" aria-hidden="true">
-        <ellipse cx="110" cy="210" rx="49" ry="8" fill="#050E27" opacity=".34"/>
-        <g class="purni-login-figure">
-          <path d="M66 207c2-40 16-65 44-70 31 5 45 30 47 70z" fill="#173B46"/>
-          <path d="M83 146c7-8 17-12 27-12s21 4 28 12l18 61H64z" fill="#1C9A6C"/>
-          <path d="m99 138 11 15 11-15" fill="none" stroke="#FBF3DE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M98 119h25v28c-7 8-18 8-25 0z" fill="#B9704F"/>
-          <path d="M69 66c-5-27 13-48 41-48 31 0 47 22 39 52l-4 49c-2 17-16 31-37 31-22 0-35-14-38-31z" fill="#18202D"/>
-          <path d="M76 76c0-25 13-41 34-41 22 0 34 15 34 41v27c0 20-13 34-34 34s-34-14-34-34z" fill="#D99974"/>
-          <path d="M75 82c-7-27 5-57 37-57 24 0 40 14 42 39-12-2-24-9-33-19-9 13-24 21-45 22z" fill="#18202D"/>
-          <path d="M77 81c-6 7-7 25-2 39 3 8 8 12 13 13l-2-36zM143 79c7 7 8 26 3 40-3 8-7 12-13 14l2-38z" fill="#18202D"/>
-          <path d="M88 87q8-6 16 0M116 87q8-6 16 0" fill="none" stroke="#51352F" stroke-width="2.5" stroke-linecap="round"/>
-          <g class="purni-login-eyes" fill="#302523">
-            <ellipse cx="97" cy="96" rx="2.3" ry="3"/>
-            <ellipse cx="123" cy="96" rx="2.3" ry="3"/>
-          </g>
-          <path d="M110 97c-1 7-3 11-1 12" fill="none" stroke="#B9704F" stroke-width="2" stroke-linecap="round"/>
-          <path d="M101 117q9 8 18 0" fill="none" stroke="#8E3F3D" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="79" cy="108" r="3" fill="#E8A48A" opacity=".65"/>
-          <circle cx="140" cy="108" r="3" fill="#E8A48A" opacity=".65"/>
-          <circle cx="75" cy="112" r="3" fill="#E6B75C"/>
-          <circle cx="145" cy="112" r="3" fill="#E6B75C"/>
-          <path d="M73 151c-13 8-17 20-17 34" fill="none" stroke="#D99974" stroke-width="10" stroke-linecap="round"/>
-          <g class="purni-login-wave">
-            <path d="M138 151c13 4 18-8 21-24" fill="none" stroke="#D99974" stroke-width="10" stroke-linecap="round"/>
-            <path d="M157 128c-3-7-2-14 1-17 4-3 6 3 5 8 2-7 6-10 9-7 3 3-1 10-4 14 5-5 10-5 11-1 1 4-6 9-12 11z" fill="#D99974"/>
-          </g>
-          <path d="M88 208v-36m22 36v-45m22 45v-36" stroke="#E8C989" stroke-width="2" opacity=".7"/>
-        </g>
-        <path class="purni-login-sparkle" d="m169 56 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#E6B75C"/>
-        <path class="purni-login-sparkle" d="m52 93 2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#74D3AE" style="animation-delay:.7s"/>
-      </svg>
-      <span class="purni-login-caption">Meet Purni, your property assistant</span>
     </div>
 
     <div style="display:flex;gap:32px;">

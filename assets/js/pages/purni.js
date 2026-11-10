@@ -49,16 +49,19 @@ export function mountPurni(ctx) {
     <button type="button" class="purni-launcher" id="purni-launcher" aria-controls="purni-panel" aria-expanded="false">
       <svg class="purni-avatar" width="38" height="38" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
         <circle cx="24" cy="24" r="23" fill="#FDF2D7"/>
-        <path d="M11 22c0-10 5-16 13-16s13 6 13 16v9H11z" fill="#26304A"/>
-        <path d="M9 46c1-8 7-13 15-13s14 5 15 13" fill="#E88855"/>
+        <path class="purni-avatar-hair" d="M11 22c0-10 5-16 13-16s13 6 13 16v9H11z" fill="#26304A"/>
+        <g class="purni-avatar-body"><path d="M9 46c1-8 7-13 15-13s14 5 15 13" fill="#E88855"/>
         <path d="M20 30h8v6c-2 2-6 2-8 0z" fill="#B56D4D"/>
-        <ellipse cx="24" cy="21" rx="10" ry="12" fill="#D99972"/>
-        <path d="M14 20c0-9 4-13 10-13 7 0 10 5 10 13-3-1-6-4-7-7-3 4-8 6-13 7z" fill="#26304A"/>
-        <circle cx="24" cy="17" r="1.2" fill="#B93139"/>
-        <circle cx="20" cy="22" r="1" fill="#26304A"/><circle cx="28" cy="22" r="1" fill="#26304A"/>
-        <path d="M20.5 27c2 2 5 2 7 0" fill="none" stroke="#8D4B3D" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="13.8" cy="24" r="1.4" fill="#E4A73F"/><circle cx="34.2" cy="24" r="1.4" fill="#E4A73F"/>
-        <g class="purni-avatar-wave"><path d="M34 38c2-3 4-5 5-8" fill="none" stroke="#E88855" stroke-width="5" stroke-linecap="round"/><path d="M39 31c-2-2-2-5-1-7 .5-1 1.4-.7 1.5.3l.2 2.1 1-3c.4-1 1.3-.6 1.2.3l-.5 3 1-1.6c.6-.8 1.4-.2 1 .7l-1.4 3.6c-.7 1.5-2 2-3 1.6z" fill="#D99972"/></g>
+        <g class="purni-avatar-head">
+          <ellipse cx="24" cy="21" rx="10" ry="12" fill="#D99972"/>
+          <path d="M14 20c0-9 4-13 10-13 7 0 10 5 10 13-3-1-6-4-7-7-3 4-8 6-13 7z" fill="#26304A"/>
+          <circle cx="24" cy="17" r="1.2" fill="#B93139"/>
+          <g class="purni-avatar-gaze"><g class="purni-avatar-eyes"><circle cx="20" cy="22" r="1" fill="#26304A"/><circle cx="28" cy="22" r="1" fill="#26304A"/></g></g>
+          <path d="M20.5 27c2 2 5 2 7 0" fill="none" stroke="#8D4B3D" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="13.8" cy="24" r="1.4" fill="#E4A73F"/><circle cx="34.2" cy="24" r="1.4" fill="#E4A73F"/>
+        </g>
+        <g class="purni-avatar-arm"><path d="M34 38c2-3 4-5 5-8" fill="none" stroke="#E88855" stroke-width="5" stroke-linecap="round"/><g class="purni-avatar-hand"><path d="M39 31c-2-2-2-5-1-7 .5-1 1.4-.7 1.5.3l.2 2.1 1-3c.4-1 1.3-.6 1.2.3l-.5 3 1-1.6c.6-.8 1.4-.2 1 .7l-1.4 3.6c-.7 1.5-2 2-3 1.6z" fill="#D99972"/></g></g>
+        </g>
       </svg>
       <span>Ask Purni</span>
     </button>`;
@@ -66,6 +69,26 @@ export function mountPurni(ctx) {
 
   const panel = root.querySelector('#purni-panel');
   const launcher = root.querySelector('#purni-launcher');
+  const avatar = root.querySelector('.purni-avatar');
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const blink = () => {
+    if (!calm.matches && !document.hidden) {
+      avatar.classList.add('is-blinking');
+      setTimeout(() => avatar.classList.remove('is-blinking'), 150);
+      if (Math.random() < 0.25) setTimeout(() => { avatar.classList.add('is-blinking'); setTimeout(() => avatar.classList.remove('is-blinking'), 150); }, 320);
+    }
+    setTimeout(blink, 2200 + Math.random() * 4800);
+  };
+  setTimeout(blink, 1800);
+  let greetTimer;
+  document.addEventListener('focusin', (e) => {
+    if (calm.matches || root.contains(e.target) || !e.target.matches?.('input,textarea,select')) return;
+    avatar.classList.remove('is-greeting');
+    void avatar.getBoundingClientRect();
+    avatar.classList.add('is-greeting');
+    clearTimeout(greetTimer);
+    greetTimer = setTimeout(() => avatar.classList.remove('is-greeting'), 2200);
+  });
   const messages = root.querySelector('#purni-messages');
   const suggestions = root.querySelector('#purni-suggestions');
   const input = root.querySelector('#purni-input');
