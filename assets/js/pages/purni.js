@@ -57,7 +57,7 @@ export function mountPurni(ctx) {
         <g class="purni-avatar-head">
           <ellipse cx="24" cy="21" rx="10" ry="12" fill="#D99972"/>
           <path d="M14 20c0-9 4-13 10-13 7 0 10 5 10 13-3-1-6-4-7-7-3 4-8 6-13 7z" fill="#26304A"/>
-          <circle cx="24" cy="17" r="1.2" fill="#B93139"/>
+          <circle cx="24" cy="18.5" r="1.1" fill="#B93139"/>
           <g class="purni-avatar-gaze"><g class="purni-avatar-eyes"><circle cx="20" cy="22" r="1" fill="#26304A"/><circle cx="28" cy="22" r="1" fill="#26304A"/></g></g>
           <path d="M20.5 27c2 2 5 2 7 0" fill="none" stroke="#8D4B3D" stroke-width="1.4" stroke-linecap="round"/>
           <circle cx="13.8" cy="24" r="1.4" fill="#E4A73F"/><circle cx="34.2" cy="24" r="1.4" fill="#E4A73F"/>

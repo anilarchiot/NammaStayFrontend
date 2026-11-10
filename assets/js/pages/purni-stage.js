@@ -25,11 +25,11 @@ export const stageMarkup = `
       <g class="pc-earring pc-earring-l"><path d="M75 64v4" stroke="#E4A73F" stroke-width="1"/><circle cx="75" cy="70" r="2.4" fill="#E4A73F"/></g>
       <g class="pc-earring pc-earring-r"><path d="M125 64v4" stroke="#E4A73F" stroke-width="1"/><circle cx="125" cy="70" r="2.4" fill="#E4A73F"/></g>
       <path d="M75 56C75 36 86 28 100 28s25 8 25 28c-7-3-15-9-19-16-6 8-18 14-31 16z" fill="${HAIR}"/>
-      <circle cx="100" cy="42" r="1.8" fill="#B93139"/>
       <circle class="pc-blush" cx="81" cy="72" r="4.5" fill="#E8764F"/><circle class="pc-blush" cx="119" cy="72" r="4.5" fill="#E8764F"/>
       <g class="pc-brows" fill="none" stroke="${HAIR}" stroke-width="2" stroke-linecap="round">
         <path class="pc-brow-l" d="M82 51q7-4 14 0"/><path class="pc-brow-r" d="M104 51q7-4 14 0"/>
       </g>
+      <circle cx="100" cy="52" r="1.7" fill="#B93139"/>
       <g class="pc-eyes">${eye(89)}${eye(111)}</g>
       <path d="M100 64q-2.5 6 1 8" fill="none" stroke="#B56D4D" stroke-width="1.6" stroke-linecap="round"/>
       <g class="pc-mouth">
