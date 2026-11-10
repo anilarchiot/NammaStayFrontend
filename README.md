@@ -35,6 +35,15 @@ This update does not yet grant platform admins every property action: business h
 functions, and subscription enforcement have separate access checks. Do not treat it as complete platform-wide
 admin access until those checks have also been updated and tested.
 
+Subscription reminders use `supabase/migrations/061_billing_reminder_updates.sql`. The in-app renewal banner
+works after the frontend is deployed; scheduled email reminders additionally require the existing billing-reminders
+job, edge function and email configuration in `backend/supabase/setup/reminders_schedule.sql`.
+
+For the property assistant name, apply `supabase/migrations/062_purni_name.sql` before deploying the frontend.
+Owners can rename the assistant in its settings; staff see the new name after reloading. Each user can opt in to
+a voice on each device. Only browser-reported local voices are offered, and voice is off by default; support and
+available voices vary by device. Demo settings are stored only in the browser.
+
 ## Windows desktop app (foundation)
 The desktop shell and installer are built with Electron:
 

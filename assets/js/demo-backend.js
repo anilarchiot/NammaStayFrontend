@@ -982,6 +982,14 @@ const pgT = (id) => DB.tenancies.find((x) => x.id === id) || fail('Tenant not fo
 
 const RPC = {
   my_memberships: () => [{ property_id: P, property_name: DB.properties[0].name, role: DB.viewAs || 'owner', display_name: DB.members[0].display_name }],
+  property_assistant_name: () => DB.assistantName || 'Purni',
+  set_property_assistant_name: ({ p_name }) => {
+    if ((DB.viewAs || 'owner') !== 'owner') fail('Only the owner can change the assistant name.');
+    const name = String(p_name || '').trim();
+    if (!name || name.length > 40) fail('Enter a chatbot name between 1 and 40 characters.');
+    DB.assistantName = name;
+    return name;
+  },
   touch_presence: () => null,
   mark_notifications_read: () => { DB.notifications.forEach((n) => { n.read_at = n.read_at || new Date().toISOString(); }); return null; },
 

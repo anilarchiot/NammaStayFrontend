@@ -1,4 +1,5 @@
 import { LIVE, rpc, rupees, sb, W } from '../core.js';
+import { localVoices as getLocalVoices, speakLocal, voiceHelpText } from '../local-voice.js';
 
 const SHORTCUTS = [
   ["Today's snapshot", 'What is happening today?'],
@@ -25,6 +26,17 @@ export function mountPurni(ctx) {
         </button>
         <button type="button" class="purni-close" aria-label="Close Purni">×</button>
       </header>
+      <details class="purni-settings">
+        <summary>Assistant settings</summary>
+        <div class="purni-settings-body">
+          ${ctx.can('owner') ? `<form id="purni-name-form"><label for="purni-name">Assistant name for this property</label>
+            <input class="ns-input" id="purni-name" maxlength="40" required value="Purni"><button class="ns-btn" type="submit" disabled>Save name</button></form>` : ''}
+          <label for="purni-voice">Voice on this device</label>
+          <select class="ns-input" id="purni-voice" aria-describedby="purni-voice-help"><option value="">Off</option></select>
+          <small id="purni-voice-help">Voice is off until you choose a local voice. Replies may be heard by people nearby.</small>
+          <div id="purni-settings-status" role="status"></div>
+        </div>
+      </details>
       <div class="purni-messages" id="purni-messages" aria-live="polite" aria-relevant="additions"></div>
       <div class="purni-suggestions" id="purni-suggestions" aria-label="Suggested questions"></div>
       <form class="purni-form" id="purni-form">
@@ -59,6 +71,80 @@ export function mountPurni(ctx) {
   const input = root.querySelector('#purni-input');
   const form = root.querySelector('#purni-form');
   const whatsappButton = root.querySelector('#purni-wa');
+  const voiceSelect = root.querySelector('#purni-voice');
+  const voiceHelp = root.querySelector('#purni-voice-help');
+  const settingsStatus = root.querySelector('#purni-settings-status');
+  const nameForm = root.querySelector('#purni-name-form');
+  const voiceKey = `ns.purni.voice.${ctx.user.id}.${ctx.property_id}`;
+  let assistantName = 'Purni';
+  let voiceId = '';
+  let localVoices = [];
+  try { voiceId = localStorage.getItem(voiceKey) || ''; }
+  catch (error) { console.warn('Assistant voice preference could not be loaded', error); }
+
+  function setName(name) {
+    assistantName = name;
+    root.querySelector('#purni-title').textContent = name;
+    root.querySelector('.purni-mark').textContent = Array.from(name)[0].toUpperCase();
+    root.querySelector('.purni-launcher span').textContent = `Ask ${name}`;
+    root.querySelector('label[for="purni-input"]').textContent = `Ask ${name}`;
+    root.querySelector('.purni-close').setAttribute('aria-label', `Close ${name}`);
+    whatsappButton.setAttribute('aria-label', `Connect ${name} to WhatsApp`);
+    whatsappButton.title = `Connect ${name} to WhatsApp`;
+    if (nameForm) nameForm.querySelector('input').value = name;
+  }
+  rpc('property_assistant_name', { p_property: ctx.property_id }).then((name) => {
+    setName(name);
+    if (nameForm) nameForm.querySelector('button').disabled = false;
+  }).catch((error) => {
+    console.error('Assistant name could not be loaded', error);
+    settingsStatus.textContent = `Assistant name could not be loaded: ${error.message}`;
+    root.querySelector('.purni-settings').open = true;
+  });
+  nameForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = nameForm.querySelector('button');
+    button.disabled = true;
+    try {
+      const name = await rpc('set_property_assistant_name', { p_property: ctx.property_id, p_name: nameForm.querySelector('input').value });
+      setName(name);
+      settingsStatus.textContent = 'Name saved for this property. Other devices will see it when they reload.';
+    } catch (error) { settingsStatus.textContent = `Could not save name: ${error.message}`; }
+    finally { button.disabled = false; }
+  });
+
+  const speech = window.speechSynthesis;
+  const supported = speech && typeof window.SpeechSynthesisUtterance === 'function';
+  function updateVoices() {
+    localVoices = getLocalVoices(speech);
+    voiceSelect.replaceChildren(new Option('Off', ''));
+    for (const voice of localVoices) voiceSelect.add(new Option(`${voice.name} (${voice.lang})`, voice.voiceURI));
+    voiceHelp.textContent = voiceHelpText(voiceId, localVoices);
+    voiceSelect.value = localVoices.some((voice) => voice.voiceURI === voiceId) ? voiceId : '';
+  }
+  if (supported) {
+    updateVoices();
+    speech.addEventListener('voiceschanged', updateVoices);
+    voiceSelect.addEventListener('change', () => {
+      voiceId = voiceSelect.value;
+      voiceHelp.textContent = voiceHelpText(voiceId, localVoices);
+      try { localStorage.setItem(voiceKey, voiceId); }
+      catch (error) { settingsStatus.textContent = 'Voice preference could not be saved on this device.'; console.warn(error); }
+      speech.cancel();
+    });
+  } else {
+    voiceSelect.disabled = true;
+    voiceHelp.textContent = 'Voice is not supported on this device.';
+  }
+  function speak(text) {
+    if (!supported || !voiceId || panel.hidden) return;
+    if (!speakLocal(speech, window.SpeechSynthesisUtterance, voiceId, text, () => {
+      settingsStatus.textContent = 'Voice playback failed. Check your device voice settings.';
+      root.querySelector('.purni-settings').open = true;
+    })) {
+      voiceHelp.textContent = 'The saved voice is unavailable on this device. Choose another local voice or turn voice off.';
+    }
+  }
 
   const addMessage = (text, sender, link, extraClass = '') => {
     const item = document.createElement('div');
@@ -85,6 +171,7 @@ export function mountPurni(ctx) {
     panel.hidden = !show;
     launcher.setAttribute('aria-expanded', String(show));
     if (show) input.focus();
+    else if (supported && voiceId) speech.cancel();
   };
 
   const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
@@ -129,9 +216,9 @@ export function mountPurni(ctx) {
       try {
         const status = await invokeWhatsApp({ action: 'status' });
         if (status.linked) {
-          if (!window.confirm(`Disconnect Purni from the WhatsApp number ending in ${status.phone_last4}?`)) return;
+          if (!window.confirm(`Disconnect ${assistantName} from the WhatsApp number ending in ${status.phone_last4}?`)) return;
           await invokeWhatsApp({ action: 'unlink' });
-          addMessage('Purni is disconnected from WhatsApp. You can link it again any time.', 'purni');
+          addMessage(`${assistantName} is disconnected from WhatsApp. You can link it again any time.`, 'purni');
           return;
         }
 
@@ -141,7 +228,7 @@ export function mountPurni(ctx) {
         if (!/^\d{8,15}$/.test(phone) || !/^purni-[0-9a-f]{32}$/.test(code)) {
           throw new Error('The WhatsApp connection is not configured correctly.');
         }
-        addMessage('This links your WhatsApp number to your TheNammaStay account so Purni can reply with read-only property summaries. Tap below and send the pre-filled message; the one-time link expires in 10 minutes. Message “unlink” any time to disconnect.', 'purni', {
+        addMessage(`This links your WhatsApp number to your TheNammaStay account so ${assistantName} can reply with read-only property summaries. Tap below and send the pre-filled message; the one-time link expires in 10 minutes. Message “unlink” any time to disconnect.`, 'purni', {
           href: `https://wa.me/${phone}?text=${encodeURIComponent(code)}`,
           label: 'Open WhatsApp to connect',
         });
@@ -174,7 +261,7 @@ export function mountPurni(ctx) {
     const pending = document.createElement('div');
     pending.className = 'purni-message is-purni';
     pending.setAttribute('role', 'status');
-    pending.setAttribute('aria-label', 'Purni is checking your property');
+    pending.setAttribute('aria-label', `${assistantName} is checking your property`);
     pending.innerHTML = '<span class="purni-thinking"><i></i><i></i><i></i></span>';
     messages.append(pending);
     messages.scrollTop = messages.scrollHeight;
@@ -184,6 +271,7 @@ export function mountPurni(ctx) {
       pending.remove();
       addMessage(result.text, 'purni', result.link);
       result.tasks?.forEach((task) => addMessage(task.text, 'purni', task.link, 'is-task'));
+      speak([result.text, ...(result.tasks || []).map((task) => task.text)].join(' '));
       setSuggestions(result.prompts || SHORTCUTS.slice(0, 3));
     } catch {
       pending.remove();
@@ -198,7 +286,10 @@ export function mountPurni(ctx) {
   async function answer(question) {
     const q = question.toLowerCase();
     const firstName = ctx.name?.trim().split(/\s+/)[0] || 'there';
-    if (/^(hi|hello|hey|good morning|good afternoon|good evening)(?:[\s,!.]+purni)?[!. ]*$/.test(q)) {
+    const greetingQuestion = q.replace(/[!. ]+$/, '');
+    const greetingWithoutName = greetingQuestion.endsWith(` ${assistantName.toLowerCase()}`)
+      ? greetingQuestion.slice(0, -assistantName.length).trim() : greetingQuestion;
+    if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/.test(greetingWithoutName)) {
       const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
       const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
       return { text: `${timeGreeting}, ${firstName}! Good to see you. I’ve got today’s board ready. Want the priorities first, or should we look at something specific?`, prompts: [['Today’s tasks', 'What needs doing today?'], ...initialShortcuts.slice(0, 2)] };
