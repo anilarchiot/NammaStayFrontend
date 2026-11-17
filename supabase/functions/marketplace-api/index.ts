@@ -8,7 +8,7 @@
 //   POST /availability  { hotel_id, rooms: [{ota_room_id, units?, rate_paise?}] } -> { ok, updated }
 //   POST /reservations  { hotel_id }                                      -> { reservations: [{ref, guest, arrival, departure, amount, currency, status}] }
 // hotel_id is the listing code shown in the host dashboard.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.119.0';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 

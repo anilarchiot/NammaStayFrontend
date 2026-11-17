@@ -2,7 +2,7 @@
 const CFG = window.NAMMASTAY_CONFIG || {};
 export const configured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 export const sb = configured
-  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey)
+  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey)
   : null;
 
 export const $ = (s, r = document) => r.querySelector(s);

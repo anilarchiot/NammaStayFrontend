@@ -30,7 +30,7 @@ const authStorage = window.NS_DESKTOP ? {
 } : undefined;
 const desktopOffline = window.NS_DESKTOP ? createDesktopOfflineFetch(CFG.supabaseAnonKey) : null;
 export const sb = LIVE
-  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
+  ? (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/+esm')).createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
     auth: authStorage ? { storage: authStorage } : undefined,
     global: desktopOffline ? { fetch: desktopOffline.fetch } : undefined,
   })
@@ -955,7 +955,7 @@ function accessBanner(ctx) {
   if (a?.state === 'suspended' && main) {
     const el = document.createElement('div'); el.className = 'ns-access-banner danger'; el.setAttribute('role', 'alert');
     el.innerHTML = '<b>This account is suspended — new bookings are paused.</b> Your data is safe. Please contact TheNammaStay support.';
-    const mb = $('.ns-mobilebar'); if (mb && mb.parentNode === main) mb.insertAdjacentElement('afterend', el); else main.prepend(el);
+    placeNotice(main, el);
     rpc('property_suspension', { p_property: ctx.property_id }).then((x) => { if (x?.reason) el.insertAdjacentHTML('beforeend', ` <span style="font-weight:600">Reason: ${esc(x.reason)}</span>`); }).catch(() => {});
     return;
   }
@@ -979,8 +979,13 @@ function accessBanner(ctx) {
     dismiss.addEventListener('click', () => { localStorage.setItem(dismissKey, ymd()); el.remove(); });
     el.append(' ', dismiss);
   }
-  const mobilebar = $('.ns-mobilebar');
-  if (mobilebar && mobilebar.parentNode === main) mobilebar.insertAdjacentElement('afterend', el); else main.prepend(el);
+  placeNotice(main, el);
+}
+
+// Notices sit as a card under the page header instead of a strip above it.
+function placeNotice(main, el) {
+  const anchor = $('.ns-topbar', main) || $('.ns-mobilebar', main);
+  if (anchor && anchor.parentNode === main) anchor.insertAdjacentElement('afterend', el); else main.prepend(el);
 }
 
 const __PATH = () => location.pathname;

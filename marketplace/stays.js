@@ -331,7 +331,7 @@ async function rewards(q) {
       <div class="card rewards-rule"><b>How it works</b><p class="mute">Book through TheNammaStay Search, complete your stay, and ask your host to mark it as stayed. Points are based on the booking total. Points have no cash value.</p></div>
     </section>
     <form class="card rewards-lookup" id="rewards-form"><h2>Check your points</h2>
-      <label for="reward-ref">Booking reference</label><input id="reward-ref" name="ref" placeholder="REQ-2041" required autocomplete="off">
+      <label for="reward-ref">Booking reference</label><input id="reward-ref" name="ref" placeholder="REQ-XXXXXXXXXX" required autocomplete="off">
       <label for="reward-phone">Phone used for the booking</label><input id="reward-phone" name="phone" type="tel" required autocomplete="tel">
       <button class="btn block">View my rewards</button><div id="reward-message" role="status" aria-live="polite"></div>
     </form>`;
@@ -370,7 +370,7 @@ async function rewards(q) {
         <div class="rewards-stats"><div><b>${Number(r.completed_stays)}</b><span>completed stays</span></div><div><b>${esc(r.tier)}</b><span>traveller tier</span></div></div>
       </div>
       <div class="rewards-history"><div class="row2"><h2>Your stays</h2><a href="#/rewards">Check another booking</a></div>
-        ${bookings || '<div class="card mute">No eligible stays yet. Complete a stay booked through TheNammaStay to start earning points.</div>'}
+        ${bookings || '<div class="card mute">This booking has no points yet. Points are added after checkout, once the host confirms the stay.</div>'}
         <p class="mute">Points are awarded after checkout when the host confirms your stay. Earn 1 point per ₹100 of the booking total; points do not have cash value.</p>
       </div>
     </section>`;
@@ -380,7 +380,7 @@ async function rewards(q) {
 async function track(q) {
   const ref = q.get('ref'), phone = q.get('phone');
   if (!ref || !phone) {
-    app.innerHTML = `${brand()}<h2>Find your request</h2><form class="card" id="f"><label>Reference</label><input name="ref" placeholder="REQ-2041" required>
+    app.innerHTML = `${brand()}<h2>Find your request</h2><form class="card" id="f"><label>Reference</label><input name="ref" placeholder="REQ-XXXXXXXXXX" required>
       <label>Phone you used</label><input name="phone" type="tel" required><button class="btn block" style="margin-top:12px">Show my request</button></form>`;
     app.querySelector('#f').onsubmit = (e) => { e.preventDefault(); const f = new FormData(e.target); go('/track', { ref: f.get('ref'), phone: f.get('phone') }); };
     return;

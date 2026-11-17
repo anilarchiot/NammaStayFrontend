@@ -8,7 +8,7 @@
 //   <OTA>_API_KEY
 // The endpoint must accept JSON: POST {url}/rooms, POST {url}/availability, POST {url}/reservations (see adapter below).
 // The `test` OTA is a built-in simulator and needs no secrets.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.119.0';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
