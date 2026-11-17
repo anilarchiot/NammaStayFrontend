@@ -1,7 +1,8 @@
 // Branches (043_branches.sql): owners with more than one property.
 // One screen for every branch (today / this month), "full here, free there", compare, team across branches, + Add branch.
 // Owner only. Each branch stays its own property: own bookings, guests, money and subscription.
-import { page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDate, options, toast, waNumber, param, SITE_URL, $, $$ } from '../core.js';
+// Other roles see the properties they belong to (read-only list with Open).
+import { page, rpc, content, setSubtitle, headerActions, esc, rupees, fmtDate, options, toast, waNumber, param, SITE_URL, $, $$, ROLE_LABEL } from '../core.js';
 import { changeBranchAccess } from '../team-access.js';
 
 const I = (d, w = 18, sw = 2) => `<svg aria-hidden="true" width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -35,9 +36,25 @@ function go(id, href) {
   return true;
 }
 
+/** Non-owners: every property they belong to, with their role there. Open uses the same switch as the menu. */
+function renderMemberProperties(ctx) {
+  const rows = (ctx.memberships || []).map((m) => {
+    const current = m.property_id === ctx.property_id;
+    const place = [TYPE[m.kind], m.city].filter(Boolean).map(esc).join(' · ');
+    return `<li class="br-member${current ? ' is-current' : ''}">
+      <div><strong>${esc(m.property_name)}</strong>
+      <p class="br-muted">${place ? place + ' · ' : ''}${esc(ROLE_LABEL[m.role] || m.role)}</p></div>
+      ${current ? '<span class="br-muted">Current</span>' : `<button type="button" class="ns-btn" data-open="${esc(m.property_id)}">Open</button>`}
+    </li>`;
+  }).join('');
+  content(`<section class="ns-card" aria-labelledby="br-mine-h"><h2 class="ns-h3" id="br-mine-h">My properties</h2>
+    <ul class="br-member-list">${rows || '<li class="br-muted">You are not linked to any property yet.</li>'}</ul></section>`);
+  $$('[data-open]').forEach((b) => b.addEventListener('click', () => go(b.dataset.open, 'dashboard.html')));
+}
+
 page('branches', async (ctx) => {
   CTX = ctx;
-  if (ctx.role !== 'owner') { content('<div class="ns-card ns-empty">The Branches page is for the owner.</div>'); return; }
+  if (ctx.role !== 'owner') { renderMemberProperties(ctx); return; }
   try { if (localStorage.getItem('ns.br.period') === 'month') period = 'month'; } catch { /* default: today */ }
   headerActions().innerHTML = `<div class="br-seg" role="group" aria-label="Show numbers for">
       <button type="button" data-period="today">Today</button><button type="button" data-period="month">This month</button></div>

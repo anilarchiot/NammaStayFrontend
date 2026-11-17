@@ -765,14 +765,12 @@ function applyChrome(ctx) {
     if (k && PAGE_ROLES[k] && !PAGE_ROLES[k].includes(ctx.role)) a.style.display = 'none';
   });
   let propertiesLink = $('.ns-sidebar a[href="branches.html"]');
-  if (ctx.role === 'owner') {
-    if (!propertiesLink) {
-      propertiesLink = document.createElement('a'); propertiesLink.href = 'branches.html'; propertiesLink.className = 'ns-nav-link';
-      propertiesLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>My properties</span>';
-    }
-    const dashboardLink = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
-    if (dashboardLink) dashboardLink.insertAdjacentElement('afterend', propertiesLink);
-  } else propertiesLink?.remove();
+  if (!propertiesLink) {
+    propertiesLink = document.createElement('a'); propertiesLink.href = 'branches.html'; propertiesLink.className = 'ns-nav-link';
+    propertiesLink.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg><span>My properties</span>';
+  }
+  const dashboardLink = $('.ns-sidebar .ns-nav-link[href="dashboard.html"]');
+  if (dashboardLink) dashboardLink.insertAdjacentElement('afterend', propertiesLink);
   const roomsLink = $('.ns-sidebar .ns-nav-link[href="rooms.html"] span'); if (roomsLink) roomsLink.textContent = W.setup;
   let otaLink = $('.ns-sidebar a[href="ota.html"]');
   if (['owner', 'manager'].includes(ctx.role)) {
