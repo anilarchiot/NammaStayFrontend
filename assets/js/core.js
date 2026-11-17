@@ -1090,7 +1090,7 @@ export function headerSearch(placeholder, onSearch, initial = '') {
 }
 
 /** Swap the static content area for live markup */
-export function content(html, style = 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;') {
+export function content(html, style = 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);') {
   const el = $('.ns-content');
   el.setAttribute('style', style);
   el.innerHTML = html;

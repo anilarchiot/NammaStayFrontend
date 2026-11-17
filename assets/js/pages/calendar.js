@@ -2,6 +2,7 @@
 // and last night on a phone) to create a booking for those dates.
 import { hostExtras, isResort, isHomestay, unitName, guestFace, W, roomsMode, guestsText, q, sb, toInputDT, confirmDialog, sendBookingWhatsApp, deleteBookingDialog, statusPill, fmtDayTime, page, rpc, content, setSubtitle, headerActions, esc, ymd, addDays, fmtWeekday, fmtDay, rupees, toPaise,
   modal, toast, field, options, METHOD_OPTIONS, SOURCES, debounce, fromInputDT, onPageLeave, $, $$ } from '../core.js';
+import { wireBedList } from '../bed-list.js';
 
 let DAYS = 9;                                     // 9 days (week view) or the days of the month (month view)
 const WEEK_DAYS = 9;
@@ -53,6 +54,7 @@ page('calendar', async (ctx) => {
   let days = [];
   let pgTenancyByBooking = new Map();
   const taken = new Map();                        // bed_id → Set of busy nights
+  const bl = { find: '', collapsed: new Set() };  // bed list search and collapsed rooms, kept across redraws
 
   async function draw() {
     sel = null;
@@ -90,10 +92,8 @@ page('calendar', async (ctx) => {
       const seen = new Set(); nights(b.check_in_at, b.check_out_at).forEach((n) => { if (!seen.has(n)) { seen.add(n); occByDay[n] = (occByDay[n] || 0) + 1; } });
     });
 
-    let room = null;
-    const rows = d.beds.map((bed) => {
-      let html = '';
-      if (bed.room !== room) { room = bed.room; html += `<div style="font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;padding:14px 0 4px">${esc(room)}</div>`; }
+    const rowHtml = (bed) => {
+      const key = esc(`${bed.label} ${bed.room}`.toLowerCase());
       const bars = [
         ...d.blocks.filter((k) => k.bed_id === bed.id).map((k) => { const p = span(k.starts_at, k.ends_at);
           return `<button type="button" class="bar cb cb-maint${p.cutL ? ' cut-l' : ''}${p.cutR ? ' cut-r' : ''}" data-block="${esc(k.id)}" style="grid-column:${p.s}/${p.e}" title="Maintenance: ${esc(k.reason)} — tap to change or remove"><span class="cb-ico">🔧</span><span class="cb-name">${esc(k.reason)}</span></button>`; }),
@@ -114,17 +114,31 @@ page('calendar', async (ctx) => {
               : `${esc(b.guest)} · ${esc(src.name)} · ${nights} night${nights > 1 ? 's' : ''} · ${label}${b.balance_paise > 0 ? ' · ' + rupees(b.balance_paise) + ' due' : ''}${canExtend ? ' · Drag right edge to extend' : ''}`}"
             >${guestFace(b.guest, month ? 20 : 24)}${month && span_ <= 1 ? '' : srcBadge}${month && span_ <= 1 ? '' : `<span class="cb-name">${esc(short)}</span>`}${!IS_PG && span_ > (month ? 4 : 1) ? `<span class="cb-n">${nights >= 28 && month ? `${Math.round(nights / 30 * 10) / 10} mo` : `${nights}n`}</span>` : ''}${month && span_ <= 2 ? '' : tag}${canExtend ? '<span class="cb-resize-handle" aria-hidden="true"></span>' : ''}</a>`; }),
       ].join('');
-      return html + `<div style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
+      return `<div class="bl-item" data-q="${key}" style="display:grid;grid-template-columns:140px 1fr;align-items:center;border-top:1px solid #F3EFE1">
           <div class="cal-bed"><span class="cal-bed-ico" aria-hidden="true">${roomsMode() ? '🚪' : '🛏'}</span><span>${esc(bed.label)}</span></div>
           <div class="row cal-row" style="position:relative;${cols}">${days.map((x, i) => `<div class="cal-cell${x === today ? ' is-today' : ''}${[0, 6].includes(new Date(x + 'T12:00:00Z').getUTCDay()) ? ' is-weekend' : ''}${staff && x >= earliest && !taken.get(bed.id).has(x) ? ' is-free' : ''}"
             data-bed="${esc(bed.id)}" data-i="${i}" style="grid-row:1;grid-column:${i + 1}"></div>`).join('')}${bars}</div></div>`;
+    };
+    const byRoom = new Map();
+    d.beds.forEach((bed) => { if (!byRoom.has(bed.room)) byRoom.set(bed.room, []); byRoom.get(bed.room).push(bed); });
+    const rows = [...byRoom].map(([name, group]) => {
+      const busy = group.filter((bed) => taken.get(bed.id)?.has(today)).length;
+      return `<div class="bl-group" data-room="${esc(name)}">
+        <button type="button" class="bl-group-h" data-toggle-room aria-expanded="true"><span class="bl-chev" aria-hidden="true">▾</span><b>${esc(name)}</b><span class="bl-group-n">${group.length} ${W.units}</span>${days.includes(today) ? `<span class="bl-busy">${busy} busy today</span>` : ''}</button>
+        <div class="bl-body">${group.map(rowHtml).join('')}</div></div>`;
     }).join('');
 
     content(`
-      <div class="ns-card${month ? ' cal-month' : ''}" style="padding:18px 20px;overflow-x:auto">
+      <div class="ns-card${month ? ' cal-month' : ''}" style="padding:var(--sp-card);overflow-x:auto">
         ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP()}</div>` : ''}
+        <div class="bl-tools">
+          <label class="ns-search"><input type="search" data-bl-find placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>
+          <span class="bl-count" data-bl-count></span>
+          <span class="bl-tools-r"><button type="button" class="ns-btn-ghost" data-bl-expand>Expand all</button><button type="button" class="ns-btn-ghost" data-bl-collapse>Collapse all</button></span>
+        </div>
+        <div class="cal-scroll">
         <div style="min-width:${month ? 140 + DAYS * 28 : 760}px">
-          <div style="display:grid;grid-template-columns:140px 1fr"><div></div>
+          <div class="cal-sticky-head" style="display:grid;grid-template-columns:140px 1fr"><div></div>
             <div class="row cal-head" style="height:auto;${cols}">${days.map((x) => {
               const dt = new Date(x + 'T12:00:00Z'); const occ = occByDay[x] || 0; const pct = totalUnits ? Math.round((occ / totalUnits) * 100) : 0;
               const wk = [0, 6].includes(dt.getUTCDay());
@@ -136,6 +150,7 @@ page('calendar', async (ctx) => {
                 <div class="cal-occn">${occ}/${totalUnits}</div></div>`; }).join('')}</div></div>
           ${rows || '<div class="ns-empty">No ${W.units} set up yet. Add them in ${W.setup}.</div>'}
         </div>
+        </div>
         <div class="cal-legend">
           ${IS_PG ? `<span><i class="lg cb-in"></i> Living here</span><span><i class="lg cb-conf"></i> Moving in</span>
           <span><i class="lg cb-out"></i> Moved out</span><span><i class="lg cb-maint"></i> Maintenance</span>` : `<span><i class="lg cb-in"></i> In house</span><span><i class="lg cb-conf"></i> Confirmed · paid</span>
@@ -146,6 +161,7 @@ page('calendar', async (ctx) => {
           ${staff ? '<span><i class="lg" style="background:#CDEBDC;border:1px solid #1C9A6C"></i> Your selection</span>' : ''}
         </div>
       </div>`);
+    wireBedList(bl, W.units);
   }
 
   // ------------------------------------------------------------ drag / tap selection

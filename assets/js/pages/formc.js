@@ -61,7 +61,7 @@ page('formc', async (ctx) => {
             ${r.arrival_at && r.status === 'checked_out' && !r.departure_at ? `<button type="button" class="ns-btn" data-mark="${esc(r.booking_id)}" data-kind="departure">Departure submitted</button>` : ''}
           </div></div>`; }).join('')
         : `<div class="ns-card ns-empty">${{ due: 'No arrival reports due. 🎉', departure: 'No departure reports due.', upcoming: 'No foreign guests arriving in the next 2 days.', done: 'Nothing here yet.' }[tab]}</div>`}`,
-    'padding:24px 32px;display:flex;flex-direction:column;gap:14px;');
+    'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
     $('#fc-tabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; draw(); } };
     $$('[data-det]').forEach((b) => b.onclick = () => details(rows.find((x) => x.booking_id === b.dataset.det)));
     $$('[data-copy]').forEach((b) => b.onclick = () => copySheet(rows.find((x) => x.booking_id === b.dataset.copy)));

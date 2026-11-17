@@ -97,7 +97,7 @@ async function draw() {
       <button type="button" class="co-tab" role="tab" data-tab="health" aria-selected="${tab === 'health'}">Company health${acts ? `<span class="co-count" aria-label="${acts} need action">${acts}</span>` : ''}</button>
     </div>
     <div class="co-print">TheNammaStay — company summary · ${esc(fmtDate(today()))}</div>
-    <div class="co-panel" role="tabpanel">${tab === 'company' ? companyTab() : healthTab()}</div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
+    <div class="co-panel" role="tabpanel">${tab === 'company' ? companyTab() : healthTab()}</div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
   $$('.co-tab').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.tab === tab) return;
     history.replaceState(null, '', b.dataset.tab === 'health' ? '#health' : location.pathname + location.search);

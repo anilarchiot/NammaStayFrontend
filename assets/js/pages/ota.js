@@ -3,6 +3,7 @@ import { fmtDate, rupees, modal, page, rpc, sb, content, setSubtitle, headerActi
   FUNCTIONS_URL, OTA, DEMO, $, $$ } from '../core.js';
 import { otaIcon, OTA_LIST } from '../ota-icons.js';
 import { requireAddon } from '../addon-gate.js';
+import { wireBedList } from '../bed-list.js';
 
 const ADDON = {
   rpc: 'ota_addon', name: 'OTA sync', eyebrow: 'OTA SYNC', ctaLabel: 'Turn on OTA sync',
@@ -34,6 +35,7 @@ page('ota', async (ctx) => {
   if (!ctx.isAdmin && !ctx.can('owner', 'manager')) { showFatal('Only the owner or manager can set up OTA sync.'); return; }
   if (!await requireAddon(ctx, ADDON)) return;
   const canEdit = ctx.canManageRooms();
+  const bl = { find: '', collapsed: new Set() };   // bed list search and collapsed rooms, kept across redraws
   headerActions().innerHTML = '<button type="button" class="ns-btn ns-refresh-button" id="sync-now"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Sync now</span></button>';
 
   async function draw() {
@@ -42,7 +44,8 @@ page('ota', async (ctx) => {
     const errs = feeds.filter((f) => f.last_status === 'error').length;
     const lastSync = feeds.map((f) => f.last_synced_at).filter(Boolean).sort().pop();
     setSubtitle(`${feeds.length} OTA calendar${feeds.length === 1 ? '' : 's'} connected · last sync ${ago(lastSync)}${errs ? ` · ${errs} need attention` : ''}`);
-    let room = null;
+    const groups = new Map();
+    beds.forEach((b) => { if (!groups.has(b.room)) groups.set(b.room, []); groups.get(b.room).push(b); });
     content(`
       <div id="cx-card"></div>
       <div class="ns-card ota-intro">
@@ -62,10 +65,14 @@ page('ota', async (ctx) => {
           <div class="ns-help" style="margin-top:8px">iCal shares <b>dates only</b> — not prices or guest details. OTAs refresh imported calendars on their own schedule (often every few hours), so a booking made on two sites within minutes can still clash. Hostelworld, MakeMyTrip and Booking.com hotel/hostel listings usually need a channel manager instead of iCal.</div>
         </details>
       </div>
-      ${beds.map((b) => {
-        let head = '';
-        if (b.room !== room) { room = b.room; head = `<div class="ota-room">${esc(room)}</div>`; }
-        return `${head}<div class="ns-card ota-bed${b.is_active ? '' : ' is-off'}" data-bed="${esc(b.bed_id)}">
+      ${beds.length ? `<div class="bl-tools">
+        <label class="ns-search"><input type="search" data-bl-find placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>
+        <span class="bl-count" data-bl-count></span>
+        <span class="bl-tools-r"><button type="button" class="ns-btn-ghost" data-bl-expand>Expand all</button><button type="button" class="ns-btn-ghost" data-bl-collapse>Collapse all</button></span>
+      </div>` : ''}
+      ${[...groups].map(([name, list]) => `<div class="bl-group ota-grp" data-room="${esc(name)}">
+        <button type="button" class="bl-group-h" data-toggle-room aria-expanded="true"><span class="bl-chev" aria-hidden="true">▾</span><b>${esc(name)}</b><span class="bl-group-n">${list.length} ${W.units}</span></button>
+        <div class="bl-body">${list.map((b) => `<div class="ns-card ota-bed bl-item${b.is_active ? '' : ' is-off'}" data-q="${esc(`${b.label} ${b.room}`.toLowerCase())}" data-bed="${esc(b.bed_id)}">
           <div class="ota-bed-head"><b>${esc(b.label)}</b>${b.is_active ? '' : ' <span class="ns-pill grey">Not in use</span>'}</div>
           <div class="ota-cols">
             <div class="ota-col">
@@ -90,10 +97,10 @@ page('ota', async (ctx) => {
                 <button type="button" class="ns-btn" data-add>Add</button></div>` : ''}
               ${!b.feeds.length ? '<div class="ns-muted" style="font-size:12.5px">No OTA calendar yet. Add one per OTA — you can connect several.</div>' : ''}
             </div>
-          </div></div>`;
-      }).join('') || '<div class="ns-card ns-empty">Add your rooms and beds first (Rooms).</div>'}`);
+          </div></div>`).join('')}</div></div>`).join('') || '<div class="ns-card ns-empty">Add your rooms and beds first (Rooms).</div>'}`);
 
     cxCard(ctx);
+    wireBedList(bl, W.units);
     $$('.ota-bed').forEach((card) => {
       const bed = beds.find((x) => x.bed_id === card.dataset.bed);
       const urlEl = card.querySelector('[data-exp-url]'); const chEl = card.querySelector('[data-exp-ch]');

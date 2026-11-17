@@ -26,7 +26,7 @@ page('reports', async (ctx) => {
         ${kpi('Revenue', rupees(r.revenue))}${kpi('Avg. occupancy', Math.round(r.occupancy * 100) + '%')}
         ${kpi('Avg. length of stay', r.alos + ' nights')}${kpi(W.perf, rupees(Math.round(r.revpab / 100) * 100), W.perfLong)}</div>
       <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px">
-        <div class="ns-card" style="display:flex;flex-direction:column;gap:18px">
+        <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
           <div style="display:flex;justify-content:space-between;align-items:center"><div class="ns-h3">Revenue by week</div>
             <div class="ns-muted"><span style="color:#1C9A6C">■</span> UPI + card &nbsp; <span style="color:#E7DFC7">■</span> Cash</div></div>
           <div class="ns-bars" style="height:200px">${r.weekly.map((w) => `<div title="${rupees(w.digital + w.cash)}">

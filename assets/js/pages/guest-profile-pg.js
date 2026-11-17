@@ -71,7 +71,7 @@ export async function pgGuestProfile(ctx, id, editGuest) {
           <td style="font-weight:700;white-space:normal">${esc(t.bed.room)} · ${esc(t.bed.label)}</td><td>${day(t.start_date)}</td>
           <td>${t.move_out_on ? day(t.move_out_on) : '—'}</td><td>${rupees(t.rent_paise + t.food_paise)}</td><td>${pill(stOf(t))}</td></tr>`).join('')
           || '<tr><td colspan="5" class="ns-empty">Not moved in yet.</td></tr>'}</tbody></table></div></div>
-    </div>`, 'padding:24px 32px;display:grid;grid-template-columns:340px 1fr;gap:20px;');
+    </div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:grid;grid-template-columns:340px 1fr;gap:var(--sp-gap);');
 
   $('#edit-guest')?.addEventListener('click', () => editGuest(ctx, g));
   if (param('edit') && $('#edit-guest')) { history.replaceState(null, '', 'guest-profile.html?id=' + g.id); editGuest(ctx, g); }

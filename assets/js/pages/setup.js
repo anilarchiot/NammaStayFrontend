@@ -16,7 +16,7 @@ page('setup', async (ctx) => {
     setSubtitle(`Step ${step + 1} of ${STEPS.length} · about 5 minutes · you can change everything later`);
     content(`<div class="su-wrap">
       <ol class="su-track">${STEPS.map(([k, l], i) => `<li class="${i === step ? 'is-on' : ''}${i < step || prog[k] ? ' is-done' : ''}"><span>${i < step || prog[k] ? '✓' : i + 1}</span>${l}</li>`).join('')}</ol>
-      <div class="ns-card su-card" id="su-body"></div></div>`, 'padding:24px 32px;');
+      <div class="ns-card su-card" id="su-body"></div></div>`, 'padding:var(--sp-page-y) var(--sp-page-x);');
     ({ details, rooms, upi, staff, done })[STEPS[step][0]]();
   }
   const nav = (back = true, nextLabel = 'Save & continue') => `<div class="su-nav">${back && step > 0 ? '<button type="button" class="ns-btn-ghost" id="su-back">← Back</button>' : '<span></span>'}

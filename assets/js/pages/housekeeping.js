@@ -25,14 +25,37 @@ page('housekeeping', async (ctx) => {
   let filter = 'todo';
   headerActions().innerHTML = '<button type="button" class="ns-btn-ghost hk-refresh-button" id="hk-refresh"><svg class="ns-refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-2.64-6.36L21 8"></path></svg><span>Refresh</span></button>';
 
+  let beds = [];
+  let findRaw = '';
+  let shellReady = false;
+
   async function draw() {
-    const beds = await rpc('hk_board', { p_property: ctx.property_id });
+    beds = await rpc('hk_board', { p_property: ctx.property_id });
     const todo = beds.filter((b) => b.status !== 'clean');
-    const priority = (b) => (b.status !== 'clean' && b.arriving ? 0 : b.status === 'cleaning' ? 1 : b.status === 'dirty' ? 2 : b.status === 'inspect' ? 3 : 4);
-    const list = (filter === 'todo' ? todo : beds).slice().sort((a, b) => priority(a) - priority(b));
     const urgent = todo.filter((b) => b.arriving).length;
     setSubtitle(`${todo.length} ${W.unit}${todo.length === 1 ? '' : 's'} to clean${urgent ? ` · ${urgent} with a guest arriving today` : ''} · ${beds.length - todo.length} ready`);
-    content(`
+    if (!shellReady) {
+      content(`
+        <div class="bl-tools">
+          <label class="ns-search"><input type="search" id="hk-find" placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>
+          <span class="bl-count" id="hk-find-n"></span>
+        </div>
+        <div id="hk-body"></div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
+      $('#hk-find').addEventListener('input', (e) => { findRaw = e.target.value; paint(); });
+      shellReady = true;
+    }
+    paint();
+  }
+
+  // Repaints only the list, so the search box keeps focus through the 60-second refresh.
+  function paint() {
+    const todo = beds.filter((b) => b.status !== 'clean');
+    const q = findRaw.trim().toLowerCase();
+    const scope = filter === 'todo' ? todo : beds;
+    const priority = (b) => (b.status !== 'clean' && b.arriving ? 0 : b.status === 'cleaning' ? 1 : b.status === 'dirty' ? 2 : b.status === 'inspect' ? 3 : 4);
+    const list = scope.filter((b) => !q || `${b.label} ${b.room}`.toLowerCase().includes(q)).slice().sort((a, b) => priority(a) - priority(b));
+    $('#hk-find-n').textContent = q ? `${list.length} of ${scope.length} shown` : '';
+    $('#hk-body').innerHTML = `
       <div class="ns-chips" id="hk-filter">${[['todo', `To clean (${todo.length})`], ['all', `All ${W.units} (${beds.length})`]].map(([k, l]) => `<button type="button" class="ns-chip${filter === k ? ' is-on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
       ${list.length ? `<div class="hk-grid">${list.map((b) => { const s = ST[b.status];
         return `<div class="hk-tile hk-${b.status}${b.status !== 'clean' && b.arriving ? ' hk-urgent' : ''}">
@@ -47,8 +70,8 @@ page('housekeeping', async (ctx) => {
             <button type="button" class="${b.status === 'clean' ? 'ns-btn-ghost' : 'ns-btn'} hk-go" data-bed="${esc(b.id)}" data-to="${s.next}">${s.action}</button>
             <button type="button" class="ns-btn-ghost hk-more" data-more="${esc(b.id)}" aria-label="More for ${esc(b.label)}">⋯</button>
           </div></div>`; }).join('')}</div>`
-        : `<div class="ns-card ns-empty">All ${W.units} are ready. ✨</div>`}`, 'padding:20px 24px;display:flex;flex-direction:column;gap:14px;');
-    $('#hk-filter').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; draw(); } };
+        : `<div class="ns-card ns-empty">${q ? `No ${W.units} match “${esc(findRaw.trim())}”.` : `All ${W.units} are ready. ✨`}</div>`}`;
+    $('#hk-filter').onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; paint(); } };
     $$('[data-to]').forEach((b) => b.onclick = async () => {
       b.disabled = true;
       try { await rpc('hk_set', { p_bed: b.dataset.bed, p_status: b.dataset.to, p_note: null }); toast(b.dataset.to === 'clean' ? 'Ready ✨' : b.dataset.to === 'cleaning' ? 'Cleaning started 🧹' : 'Marked dirty'); draw(); }

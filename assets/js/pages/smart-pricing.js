@@ -47,7 +47,7 @@ async function draw() {
   }
   if (S.is_pg) { content('<div class="ns-card ns-empty">Smart pricing is for nightly stays. PG / monthly tenants keep their fixed rent.</div>'); return; }
   content(`${hero()}${pausedBar()}${suggestions()}${calendar()}
-    <div class="sp-g2">${limitsCard()}<div class="sp-col">${howCard()}${datesCard()}${runsCard()}</div></div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
+    <div class="sp-g2">${limitsCard()}<div class="sp-col">${howCard()}${datesCard()}${runsCard()}</div></div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
   wire();
 }
 

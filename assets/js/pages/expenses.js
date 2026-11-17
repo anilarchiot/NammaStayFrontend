@@ -83,7 +83,7 @@ page('expenses', async (ctx) => {
             <td class="ns-sticky-end" style="white-space:nowrap;text-align:right"><button type="button" class="ns-icon-edit" data-edit="${esc(x.id)}" aria-label="Edit" title="Edit">✎</button>
               <button type="button" class="ns-icon-del" data-del="${esc(x.id)}" aria-label="Delete" title="Delete">✕</button></td></tr>`).join('')
             || '<tr><td colspan="6" class="ns-empty">No expenses yet — tap + Add expense.</td></tr>'}
-        </tbody></table></div></div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
+        </tbody></table></div></div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
     $$('[data-edit]').forEach((b) => b.onclick = () => edit(list.find((x) => x.id === b.dataset.edit)));
     $$('[data-del]').forEach((b) => b.onclick = async () => {
       const x = list.find((y) => y.id === b.dataset.del);

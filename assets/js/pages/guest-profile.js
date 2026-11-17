@@ -58,7 +58,7 @@ page('guests', async (ctx) => {
       ${d.current ? `<div class="ns-card-dark" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
           <div><div style="font-weight:700">Currently checked in</div><div style="font-size:12px;color:#AEB6C9">${esc(d.current.room)} · ${esc(d.current.bed)} · until ${fmtDate(d.current.check_out_at)}</div></div>
           <a class="ns-btn" href="booking-detail.html?id=${esc(d.current.id)}">View active booking</a></div>` : ''}
-    </div>`, 'padding:24px 32px;display:grid;grid-template-columns:340px 1fr;gap:20px;');
+    </div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:grid;grid-template-columns:340px 1fr;gap:var(--sp-gap);');
 
   $('#edit-guest')?.addEventListener('click', () => editGuest(ctx, g));
   $('#delete-guest')?.addEventListener('click', () => deleteGuestDialog(ctx, g.id, () => setTimeout(() => { location.href = 'guest-profile.html'; }, 600))

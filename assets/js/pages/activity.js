@@ -26,7 +26,7 @@ adminPage(async () => {
         <div class="al-main"><b>${esc(LABEL[a.action] || a.action)}</b>${a.property ? ` · <a href="admin.html?id=${esc(a.property_id)}">${esc(a.property)}</a>` : ''}${a.details?.code ? ` · ${esc(a.details.code)}` : ''}
           ${keys.length ? `<div class="al-diff">${keys.map((k) => `<span>${esc(FIELD[k])}: <s>${esc(fmt(k, ch[k][0]))}</s> → <b>${esc(fmt(k, ch[k][1]))}</b></span>`).join('')}</div>` : ''}</div>
         <div class="al-who">${esc(a.admin_email || '')}</div></div>`; }).join('')
-      : '<div class="ns-empty" style="padding:22px">No admin changes yet.</div>'}</div>`, 'padding:24px 32px;');
+      : '<div class="ns-empty" style="padding:22px">No admin changes yet.</div>'}</div>`, 'padding:var(--sp-page-y) var(--sp-page-x);');
   }
   draw();
 });

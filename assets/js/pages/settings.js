@@ -33,7 +33,7 @@ page('settings', async (ctx) => {
       t.setAttribute('aria-selected', on);
     });
     history.replaceState(null, '', '?tab=' + tab);
-    content('<div class="ns-card ns-empty">Loading…</div>', 'padding:24px 32px;display:flex;flex-direction:column;gap:20px;');
+    content('<div class="ns-card ns-empty">Loading…</div>', 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
     try { await VIEWS[tab](); } catch (e) { content(`<div class="ns-card ns-empty">${esc(e.message)}</div>`); }
   }
 
@@ -264,7 +264,7 @@ page('settings', async (ctx) => {
             ${!payable.length ? '<div class="ns-demo-hint">Your property is priced on request — tap “Contact us for a quote” above.</div>' : !owner ? '<div class="ns-muted">Only the property owner can make payments.</div>' : !upi ? '<div class="ns-demo-hint">Online payment details aren’t set up yet. Please contact TheNammaStay support.</div>' : `
             <div class="cp-row"><input class="ns-input" id="coupon" placeholder="Have a coupon code?" maxlength="20" style="text-transform:uppercase" autocomplete="off">
               <button type="button" class="ns-btn-ghost" id="coupon-apply">Apply</button><span id="coupon-msg" class="ns-muted" style="font-size:12.5px"></span></div>
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;border-top:1px solid #F0EBDB;padding-top:16px">
               <div id="qr-box" style="width:170px;height:170px;border:1px solid #F0EBDB;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff"><img id="qr" alt="UPI QR code" width="160" height="160"></div>
               <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
                 <div style="font-size:13.5px;line-height:1.6"><b>1.</b> Pay <b id="amt"></b> to <b>${esc(upi)}</b> (${esc(b.pay_to.payee_name)}) — scan the QR or <a id="upi-open" style="font-weight:700">open your UPI app</a>.</div>

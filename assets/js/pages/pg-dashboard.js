@@ -16,7 +16,7 @@ export async function pgDashboard(ctx) {
   const row = (href, name, sub, right) => `<a class="ns-list-row" href="${href}" style="color:inherit">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">${avatar(name)}
         <div style="min-width:0"><div style="font-size:13px;font-weight:700">${esc(name)}</div><div class="ns-muted" style="font-size:11px">${esc(sub)}</div></div></div>${right}</a>`;
-  const card = (title, link, body) => `<div class="ns-card" style="padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-width:0">
+  const card = (title, link, body) => `<div class="ns-card" style="padding:var(--sp-card);display:flex;flex-direction:column;gap:6px;min-width:0">
       <div style="display:flex;justify-content:space-between;align-items:center"><div class="ns-h3">${title}</div>${link || ''}</div>${body}</div>`;
   const empty = (t) => `<div class="ns-empty" style="padding:18px">${t}</div>`;
   const remind = (x) => {

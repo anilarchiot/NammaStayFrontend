@@ -20,7 +20,7 @@ page('tenants', async (ctx) => {
   const boss = ctx.can('owner', 'manager');
   if (!ctx.isPg) {                                             // only for PG / co-living properties
     const h = headerActions(); if (h) h.innerHTML = '';
-    content(`<div class="ns-card" style="max-width:560px;margin:30px auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:28px">
+    content(`<div class="ns-card" style="max-width:560px;margin:var(--sp-page-y) auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:var(--sp-modal-y) var(--sp-modal-x)">
       <div style="font-size:30px">🔑</div>
       <div class="ns-h3">Tenants & rent is for PG / co-living</div>
       <div class="ns-muted" style="font-size:13.5px">Monthly tenants, automatic rent, deposits and move-out settlement. ${W.unit === 'bed'
@@ -58,7 +58,7 @@ page('tenants', async (ctx) => {
     };
     const q = (t) => !search || [t.guest.full_name, t.guest.phone, t.bed.label, t.bed.room].join(' ').toLowerCase().includes(search);
     const rows = lists[tab].filter(q);
-    const card = (label, value, sub, tone = '') => `<div class="ns-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:4px${tone}">
+    const card = (label, value, sub, tone = '') => `<div class="ns-card" style="padding:16px var(--sp-card);display:flex;flex-direction:column;gap:4px${tone}">
         <div class="ns-muted" style="font-size:12px;font-weight:700">${label}</div>
         <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800">${value}</div>
         <div class="ns-muted" style="font-size:11.5px">${sub}</div></div>`;

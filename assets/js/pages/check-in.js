@@ -31,7 +31,7 @@ page('checkin', async (ctx) => {
   const L = (s) => `<div style="display:flex;justify-content:space-between;font-size:13px;color:#AEB6C9">${s}</div>`;
   content(`
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
-      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
+      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
         <div class="ns-h3">Guest details</div>
         ${draftEnabled ? `<div class="ns-help" id="draft-status" role="status">${esc(draftError || (draft ? 'Unfinished booking restored from your account.' : 'Guest and stay details are saved to your account as a draft.'))}</div>
           <div class="ns-help">Drafts sync to your account on other devices. ID numbers and photos, payment details, notes and other guests are not saved in the draft.</div>
@@ -55,7 +55,7 @@ page('checkin', async (ctx) => {
           Email the booking confirmation and online check-in link to the guest</label>
       </div>
 
-      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
+      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
         <div class="ns-h3">Stay details</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           ${field('Check-in date & time *', `<input class="ns-input" name="check_in_at" type="datetime-local" value="${preIn}T14:00">`)}
@@ -86,7 +86,7 @@ page('checkin', async (ctx) => {
       <div class="ns-error" id="err" role="alert" hidden></div>
       <button type="button" class="ns-btn ns-btn-lg" id="checkin-now">Confirm booking &amp; check in</button>
       <button type="button" class="ns-btn-ghost ns-btn-lg" id="save-confirmed" style="height:44px">Save booking (arriving later)</button>
-    </div>`, 'padding:28px 32px;display:grid;grid-template-columns:1fr 380px;gap:24px;');
+    </div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:grid;grid-template-columns:1fr 380px;gap:var(--sp-gap);');
 
   const f = (n) => document.querySelector(`[name="${n}"]`);
   const draftFields = ['full_name', 'phone', 'email', 'nationality', 'check_in_at', 'check_out_at', 'source', 'send_confirmation'];
@@ -423,7 +423,7 @@ async function arrivalsView(ctx) {
       ${section('Arriving today', arriving, 'arriving', 'No more arrivals today. 🎉')}
       ${section('Checked in today', inToday, 'in', 'Nobody has checked in yet today.')}
       ${section('Next 7 days', upcoming, 'upcoming', 'No arrivals in the next 7 days.')}`,
-    'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
+    'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
   }
 
   document.querySelector('.ns-content').addEventListener('click', async (e) => {

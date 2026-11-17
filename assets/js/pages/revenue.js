@@ -34,7 +34,7 @@ adminPage(async () => {
           <td><span class="ns-pill ${c.is_active && (!c.expires_at || new Date(c.expires_at) > new Date()) && (!c.max_uses || c.used < c.max_uses) ? 'green' : 'grey'}">${c.is_active ? ((c.max_uses && c.used >= c.max_uses) ? 'Used up' : (c.expires_at && new Date(c.expires_at) < new Date()) ? 'Expired' : 'Active') : 'Off'}</span></td>
           <td style="text-align:right"><button type="button" class="ns-btn-ghost" style="height:30px;font-size:12px" data-edit="${i}">Edit</button></td></tr>`).join('')
           : '<tr><td colspan="7" class="ns-empty">No coupons yet — e.g. LAUNCH20 for your launch offer.</td></tr>'}
-        </tbody></table></div></div>`, 'padding:24px 32px;display:flex;flex-direction:column;gap:18px;');
+        </tbody></table></div></div>`, 'padding:var(--sp-page-y) var(--sp-page-x);display:flex;flex-direction:column;gap:var(--sp-gap);');
     $$('[data-edit]').forEach((b) => b.onclick = () => couponDialog(coupons[+b.dataset.edit], plans));
     $('#new-coupon').onclick = () => couponDialog(null, plans);
   }

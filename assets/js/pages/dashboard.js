@@ -45,7 +45,7 @@ page('dashboard', async (ctx) => {
       ${stat('Pending dues', rupees(d.dues_paise), `${d.dues_count} unpaid booking${d.dues_count === 1 ? '' : 's'}`, '#E2A03F', true)}
     </div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;">
-      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px;padding:22px">
+      <div class="ns-card" style="display:flex;flex-direction:column;gap:16px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="ns-h3">Occupancy — last 7 days</div><div class="ns-muted">${W.Units} occupied / ${d.beds_total}</div></div>
         <div class="ns-bars">
