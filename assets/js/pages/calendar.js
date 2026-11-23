@@ -21,8 +21,8 @@ const srcOf = (b) => {
   return { cls: 'src-ot', short: 'O', name: n || 'OTA' };
 };
 let IS_PG = false;                                // PG / co-living account (032)
-const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> drag a tenant booking’s right edge to change checkout. Tap a free bed on the move-in day to move a tenant in.'
-  : `<b style="color:#157A56">Tip:</b> drag a booking’s right edge across free nights to extend the stay.`);
+const TIP = () => (IS_PG ? '<b style="color:#157A56">Tip:</b> drag a tenant booking’s right edge to change checkout, or drag it to another bed (press and hold on a phone). Tap a free bed on the move-in day to move a tenant in.'
+  : `<b style="color:#157A56">Tip:</b> drag a booking’s right edge across free nights to extend the stay, or drag the booking to move it (press and hold on a phone).`);
 
 page('calendar', async (ctx) => {
   const staff = ctx.can('owner', 'manager', 'front_desk');
@@ -130,7 +130,7 @@ page('calendar', async (ctx) => {
 
     content(`
       <div class="ns-card${month ? ' cal-month' : ''}" style="padding:var(--sp-card);overflow-x:auto">
-        ${staff ? `<div id="cal-hint" class="ns-muted" style="font-size:12.5px;margin-bottom:10px;min-height:28px">${TIP()}</div>` : ''}
+        ${staff ? `<div id="cal-hint" class="cal-tip">${TIP()}</div>` : ''}
         <div class="bl-tools">
           <label class="ns-search"><input type="search" data-bl-find placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>
           <span class="bl-count" data-bl-count></span>
@@ -146,8 +146,8 @@ page('calendar', async (ctx) => {
                 <div class="cal-wd">${x === today && !month ? 'Today' : dt.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }).slice(0, month ? 2 : 3)}</div>
                 <div class="cal-dn">${dt.getUTCDate()}</div>
                 <div class="cal-mo">${dt.toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' }).replace('Sept', 'Sep')}</div>
-                <div class="cal-occ" title="${occ} of ${totalUnits} ${W.units} booked"><span style="width:${pct}%;background:${pct >= 90 ? '#B23A3A' : pct >= 60 ? '#1C9A6C' : '#E2A03F'}"></span></div>
-                <div class="cal-occn">${occ}/${totalUnits}</div></div>`; }).join('')}</div></div>
+                <div class="cal-occrow"><div class="cal-occ" title="${occ} of ${totalUnits} ${W.units} booked"><span style="width:${pct}%;background:${pct >= 90 ? '#B23A3A' : pct >= 60 ? '#1C9A6C' : '#E2A03F'}"></span></div>
+                <span class="cal-occn">${occ}/${totalUnits}</span></div></div>`; }).join('')}</div></div>
           ${rows || '<div class="ns-empty">No ${W.units} set up yet. Add them in ${W.setup}.</div>'}
         </div>
         </div>
@@ -195,7 +195,8 @@ page('calendar', async (ctx) => {
   }
 
   // ------------------------------------------------------------ move a booking: drag (mouse) or "Move…" then tap (phone)
-  let mv = null;            // { b, grab, startIdx, n, x0, y0, active, ghost, target }
+  const TOUCH_HOLD_MS = 250;
+  let mv = null;            // { b, grab, startIdx, n, x0, y0, active, ghost, target, touch, held, timer }
   let moveMode = null;      // tap-to-place: { b }
   let ex = null;             // { b, bar, x0, y0, active, target }
   let justMoved = false;
@@ -293,6 +294,8 @@ page('calendar', async (ctx) => {
   if (staff) {
     const host = $('.ns-content');
     host.addEventListener('dragstart', (e) => { if (e.target.closest?.('a.bar')) e.preventDefault(); });
+    host.addEventListener('touchmove', (e) => { if (mv?.active || ex?.active) e.preventDefault(); }, { passive: false });   // no page scroll while a drag is active
+    host.addEventListener('contextmenu', (e) => { if (mv?.touch) e.preventDefault(); });                                    // long-press menu would cancel the drag
     host.addEventListener('pointerdown', (e) => {                       // mouse: drag a booking bar to move it
       const handle = e.target.closest('.cb-resize-handle');
       if (handle && e.button === 0) {
@@ -303,11 +306,13 @@ page('calendar', async (ctx) => {
         e.preventDefault(); e.stopPropagation(); return;
       }
       const bar = e.target.closest('a.bar[data-id]');
-      if (!bar || e.pointerType === 'touch' || e.button !== 0) return;
+      if (!bar || e.button !== 0) return;
       const b = data.bookings.find((x) => x.id === bar.dataset.id); if (!b || b.status === 'checked_out') return;
       const c = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList?.contains('cal-cell'));
       const startIdx = dayIdx(ymd(b.check_in_at));
-      mv = { b, bar, startIdx, grab: c ? +c.dataset.i - startIdx : 0, x0: e.clientX, y0: e.clientY, active: false, target: null };
+      const m = { b, bar, startIdx, grab: c ? +c.dataset.i - startIdx : 0, x0: e.clientX, y0: e.clientY, active: false, target: null, touch: e.pointerType === 'touch', held: false, timer: null };
+      mv = m;
+      if (m.touch) { m.timer = setTimeout(() => { m.held = true; }, TOUCH_HOLD_MS); return; }   // touch: press and hold first, so a swipe still scrolls
       e.preventDefault();
     });
     host.addEventListener('pointermove', (e) => {
@@ -324,7 +329,9 @@ page('calendar', async (ctx) => {
       }
       if (!mv) return;
       if (!mv.active) {
-        if (Math.hypot(e.clientX - mv.x0, e.clientY - mv.y0) < 6) return;
+        const moved = Math.hypot(e.clientX - mv.x0, e.clientY - mv.y0);
+        if (mv.touch && !mv.held) { if (moved > 8) { clearTimeout(mv.timer); mv = null; } return; }   // moved before the hold: let the page scroll
+        if (moved < 6) return;
         mv.active = true; document.body.classList.add('cal-moving');
         const r = mv.bar.getBoundingClientRect();
         mv.ghost = mv.bar.cloneNode(true); mv.ghost.classList.add('cb-ghost'); mv.ghost.style.width = `${Math.min(r.width, 260)}px`;
@@ -350,7 +357,7 @@ page('calendar', async (ctx) => {
         confirmExtend(x.b, x.target.endIdx); return;
       }
       if (!mv) return;
-      const m = mv; mv = null;
+      const m = mv; mv = null; clearTimeout(m.timer);
       if (!m.active) return;                                             // a plain click: let it open the panel
       justMoved = true; setTimeout(() => { justMoved = false; }, 80);
       m.ghost?.remove(); m.bar.classList.remove('cb-dragging'); document.body.classList.remove('cal-moving');
@@ -360,6 +367,12 @@ page('calendar', async (ctx) => {
     };
     window.addEventListener('pointerup', onBookingPointerUp);
     onPageLeave(() => window.removeEventListener('pointerup', onBookingPointerUp));
+    const onBookingPointerCancel = () => {                               // the browser took over (scroll, long-press menu): drop the drag
+      if (mv) { const m = mv; mv = null; clearTimeout(m.timer); m.ghost?.remove(); m.bar.classList.remove('cb-dragging'); document.body.classList.remove('cal-moving'); paintMove(null); }
+      if (ex) { ex.bar?.classList.remove('cb-resizing'); ex = null; document.body.classList.remove('cal-moving'); paintExtend(null, null); }
+    };
+    window.addEventListener('pointercancel', onBookingPointerCancel);
+    onPageLeave(() => window.removeEventListener('pointercancel', onBookingPointerCancel));
     host.addEventListener('pointerdown', (e) => {                       // mouse / pen: drag
       const c = e.target.closest('.cal-cell.is-free');
       if (!c || e.pointerType === 'touch' || e.button !== 0) return;
