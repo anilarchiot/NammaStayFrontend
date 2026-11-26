@@ -87,6 +87,7 @@ page('calendar', async (ctx) => {
     d.beds.forEach((b) => taken.set(b.id, new Set()));
     d.bookings.filter((b) => LIVE.includes(b.status)).forEach((b) => nights(b.check_in_at, b.check_out_at).forEach((n) => taken.get(b.bed_id)?.add(n)));
     d.blocks.forEach((k) => nights(k.starts_at, k.ends_at).forEach((n) => taken.get(k.bed_id)?.add(n)));
+    const showBedSearch = ctx.memberships.length > 1;
     const occByDay = {}; const totalUnits = d.beds.length;
     d.bookings.filter((b) => ['pending', 'confirmed', 'checked_in', 'checked_out'].includes(b.status)).forEach((b) => {
       const seen = new Set(); nights(b.check_in_at, b.check_out_at).forEach((n) => { if (!seen.has(n)) { seen.add(n); occByDay[n] = (occByDay[n] || 0) + 1; } });
@@ -132,7 +133,7 @@ page('calendar', async (ctx) => {
       <div class="ns-card${month ? ' cal-month' : ''}" style="padding:var(--sp-card);overflow-x:auto">
         ${staff ? `<div id="cal-hint" class="cal-tip">${TIP()}</div>` : ''}
         <div class="bl-tools">
-          <label class="ns-search"><input type="search" data-bl-find placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>
+          ${showBedSearch ? `<label class="ns-search"><input type="search" data-bl-find placeholder="Find a ${W.unit} or room…" aria-label="Find a ${W.unit} or room"></label>` : ''}
           <span class="bl-count" data-bl-count></span>
           <span class="bl-tools-r"><button type="button" class="ns-btn-ghost" data-bl-expand>Expand all</button><button type="button" class="ns-btn-ghost" data-bl-collapse>Collapse all</button></span>
         </div>
